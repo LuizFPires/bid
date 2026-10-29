@@ -443,6 +443,111 @@ export async function fetchPropostasPorCategoria(
   return ((data ?? []) as unknown as Parameters<typeof toComparavel>[0][]).map(toComparavel);
 }
 
+/* ---------- Contratos ---------- */
+
+import type { ContratoStatus } from '@bid/core';
+
+export interface ContratoResumo {
+  id: string;
+  categoria: string;
+  obraNome: string;
+  valor: number | null;
+  status: ContratoStatus;
+  temPdf: boolean;
+}
+
+export interface ClausulaRow {
+  id: string;
+  numero: number;
+  titulo: string;
+  texto: string;
+  origem: 'proposta' | 'modelo';
+}
+
+export interface ContratoDetalhe {
+  id: string;
+  categoria: string;
+  obraNome: string;
+  valor: number | null;
+  status: ContratoStatus;
+  propostaId: string;
+  pdfPath: string | null;
+  paginas: number | null;
+  clausulas: ClausulaRow[];
+}
+
+interface RawContratoRow {
+  id: string;
+  categoria: string;
+  valor: number | null;
+  status: ContratoStatus;
+  pdf_path: string | null;
+  obras: { nome: string } | { nome: string }[] | null;
+}
+
+export async function fetchContratos(): Promise<ContratoResumo[]> {
+  const { data, error } = await db()
+    .from('contratos')
+    .select('id, categoria, valor, status, pdf_path, obras ( nome )')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as RawContratoRow[];
+  return rows.map((r) => ({
+    id: r.id,
+    categoria: r.categoria,
+    obraNome: one(r.obras)?.nome ?? '',
+    valor: r.valor,
+    status: r.status,
+    temPdf: Boolean(r.pdf_path),
+  }));
+}
+
+export async function fetchContrato(id: string): Promise<ContratoDetalhe | null> {
+  const { data, error } = await db()
+    .from('contratos')
+    .select(
+      `id, categoria, valor, status, proposta_id, pdf_path, paginas,
+       obras ( nome ),
+       contrato_clausulas ( id, numero, titulo, texto, origem )`,
+    )
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const r = data as unknown as {
+    id: string;
+    categoria: string;
+    valor: number | null;
+    status: ContratoStatus;
+    proposta_id: string;
+    pdf_path: string | null;
+    paginas: number | null;
+    obras: { nome: string } | { nome: string }[] | null;
+    contrato_clausulas: ClausulaRow[] | null;
+  };
+  const clausulas = [...(r.contrato_clausulas ?? [])].sort((a, b) => a.numero - b.numero);
+  return {
+    id: r.id,
+    categoria: r.categoria,
+    obraNome: one(r.obras)?.nome ?? '',
+    valor: r.valor,
+    status: r.status,
+    propostaId: r.proposta_id,
+    pdfPath: r.pdf_path,
+    paginas: r.paginas,
+    clausulas,
+  };
+}
+
+/** URL assinada (curta) para baixar o PDF do contrato (bucket privado). */
+export async function urlContratoPdf(path: string): Promise<string> {
+  const { data, error } = await db().storage.from('contratos').createSignedUrl(path, 120);
+  if (error || !data) throw error ?? new Error('PDF indisponível.');
+  return data.signedUrl;
+}
+
 /* ---------- Organização ---------- */
 
 /** A organização do usuário (a primeira; criada no signup). RLS garante o escopo. */

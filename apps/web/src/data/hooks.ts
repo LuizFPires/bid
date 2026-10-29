@@ -8,6 +8,8 @@ import {
   fetchEqualizacao,
   fetchPropostasDoCertame,
   fetchPropostasPorCategoria,
+  fetchContratos,
+  fetchContrato,
   fetchSugestoes,
   fetchMinhaOrg,
 } from './queries';
@@ -19,6 +21,9 @@ import {
   equalizarIA,
   definirVencedora,
   desfazerVencedora,
+  criarContrato,
+  atualizarClausula,
+  gerarPdfContrato,
 } from './mutations';
 
 export function useAcervo() {
@@ -71,6 +76,43 @@ export function usePropostasPorCategoria(categoria: string) {
     queryKey: ['propostas-categoria', c],
     queryFn: () => fetchPropostasPorCategoria(c),
     enabled: c.length > 0,
+  });
+}
+
+export function useContratos() {
+  return useQuery({ queryKey: ['contratos'], queryFn: fetchContratos });
+}
+
+export function useContrato(id: string | undefined) {
+  return useQuery({
+    queryKey: ['contrato', id],
+    queryFn: () => fetchContrato(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCriarContrato() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: criarContrato,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contratos'] }),
+  });
+}
+
+export function useAtualizarClausula(contratoId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clausulaId, texto }: { clausulaId: string; texto: string }) =>
+      atualizarClausula(clausulaId, texto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contrato', contratoId] }),
+  });
+}
+
+export function useGerarPdf(contratoId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => gerarPdfContrato(contratoId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contrato', contratoId] }),
   });
 }
 
