@@ -287,6 +287,8 @@ export interface EqualizacaoDetalhe {
   categoria: string;
   certameId: string | null;
   certameTitulo: string | null;
+  certameStatus: CertameStatus | null;
+  vencedoraPropostaId: string | null;
   obraNome: string | null;
   propostas: (PropostaComparavel & { obraNome: string })[];
   resultadoIa: ResultadoIA | null;
@@ -352,7 +354,7 @@ export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe |
     .from('equalizacoes')
     .select(
       `id, escopo, categoria, certame_id, proposta_ids, resultado_ia,
-       certames ( id, titulo, obras ( nome ) )`,
+       certames ( id, titulo, status, vencedora_proposta_id, obras ( nome ) )`,
     )
     .eq('id', id)
     .is('deleted_at', null)
@@ -366,7 +368,13 @@ export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe |
     certame_id: string | null;
     proposta_ids: string[];
     resultado_ia: ResultadoIA | null;
-    certames: { id: string; titulo: string; obras: { nome: string } | { nome: string }[] | null } | null;
+    certames: {
+      id: string;
+      titulo: string;
+      status: CertameStatus;
+      vencedora_proposta_id: string | null;
+      obras: { nome: string } | { nome: string }[] | null;
+    } | null;
   };
 
   const { data: pdata, error: pErr } = await db()
@@ -394,6 +402,8 @@ export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe |
     categoria: r.categoria,
     certameId: r.certame_id,
     certameTitulo: cert?.titulo ?? null,
+    certameStatus: cert?.status ?? null,
+    vencedoraPropostaId: cert?.vencedora_proposta_id ?? null,
     obraNome: obra?.nome ?? null,
     propostas,
     resultadoIa: r.resultado_ia,
