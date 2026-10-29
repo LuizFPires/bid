@@ -1,0 +1,3 @@
+-- Seed de homologação (NUNCA em produção). Vazio no M0.
+-- O seed de demonstração (obras, certames e propostas de exemplo) entra no M1,
+-- apenas fora de produção, conforme o CLAUDE.md.

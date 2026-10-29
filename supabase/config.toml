@@ -1,0 +1,27 @@
+# Configuração do Supabase (CLI). O projeto em si é criado pelo usuário.
+project_id = "bid"
+
+[api]
+enabled = true
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+
+[db]
+major_version = 15
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+# URL do site (ajustar por ambiente)
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+# Login por LINK MÁGICO (OTP por e-mail). Sem senha nesta fase.
+enable_confirmations = true
+double_confirm_changes = true
