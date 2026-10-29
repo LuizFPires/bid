@@ -38,9 +38,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // O arquivo precisa estar na pasta do próprio usuário: {org_id}/{user_id}/...
+  // O arquivo precisa estar na pasta do próprio usuário: {org_id}/{user_id}/arquivo.
+  // (A barreira real de posse é a RLS do createSignedUrl abaixo; esta checagem
+  // é defesa em profundidade e rejeita caminhos malformados cedo.)
   const partes = path.split('/');
-  if (partes[1] !== userData.user.id) {
+  if (partes.length < 3 || !partes[0] || partes[1] !== userData.user.id) {
     res.status(403).json({ erro: 'Arquivo fora da pasta do usuário.' });
     return;
   }

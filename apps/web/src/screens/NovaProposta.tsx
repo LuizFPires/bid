@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatBRL, parseBRL, somaItens, type PropostaExtraida } from '@bid/core';
+import { formatBRL, normalizarExtracao, somaItens, type PropostaExtraida } from '@bid/core';
 import { Autocomplete, Button, Icon } from '@bid/ui';
 import { useObras, useSugestoes } from '../data/hooks';
 import { useCriarProposta } from '../data/hooks';
@@ -55,6 +55,8 @@ export function NovaPropostaScreen() {
   const criar = useCriarProposta();
 
   const fileRef = useRef<HTMLInputElement>(null);
+  // Evita re-upload (e arquivo órfão) se o mesmo File for reenviado após "Voltar".
+  const enviadoRef = useRef<{ file: File; path: string; ehPdf: boolean } | null>(null);
 
   const [fase, setFase] = useState<Fase>('form');
   const [obraId, setObraId] = useState('');
@@ -91,7 +93,11 @@ export function NovaPropostaScreen() {
     if (!file || !obraId || !categoria.trim()) return;
     setErro(null);
     try {
-      const enviado = await uploadPropostaArquivo(file);
+      const enviado =
+        enviadoRef.current?.file === file
+          ? enviadoRef.current
+          : { ...(await uploadPropostaArquivo(file)), file };
+      enviadoRef.current = enviado;
       setArquivoPath(enviado.path);
 
       if (enviado.ehPdf) {
@@ -117,20 +123,23 @@ export function NovaPropostaScreen() {
       setErro('Informe o fornecedor para arquivar.');
       return;
     }
+    // Mesma normalização do core do caminho de extração (rejeita prazo não
+    // positivo, entende valor no padrão brasileiro) — sem duplicar regra.
+    const limpos = normalizarExtracao({
+      fornecedor,
+      valor,
+      prazo_dias: prazo,
+      condicao_pagamento: pagamento,
+      garantia,
+      observacoes: obs,
+      itens,
+    });
     try {
       await criar.mutateAsync({
         obraId,
         categoria: categoria.trim(),
         arquivoPath,
-        dados: {
-          fornecedor: fornecedor.trim(),
-          valor: valor.trim() ? parseBRL(valor) : null,
-          prazo_dias: prazo.trim() ? Math.round(Number(prazo)) || null : null,
-          condicao_pagamento: pagamento.trim() || null,
-          garantia: garantia.trim() || null,
-          observacoes: obs.trim() || null,
-          itens,
-        },
+        dados: { ...limpos, fornecedor: fornecedor.trim() },
       });
       navigate(`/obras/${obraId}`);
     } catch (err) {
