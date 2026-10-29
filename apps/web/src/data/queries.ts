@@ -276,9 +276,9 @@ export interface EqualizacaoResumo {
 }
 
 export interface ResultadoIA {
-  veredito?: string;
-  achados?: { proposta?: string; pontos?: string[] }[];
-  recomendacao?: { proposta_id?: string; fornecedor?: string; justificativa?: string };
+  veredito?: string | null;
+  achados?: { fornecedor?: string; pontos?: string[] }[];
+  recomendacao?: { proposta_id?: string | null; fornecedor?: string | null; justificativa?: string | null };
 }
 
 export interface EqualizacaoDetalhe {

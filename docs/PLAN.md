@@ -35,11 +35,11 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** revisar uma proposta mantém o histórico; comparar duas versões mostra o que mudou. _(Revisão com arquivo PDF exige `ANTHROPIC_API_KEY`; o preenchimento manual funciona sem chave.)_
 
 ## M4 · Equalização (prioridade 3)
-- [ ] `core`: normalização e cálculo do comparativo (itens, prazo, pagamento, garantia, total; menor/maior).
-- [ ] Tela **Equalizações** (lista por estado) + **Iniciar equalização** (escopo, categoria, seleção de propostas).
-- [ ] Comparativo lado a lado + função `/ai/equalize` (análise e recomendação) salva em `equalizacoes`.
-- [ ] Equalização **entre obras** (mesma categoria, N obras).
-- **Aceite:** comparar um certame com várias propostas, rodar a IA e ver recomendação com justificativa; comparar a mesma categoria entre obras.
+- [x] `core`: comparativo (menor/maior valor e prazo, economia potencial) + normalização da análise IA — testados.
+- [x] Tela **Equalizar** (lista por estado) + **Iniciar equalização** (escopo, categoria, seleção de propostas).
+- [x] Comparativo lado a lado + função `/ai/equalize` (análise e recomendação) salva em `equalizacoes.resultado_ia`.
+- [x] Equalização **entre obras** (mesma categoria, N obras).
+- **Aceite:** comparar um certame com várias propostas, rodar a IA e ver recomendação com justificativa; comparar a mesma categoria entre obras. _(Comparativo lado a lado funciona sem chave; a recomendação da IA exige `ANTHROPIC_API_KEY` no servidor.)_
 
 ## M5 · Vencedora (prioridade 4a)
 - [ ] Definir vencedora pela equalização.

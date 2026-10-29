@@ -6,6 +6,8 @@ import {
   fetchProposta,
   fetchEqualizacoes,
   fetchEqualizacao,
+  fetchPropostasDoCertame,
+  fetchPropostasPorCategoria,
   fetchSugestoes,
   fetchMinhaOrg,
 } from './queries';
@@ -50,6 +52,23 @@ export function useEqualizacao(id: string | undefined) {
     queryKey: ['equalizacao', id],
     queryFn: () => fetchEqualizacao(id as string),
     enabled: Boolean(id),
+  });
+}
+
+export function usePropostasDoCertame(certameId: string | undefined) {
+  return useQuery({
+    queryKey: ['propostas-certame', certameId],
+    queryFn: () => fetchPropostasDoCertame(certameId as string),
+    enabled: Boolean(certameId),
+  });
+}
+
+export function usePropostasPorCategoria(categoria: string) {
+  const c = categoria.trim();
+  return useQuery({
+    queryKey: ['propostas-categoria', c],
+    queryFn: () => fetchPropostasPorCategoria(c),
+    enabled: c.length > 0,
   });
 }
 
