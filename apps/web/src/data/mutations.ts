@@ -1,3 +1,4 @@
+import type { PropostaExtraida } from '@bid/core';
 import { supabase } from '../lib/supabase';
 import { fetchMinhaOrg } from './queries';
 import type { Obra } from './types';
@@ -48,4 +49,111 @@ export async function criarObra(input: NovaObraInput): Promise<Obra> {
   }
 
   return data as Obra;
+}
+
+/* ---------- Nova proposta (upload → extração por IA → conferência → salvar) ---------- */
+
+/** Tira acentos/espaços de um nome de arquivo, preservando a extensão. */
+function nomeSeguro(nome: string): string {
+  return nome
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .toLowerCase();
+}
+
+export interface ArquivoEnviado {
+  path: string;
+  /** true quando é PDF (único formato com extração automática neste milestone). */
+  ehPdf: boolean;
+}
+
+/**
+ * Envia o arquivo da proposta ao bucket privado `propostas`, na pasta do
+ * usuário (`{org_id}/{user_id}/…`) — convenção exigida pela função de extração.
+ */
+export async function uploadPropostaArquivo(file: File): Promise<ArquivoEnviado> {
+  const org = await fetchMinhaOrg();
+  if (!org) throw new Error('Organização não encontrada.');
+  const { data: userData, error: userErr } = await db().auth.getUser();
+  if (userErr || !userData.user) throw new Error('Sessão inválida.');
+
+  const path = `${org.id}/${userData.user.id}/${Date.now()}-${nomeSeguro(file.name)}`;
+  const { error } = await db()
+    .storage.from('propostas')
+    .upload(path, file, { upsert: false, contentType: file.type || undefined });
+  if (error) throw error;
+
+  const ehPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  return { path, ehPdf };
+}
+
+/** Chama a função de servidor que lê o PDF e devolve os dados para conferência. */
+export async function extrairProposta(path: string): Promise<PropostaExtraida> {
+  const { data: sessionData } = await db().auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Sessão inválida.');
+
+  const resp = await fetch('/api/ai/extract-proposal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ path }),
+  });
+  if (!resp.ok) {
+    const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
+    throw new Error(corpo?.erro ?? 'Falha na extração.');
+  }
+  const corpo = (await resp.json()) as { dados: PropostaExtraida };
+  return corpo.dados;
+}
+
+export interface NovaPropostaInput {
+  obraId: string;
+  categoria: string;
+  /** Dados já conferidos/editados pelo usuário. `fornecedor` é obrigatório. */
+  dados: PropostaExtraida & { fornecedor: string };
+  arquivoPath: string | null;
+}
+
+/**
+ * Salva a proposta conferida chamando o RPC `criar_proposta`: proposta + 1ª
+ * versão + certame (reaproveitado ou criado) de forma ATÔMICA e sem corrida —
+ * as invariantes de escrita moram no banco. Nada é gravado sem a conferência do
+ * usuário (regra #3). Devolve o id da proposta criada.
+ */
+export async function criarProposta(input: NovaPropostaInput): Promise<string> {
+  const categoria = input.categoria.trim();
+  const fornecedor = input.dados.fornecedor.trim();
+  if (!categoria) throw new Error('Informe a categoria.');
+  if (!fornecedor) throw new Error('Informe o fornecedor.');
+
+  const d = input.dados;
+  const { data, error } = await db().rpc('criar_proposta', {
+    p_obra: input.obraId,
+    p_categoria: categoria,
+    p_fornecedor: fornecedor,
+    p_valor: d.valor,
+    p_prazo: d.prazo_dias,
+    p_pagamento: d.condicao_pagamento,
+    p_garantia: d.garantia,
+    p_obs: d.observacoes,
+    p_arquivo_path: input.arquivoPath,
+    p_dados: d,
+  });
+  if (error) throw error;
+  const propostaId = data as string;
+
+  // Sugestões são best-effort (não derrubam o salvamento); precisam da org.
+  try {
+    const org = await fetchMinhaOrg();
+    if (org) {
+      await registrarSugestao(org.id, 'categoria', categoria);
+      await registrarSugestao(org.id, 'fornecedor', fornecedor);
+    }
+  } catch {
+    // ignora — a proposta já foi gravada; sugestões são secundárias.
+  }
+
+  return propostaId;
 }
