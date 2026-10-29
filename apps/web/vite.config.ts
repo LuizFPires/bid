@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // .env fica na raiz do monorepo (um só para todo o projeto).
+  envDir: '../..',
   plugins: [
     react(),
     VitePWA({
