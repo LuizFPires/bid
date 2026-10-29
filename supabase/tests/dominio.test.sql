@@ -1,6 +1,6 @@
 -- Teste de política (pgTAP) do domínio. `supabase test db`.
 begin;
-select plan(14);
+select plan(15);
 
 -- Tabelas.
 select has_table('public', 'obras', 'obras existe');
@@ -70,6 +70,8 @@ select isnt((select count(*) from pg_trigger where tgname = 'trg_propostas_guard
   0::bigint, 'guard_soft_delete em propostas');
 select isnt((select count(*) from pg_trigger where tgname = 'trg_eventos_autor'),
   0::bigint, 'force_evento_autor em eventos');
+select isnt((select count(*) from pg_trigger where tgname = 'trg_propostas_org_immutable'),
+  0::bigint, 'org_id imutável em propostas');
 
 select * from finish();
 rollback;

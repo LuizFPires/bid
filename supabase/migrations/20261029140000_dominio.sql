@@ -156,13 +156,36 @@ $$;
 create trigger trg_eventos_autor before insert on public.eventos
   for each row execute function public.force_evento_autor();
 
+-- org_id é imutável: impede mover uma linha para outra organização (uma linha
+-- de org A nunca vira de org B, mesmo que o usuário pertença às duas).
+create or replace function public.block_org_change()
+returns trigger language plpgsql as $$
+begin
+  if new.org_id is distinct from old.org_id then
+    raise exception 'org_id é imutável';
+  end if;
+  return new;
+end;
+$$;
+create trigger trg_obras_org_immutable before update on public.obras
+  for each row execute function public.block_org_change();
+create trigger trg_certames_org_immutable before update on public.certames
+  for each row execute function public.block_org_change();
+create trigger trg_propostas_org_immutable before update on public.propostas
+  for each row execute function public.block_org_change();
+create trigger trg_versoes_org_immutable before update on public.proposta_versoes
+  for each row execute function public.block_org_change();
+create trigger trg_sugestoes_org_immutable before update on public.sugestoes
+  for each row execute function public.block_org_change();
+
 -- Soft delete (mexer em deleted_at) só por gestor — para usuários autenticados.
+-- Checa a org ORIGINAL (old) da linha; com org_id imutável, old = new.
 create or replace function public.guard_soft_delete()
 returns trigger language plpgsql as $$
 begin
   if auth.uid() is not null
      and (new.deleted_at is distinct from old.deleted_at)
-     and not public.is_gestor(new.org_id) then
+     and not public.is_gestor(old.org_id) then
     raise exception 'apenas gestor pode arquivar/excluir (soft delete)';
   end if;
   return new;
