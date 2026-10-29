@@ -157,6 +157,106 @@ export async function fetchObra(id: string): Promise<ObraDetalhe | null> {
   return { obra: obra as Obra, certames: resumos };
 }
 
+/* ---------- Proposta (detalhe + versões) ---------- */
+
+export interface VersaoDetalhe {
+  id: string;
+  n: number;
+  data: string;
+  valor: number | null;
+  prazo: number | null;
+  condicao_pagamento: string | null;
+  garantia: string | null;
+  obs: string | null;
+  arquivo_path: string | null;
+}
+
+export interface PropostaDetalhe {
+  id: string;
+  fornecedor: string;
+  status: PropostaStatus;
+  valorAtual: number | null;
+  prazoAtual: number | null;
+  condicaoPagamento: string | null;
+  garantia: string | null;
+  versaoAtual: number;
+  categoria: string;
+  obraId: string;
+  obraNome: string;
+  certameId: string;
+  certameTitulo: string;
+  certameStatus: CertameStatus;
+  /** Versões em ordem decrescente (a mais nova primeiro). */
+  versoes: VersaoDetalhe[];
+}
+
+interface RawPropostaDetalhe {
+  id: string;
+  fornecedor: string;
+  status: PropostaStatus;
+  valor_atual: number | null;
+  prazo_atual: number | null;
+  condicao_pagamento: string | null;
+  garantia: string | null;
+  versao_atual: number;
+  certame_id: string;
+  certames:
+    | {
+        id: string;
+        titulo: string;
+        categoria: string;
+        status: CertameStatus;
+        obra_id: string;
+        obras: { id: string; nome: string } | { id: string; nome: string }[] | null;
+      }
+    | null;
+  proposta_versoes: VersaoDetalhe[] | null;
+}
+
+export async function fetchProposta(id: string): Promise<PropostaDetalhe | null> {
+  const { data, error } = await db()
+    .from('propostas')
+    .select(
+      `id, fornecedor, status, valor_atual, prazo_atual, condicao_pagamento, garantia, versao_atual, certame_id,
+       certames!inner ( id, titulo, categoria, status, obra_id, obras!inner ( id, nome ) ),
+       proposta_versoes ( id, n, data, valor, prazo, condicao_pagamento, garantia, obs, arquivo_path )`,
+    )
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  const r = data as unknown as RawPropostaDetalhe;
+  const cert = one(r.certames);
+  const obra = one(cert?.obras);
+  const versoes = [...(r.proposta_versoes ?? [])].sort((a, b) => b.n - a.n);
+  return {
+    id: r.id,
+    fornecedor: r.fornecedor,
+    status: r.status,
+    valorAtual: r.valor_atual,
+    prazoAtual: r.prazo_atual,
+    condicaoPagamento: r.condicao_pagamento,
+    garantia: r.garantia,
+    versaoAtual: r.versao_atual,
+    categoria: cert?.categoria ?? '',
+    obraId: cert?.obra_id ?? '',
+    obraNome: obra?.nome ?? '',
+    certameId: r.certame_id,
+    certameTitulo: cert?.titulo ?? '',
+    certameStatus: (cert?.status ?? 'aberta') as CertameStatus,
+    versoes,
+  };
+}
+
+/** URL assinada (curta) para baixar um arquivo do bucket privado `propostas`. */
+export async function urlArquivoProposta(path: string): Promise<string> {
+  const { data, error } = await db().storage.from('propostas').createSignedUrl(path, 120);
+  if (error || !data) throw error ?? new Error('Arquivo indisponível.');
+  return data.signedUrl;
+}
+
 /* ---------- Organização ---------- */
 
 /** A organização do usuário (a primeira; criada no signup). RLS garante o escopo. */

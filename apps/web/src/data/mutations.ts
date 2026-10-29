@@ -157,3 +157,31 @@ export async function criarProposta(input: NovaPropostaInput): Promise<string> {
 
   return propostaId;
 }
+
+export interface NovaVersaoInput {
+  propostaId: string;
+  /** Dados já conferidos/editados pelo usuário. */
+  dados: PropostaExtraida;
+  arquivoPath: string | null;
+}
+
+/**
+ * Cria uma nova versão da proposta via RPC `criar_versao` (atômico: grava a
+ * versão n+1 e atualiza os campos "atuais"; histórico preservado). Devolve o
+ * número da nova versão.
+ */
+export async function criarVersao(input: NovaVersaoInput): Promise<number> {
+  const d = input.dados;
+  const { data, error } = await db().rpc('criar_versao', {
+    p_proposta: input.propostaId,
+    p_valor: d.valor,
+    p_prazo: d.prazo_dias,
+    p_pagamento: d.condicao_pagamento,
+    p_garantia: d.garantia,
+    p_obs: d.observacoes,
+    p_arquivo_path: input.arquivoPath,
+    p_dados: d,
+  });
+  if (error) throw error;
+  return data as number;
+}
