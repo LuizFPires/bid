@@ -13,6 +13,17 @@ export function AppShell() {
       <div className="device">
         <header className="topbar">
           <BrandLogo />
+          {active === 'propostas' && (
+            <button
+              className="ticon"
+              type="button"
+              aria-label="Nova proposta"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => navigate('/propostas/nova')}
+            >
+              <Icon name="plus" />
+            </button>
+          )}
           {active === 'obras' && (
             <button
               className="ticon"

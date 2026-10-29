@@ -1213,10 +1213,31 @@ table.eq .high {
   color: var(--ink);
   box-shadow: var(--shadow);
 }
+.field textarea {
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  resize: vertical;
+}
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 .dropzone {
   display: flex;

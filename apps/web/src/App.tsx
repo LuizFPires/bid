@@ -11,6 +11,7 @@ import {
   ObrasScreen,
   ObraScreen,
   NovaObraScreen,
+  NovaPropostaScreen,
 } from './screens';
 
 function Gate() {
@@ -40,6 +41,7 @@ function Gate() {
       <Route element={<AppShell />}>
         <Route index element={<Navigate to="/propostas" replace />} />
         <Route path="propostas" element={<PropostasScreen />} />
+        <Route path="propostas/nova" element={<NovaPropostaScreen />} />
         <Route path="equalizacoes" element={<EqualizacoesScreen />} />
         <Route path="contratos" element={<ContratosScreen />} />
         <Route path="obras" element={<ObrasScreen />} />

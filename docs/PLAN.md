@@ -22,11 +22,11 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** navegar o acervo, buscar e filtrar; listas sem N+1; abrir obra.
 
 ## M2 · Nova proposta com extração por IA (prioridade 1)
-- [ ] Upload de arquivo (PDF/planilha) para Storage.
-- [ ] Função `/ai/extract-proposal` (Anthropic) → JSON estruturado; tela mostra "lendo…" e o cartão de conferência.
-- [ ] Salvar proposta + 1ª versão com `dados_extraidos` e arquivo.
-- [ ] Botão de criar discreto no topo à direita.
-- **Aceite:** informar obra + categoria, anexar arquivo, a IA preenche os dados, o usuário confere e arquiva; a proposta aparece no acervo.
+- [x] Upload de arquivo (PDF/planilha) para Storage (bucket `propostas`, pasta do usuário; limites de tamanho/mime).
+- [x] Função `/ai/extract-proposal` (Anthropic) → JSON estruturado; tela mostra "lendo…" e o cartão de conferência.
+- [x] Salvar proposta + 1ª versão com `dados_extraidos` e arquivo (reaproveita/cria certame por obra+categoria).
+- [x] Botão de criar discreto no topo à direita (aba Propostas).
+- **Aceite:** informar obra + categoria, anexar arquivo, a IA preenche os dados, o usuário confere e arquiva; a proposta aparece no acervo. _(Fluxo e UI prontos; a extração ponta a ponta exige `ANTHROPIC_API_KEY` no servidor — verificação no preview da Vercel após provisionar.)_
 
 ## M3 · Controle de versões (prioridade 2)
 - [ ] Nova versão de uma proposta (novo arquivo + extração + histórico).
