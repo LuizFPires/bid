@@ -3,3 +3,4 @@ export * from './dates';
 export * from './status';
 export * from './versions';
 export * from './acervo';
+export * from './extracao';
