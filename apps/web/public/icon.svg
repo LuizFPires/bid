@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="bid">
+  <rect width="512" height="512" rx="112" fill="#7D8CF5" />
+  <g
+    fill="none"
+    stroke="#141B50"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    transform="translate(106 106) scale(12.5)"
+  >
+    <path d="M3 7l9-4 9 4-9 4-9-4z" />
+    <path d="M3 12l9 4 9-4" />
+    <path d="M3 17l9 4 9-4" />
+  </g>
+</svg>
