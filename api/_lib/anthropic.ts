@@ -1,9 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  EQUALIZE_INPUT_SCHEMA,
+  EQUALIZE_PROMPT,
+  EQUALIZE_TOOL_NAME,
   EXTRACAO_INPUT_SCHEMA,
   EXTRACAO_PROMPT,
   EXTRACAO_TOOL_NAME,
+  normalizarAnalise,
   normalizarExtracao,
+  type AnaliseEqualizacao,
   type PropostaExtraida,
 } from '@bid/core';
 import { env } from './env';
@@ -43,4 +48,48 @@ export async function extrairPropostaDePdf(pdfBase64: string): Promise<PropostaE
     throw new Error('A IA não retornou dados estruturados.');
   }
   return normalizarExtracao(bloco.input);
+}
+
+export interface PropostaParaIA {
+  id: string;
+  fornecedor: string;
+  valor: number | null;
+  prazo: number | null;
+  condicao_pagamento: string | null;
+  garantia: string | null;
+  itens: unknown;
+}
+
+/** Analisa um conjunto de propostas e devolve a recomendação (apoio). */
+export async function analisarEqualizacao(propostas: PropostaParaIA[]): Promise<AnaliseEqualizacao> {
+  const client = new Anthropic({ apiKey: env.anthropicKey() });
+  const ids = propostas.map((p) => p.id);
+
+  const msg = await client.messages.create({
+    model: env.modelEqualize(),
+    max_tokens: 2048,
+    tools: [
+      {
+        name: EQUALIZE_TOOL_NAME,
+        description: 'Registra a análise comparativa e a recomendação.',
+        input_schema: EQUALIZE_INPUT_SCHEMA as unknown as Anthropic.Tool.InputSchema,
+      },
+    ],
+    tool_choice: { type: 'tool', name: EQUALIZE_TOOL_NAME },
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: EQUALIZE_PROMPT },
+          { type: 'text', text: `Propostas (JSON):\n${JSON.stringify(propostas)}` },
+        ],
+      },
+    ],
+  });
+
+  const bloco = msg.content.find((b) => b.type === 'tool_use');
+  if (!bloco || bloco.type !== 'tool_use') {
+    throw new Error('A IA não retornou a análise.');
+  }
+  return normalizarAnalise(bloco.input, ids);
 }
