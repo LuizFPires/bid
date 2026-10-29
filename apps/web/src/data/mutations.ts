@@ -158,6 +158,45 @@ export async function criarProposta(input: NovaPropostaInput): Promise<string> {
   return propostaId;
 }
 
+export interface NovaEqualizacaoInput {
+  escopo: 'obra' | 'entre_obras';
+  categoria: string;
+  certameId: string | null;
+  propostaIds: string[];
+}
+
+/** Cria uma equalização via RPC atômico. Devolve o id. */
+export async function criarEqualizacao(input: NovaEqualizacaoInput): Promise<string> {
+  const { data, error } = await db().rpc('criar_equalizacao', {
+    p_escopo: input.escopo,
+    p_categoria: input.categoria.trim(),
+    p_certame: input.certameId,
+    p_proposta_ids: input.propostaIds,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/**
+ * Dispara a análise por IA (servidor) de uma equalização já criada. O servidor
+ * carrega as propostas (RLS), chama a Claude e grava em `resultado_ia`.
+ */
+export async function equalizarIA(equalizacaoId: string): Promise<void> {
+  const { data: sessionData } = await db().auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Sessão inválida.');
+
+  const resp = await fetch('/api/ai/equalize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ id: equalizacaoId }),
+  });
+  if (!resp.ok) {
+    const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
+    throw new Error(corpo?.erro ?? 'Falha na análise por IA.');
+  }
+}
+
 export interface NovaVersaoInput {
   propostaId: string;
   /** Dados já conferidos/editados pelo usuário. */

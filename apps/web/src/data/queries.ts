@@ -259,6 +259,174 @@ export async function urlArquivoProposta(path: string): Promise<string> {
   return data.signedUrl;
 }
 
+/* ---------- Equalização ---------- */
+
+import type { PropostaComparavel } from '@bid/core';
+
+export type EqualizacaoEscopo = 'obra' | 'entre_obras';
+
+export interface EqualizacaoResumo {
+  id: string;
+  escopo: EqualizacaoEscopo;
+  categoria: string;
+  certameId: string | null;
+  certameStatus: CertameStatus | null;
+  totalPropostas: number;
+  temAnalise: boolean;
+}
+
+export interface ResultadoIA {
+  veredito?: string;
+  achados?: { proposta?: string; pontos?: string[] }[];
+  recomendacao?: { proposta_id?: string; fornecedor?: string; justificativa?: string };
+}
+
+export interface EqualizacaoDetalhe {
+  id: string;
+  escopo: EqualizacaoEscopo;
+  categoria: string;
+  certameId: string | null;
+  certameTitulo: string | null;
+  obraNome: string | null;
+  propostas: (PropostaComparavel & { obraNome: string })[];
+  resultadoIa: ResultadoIA | null;
+}
+
+interface RawEqRow {
+  id: string;
+  escopo: EqualizacaoEscopo;
+  categoria: string;
+  certame_id: string | null;
+  proposta_ids: string[];
+  resultado_ia: ResultadoIA | null;
+  certames: { status: CertameStatus } | { status: CertameStatus }[] | null;
+}
+
+export async function fetchEqualizacoes(): Promise<EqualizacaoResumo[]> {
+  const { data, error } = await db()
+    .from('equalizacoes')
+    .select('id, escopo, categoria, certame_id, proposta_ids, resultado_ia, certames ( status )')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as RawEqRow[];
+  return rows.map((r) => {
+    const cert = one(r.certames);
+    return {
+      id: r.id,
+      escopo: r.escopo,
+      categoria: r.categoria,
+      certameId: r.certame_id,
+      certameStatus: cert?.status ?? null,
+      totalPropostas: r.proposta_ids?.length ?? 0,
+      temAnalise: r.resultado_ia != null,
+    };
+  });
+}
+
+/** Mapeia uma linha de proposta (com certame→obra) para comparável + obra. */
+function toComparavel(p: {
+  id: string;
+  fornecedor: string;
+  valor_atual: number | null;
+  prazo_atual: number | null;
+  condicao_pagamento: string | null;
+  garantia: string | null;
+  certames?: { obras?: { nome: string } | { nome: string }[] | null } | { obras?: unknown }[] | null;
+}): PropostaComparavel & { obraNome: string } {
+  const cert = one(p.certames as { obras?: { nome: string } | { nome: string }[] | null } | null);
+  const obra = one(cert?.obras ?? null);
+  return {
+    id: p.id,
+    fornecedor: p.fornecedor,
+    valor: p.valor_atual,
+    prazo: p.prazo_atual,
+    condicaoPagamento: p.condicao_pagamento,
+    garantia: p.garantia,
+    obraNome: obra?.nome ?? '',
+  };
+}
+
+export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe | null> {
+  const { data, error } = await db()
+    .from('equalizacoes')
+    .select(
+      `id, escopo, categoria, certame_id, proposta_ids, resultado_ia,
+       certames ( id, titulo, obras ( nome ) )`,
+    )
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const r = data as unknown as {
+    id: string;
+    escopo: EqualizacaoEscopo;
+    categoria: string;
+    certame_id: string | null;
+    proposta_ids: string[];
+    resultado_ia: ResultadoIA | null;
+    certames: { id: string; titulo: string; obras: { nome: string } | { nome: string }[] | null } | null;
+  };
+
+  const { data: pdata, error: pErr } = await db()
+    .from('propostas')
+    .select(
+      `id, fornecedor, valor_atual, prazo_atual, condicao_pagamento, garantia,
+       certames ( obras ( nome ) )`,
+    )
+    .in('id', r.proposta_ids.length ? r.proposta_ids : ['00000000-0000-0000-0000-000000000000'])
+    .is('deleted_at', null);
+  if (pErr) throw pErr;
+  const propostas = ((pdata ?? []) as unknown as Parameters<typeof toComparavel>[0][]).map(toComparavel);
+
+  const cert = one(r.certames);
+  const obra = one(cert?.obras ?? null);
+  return {
+    id: r.id,
+    escopo: r.escopo,
+    categoria: r.categoria,
+    certameId: r.certame_id,
+    certameTitulo: cert?.titulo ?? null,
+    obraNome: obra?.nome ?? null,
+    propostas,
+    resultadoIa: r.resultado_ia,
+  };
+}
+
+/** Propostas de um certame (para iniciar equalização de escopo obra). */
+export async function fetchPropostasDoCertame(
+  certameId: string,
+): Promise<(PropostaComparavel & { obraNome: string })[]> {
+  const { data, error } = await db()
+    .from('propostas')
+    .select(
+      `id, fornecedor, valor_atual, prazo_atual, condicao_pagamento, garantia,
+       certames ( obras ( nome ) )`,
+    )
+    .eq('certame_id', certameId)
+    .is('deleted_at', null);
+  if (error) throw error;
+  return ((data ?? []) as unknown as Parameters<typeof toComparavel>[0][]).map(toComparavel);
+}
+
+/** Propostas de uma categoria em todas as obras (escopo entre_obras). */
+export async function fetchPropostasPorCategoria(
+  categoria: string,
+): Promise<(PropostaComparavel & { obraNome: string })[]> {
+  const { data, error } = await db()
+    .from('propostas')
+    .select(
+      `id, fornecedor, valor_atual, prazo_atual, condicao_pagamento, garantia,
+       certames!inner ( categoria, obras!inner ( nome ) )`,
+    )
+    .eq('certames.categoria', categoria)
+    .is('deleted_at', null)
+    .is('certames.deleted_at', null);
+  if (error) throw error;
+  return ((data ?? []) as unknown as Parameters<typeof toComparavel>[0][]).map(toComparavel);
+}
+
 /* ---------- Organização ---------- */
 
 /** A organização do usuário (a primeira; criada no signup). RLS garante o escopo. */

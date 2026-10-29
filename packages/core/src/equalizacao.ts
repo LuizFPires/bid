@@ -78,3 +78,98 @@ export function compararPropostas(props: readonly PropostaComparavel[]): Compara
     economiaPotencial,
   };
 }
+
+/* ---------- Análise por IA (apoio) — partes puras ---------- */
+
+export interface AnaliseEqualizacao {
+  veredito: string | null;
+  achados: { fornecedor: string; pontos: string[] }[];
+  recomendacao: { proposta_id: string | null; fornecedor: string | null; justificativa: string | null };
+}
+
+export const EQUALIZE_TOOL_NAME = 'registrar_analise';
+
+export const EQUALIZE_INPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    veredito: { type: ['string', 'null'], description: 'Síntese curta da comparação.' },
+    achados: {
+      type: 'array',
+      description: 'Pontos por proposta (itens faltando, risco de custo extra, escopo).',
+      items: {
+        type: 'object',
+        properties: {
+          fornecedor: { type: 'string' },
+          pontos: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['fornecedor', 'pontos'],
+      },
+    },
+    recomendacao: {
+      type: 'object',
+      description: 'Proposta recomendada (apoio — a decisão é do usuário).',
+      properties: {
+        proposta_id: { type: ['string', 'null'] },
+        fornecedor: { type: ['string', 'null'] },
+        justificativa: { type: ['string', 'null'] },
+      },
+      required: ['proposta_id', 'fornecedor', 'justificativa'],
+    },
+  },
+  required: ['veredito', 'achados', 'recomendacao'],
+} as const;
+
+export const EQUALIZE_PROMPT = [
+  'Você é um analista de compras de obras. Compare as propostas no mesmo nível',
+  '(normalize escopos; se alguém não incluiu um item que os outros incluíram,',
+  'aponte o risco de custo extra). Registre a análise na ferramenta.',
+  '',
+  '- Recomende a melhor proposta por CUSTO-BENEFÍCIO, não só o menor preço.',
+  '- recomendacao.proposta_id DEVE ser um dos ids informados (ou null se não der).',
+  '- A recomendação é apoio; seja objetivo e justifique.',
+].join('\n');
+
+const MAX = 2000;
+function txt(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  return t ? t.slice(0, MAX) : null;
+}
+
+/**
+ * Normaliza a saída da IA. `idsValidos` garante que a recomendação aponte para
+ * uma das propostas comparadas (senão zera o id — a IA não inventa alvo).
+ */
+export function normalizarAnalise(raw: unknown, idsValidos: readonly string[]): AnaliseEqualizacao {
+  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const achadosRaw = Array.isArray(o.achados) ? o.achados : [];
+  const achados = achadosRaw
+    .slice(0, 50)
+    .map((a) => {
+      if (typeof a !== 'object' || a === null) return null;
+      const ao = a as Record<string, unknown>;
+      const fornecedor = txt(ao.fornecedor);
+      if (!fornecedor) return null;
+      const pontos = (Array.isArray(ao.pontos) ? ao.pontos : [])
+        .map(txt)
+        .filter((p): p is string => p !== null)
+        .slice(0, 20);
+      return { fornecedor, pontos };
+    })
+    .filter((a): a is { fornecedor: string; pontos: string[] } => a !== null);
+
+  const recRaw = (typeof o.recomendacao === 'object' && o.recomendacao !== null ? o.recomendacao : {}) as Record<
+    string,
+    unknown
+  >;
+  const recId = txt(recRaw.proposta_id);
+  return {
+    veredito: txt(o.veredito),
+    achados,
+    recomendacao: {
+      proposta_id: recId && idsValidos.includes(recId) ? recId : null,
+      fornecedor: txt(recRaw.fornecedor),
+      justificativa: txt(recRaw.justificativa),
+    },
+  };
+}

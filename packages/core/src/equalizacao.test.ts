@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compararPropostas, type PropostaComparavel } from './equalizacao';
+import { compararPropostas, normalizarAnalise, type PropostaComparavel } from './equalizacao';
 
 const base: PropostaComparavel[] = [
   { id: 'a', fornecedor: 'A', valor: 1200, prazo: 90, condicaoPagamento: 'à vista', garantia: '5 anos' },
@@ -61,5 +61,44 @@ describe('compararPropostas', () => {
     const c = compararPropostas([]);
     expect(c.menorValor).toBeNull();
     expect(c.economiaPotencial).toBeNull();
+  });
+});
+
+describe('normalizarAnalise', () => {
+  it('coage uma saída bem formada e mantém o id recomendado válido', () => {
+    const r = normalizarAnalise(
+      {
+        veredito: 'B tem melhor custo-benefício.',
+        achados: [{ fornecedor: 'A', pontos: ['não incluiu transporte'] }],
+        recomendacao: { proposta_id: 'b', fornecedor: 'B', justificativa: 'menor valor com escopo completo' },
+      },
+      ['a', 'b', 'c'],
+    );
+    expect(r.recomendacao.proposta_id).toBe('b');
+    expect(r.achados[0]?.fornecedor).toBe('A');
+    expect(r.veredito).toContain('custo-benefício');
+  });
+
+  it('zera o id recomendado se a IA apontar fora da lista (não inventa alvo)', () => {
+    const r = normalizarAnalise({ recomendacao: { proposta_id: 'x', fornecedor: 'X' } }, ['a', 'b']);
+    expect(r.recomendacao.proposta_id).toBeNull();
+    expect(r.recomendacao.fornecedor).toBe('X');
+  });
+
+  it('nunca lança para lixo', () => {
+    for (const lixo of [null, 42, 'txt', [], {}]) {
+      const r = normalizarAnalise(lixo, []);
+      expect(r.achados).toEqual([]);
+      expect(r.recomendacao.proposta_id).toBeNull();
+    }
+  });
+
+  it('descarta achados sem fornecedor e limita pontos', () => {
+    const r = normalizarAnalise(
+      { achados: [{ pontos: ['x'] }, { fornecedor: 'A', pontos: ['p1', 42, 'p2'] }] },
+      [],
+    );
+    expect(r.achados).toHaveLength(1);
+    expect(r.achados[0]?.pontos).toEqual(['p1', 'p2']);
   });
 });
