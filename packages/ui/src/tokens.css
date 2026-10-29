@@ -1,0 +1,80 @@
+/* bid · tokens de design (índigo) — extraídos do protótipo aprovado.
+   Semântica sempre com texto + ícone, nunca só cor. Mínimo 12px. */
+
+:root {
+  /* superfícies */
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #f6f7f9;
+  /* tinta */
+  --ink: #191a22;
+  --muted: #737682;
+  --faint: #a2a5b2;
+  /* linhas */
+  --line: #ebecf1;
+  --line-2: #f1f2f6;
+  /* acento índigo */
+  --accent: #7d8cf5;
+  --accent-deep: #434ed1;
+  --accent-soft: #eef0fe;
+  --accent-ink: #141b50;
+  /* semânticos */
+  --danger: #c62828;
+  --danger-soft: #fbeaea;
+  --ok: #2e7d55;
+  --ok-soft: #e7f3ec;
+  --warn: #b0711c;
+  --warn-soft: #fbf1e2;
+  /* forma e tipografia */
+  --shadow: 0 1px 2px rgba(20, 22, 40, 0.04), 0 8px 24px rgba(20, 22, 40, 0.05);
+  --radius: 18px;
+  --ff: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* modo escuro automático, salvo quando o usuário fixa o tema claro */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0e0f13;
+    --surface: #17181f;
+    --surface-2: #1c1e26;
+    --ink: #f1f2f6;
+    --muted: #9a9dab;
+    --faint: #6e7180;
+    --line: #262833;
+    --line-2: #20222b;
+    --accent: #7c8af0;
+    --accent-deep: #aeb7ff;
+    --accent-soft: #1c2150;
+    --accent-ink: #e6e9ff;
+    --danger: #f08b8b;
+    --danger-soft: #331b1b;
+    --ok: #7fc79e;
+    --ok-soft: #172a20;
+    --warn: #e0a95c;
+    --warn-soft: #2e2414;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* modo escuro fixado manualmente */
+:root[data-theme='dark'] {
+  --bg: #0e0f13;
+  --surface: #17181f;
+  --surface-2: #1c1e26;
+  --ink: #f1f2f6;
+  --muted: #9a9dab;
+  --faint: #6e7180;
+  --line: #262833;
+  --line-2: #20222b;
+  --accent: #7c8af0;
+  --accent-deep: #aeb7ff;
+  --accent-soft: #1c2150;
+  --accent-ink: #e6e9ff;
+  --danger: #f08b8b;
+  --danger-soft: #331b1b;
+  --ok: #7fc79e;
+  --ok-soft: #172a20;
+  --warn: #e0a95c;
+  --warn-soft: #2e2414;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.4);
+}
