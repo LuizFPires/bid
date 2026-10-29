@@ -70,6 +70,11 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 ---
 
 ## Decisões
+- 29/10/2026 (auto — M2) — **Wiring das funções: `/api` na raiz** (zero-config da Vercel, Root Directory = raiz). Handlers em `/api/**`, compartilhados em `/api/_lib/` (prefixo `_` não vira rota). A lógica pura de extração mora em `packages/core`. Substitui o pacote `apps/api` (sancionado pelo CLAUDE.md: "ou /api no Vercel").
+- 29/10/2026 (auto — M2) — **A IA lê o arquivo via Storage**: o cliente faz upload para o bucket privado `propostas` (owner = usuário); o servidor baixa com a `service_role` e envia o PDF à Claude como bloco `document`. Evita trafegar o arquivo no corpo da requisição (limite 4,5 MB) e mantém o arquivo privado.
+- 29/10/2026 (auto — M2) — **Certame na criação da proposta**: informar obra + categoria. Se já existe um certame **ativo** (não adjudicado) dessa obra+categoria, a proposta entra nele; senão cria-se um certame `aberta`. Garante que a proposta sempre caia num certame coerente e apareça no acervo.
+- 29/10/2026 (auto — M2) — **Extração**: modelo `claude-haiku-5-5` (env `ANTHROPIC_MODEL_EXTRACT`), saída estruturada por **tool forçada** (`input_schema`). Normalização/validação do JSON em `core.normalizarExtracao` (testada). Conferência obrigatória: nada grava sem o usuário confirmar (regra #3); campos extraídos ficam editáveis.
+- 29/10/2026 (auto — M2) — **Formatos**: extração automática por IA para **PDF** (bloco `document` nativo). Outros formatos (planilha/imagem) podem ser anexados, mas sem extração automática — o usuário preenche os campos à mão.
 - 29/10/2026 (auto — M1) — **Multi-tenant por organização**: tabelas `organizacoes` e `membros`; toda tabela de domínio tem `org_id`; RLS = usuário é membro da org. Trigger em `auth.users` cria uma org pessoal + membership no primeiro login (perfil Equipe compartilha dados da org).
 - 29/10/2026 (auto — M1) — **Categoria é texto livre** (sem lista fechada tipo CATS do protótipo): ícone genérico por categoria na UI + troféu para vencedora. `sugestoes` por org (tipo: categoria/fornecedor/obra/local), `uso` ordena o autocomplete.
 - 29/10/2026 (auto — M1) — **Acervo**: busca e filtros no cliente sobre um fetch agregado único (sem N+1); lista ordenada por valor. Derivados calculados no cliente com o `core`.
