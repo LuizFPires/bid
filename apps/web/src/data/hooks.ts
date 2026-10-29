@@ -129,7 +129,7 @@ export function useCriarEqualizacao() {
 }
 
 /** Invalida tudo que reflete a adjudicação (proposta, acervo, obras, equalizações). */
-function invalidarVencedora(qc: ReturnType<typeof useQueryClient>) {
+export function invalidarVencedora(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['proposta'] });
   qc.invalidateQueries({ queryKey: ['acervo'] });
   qc.invalidateQueries({ queryKey: ['obras'] });

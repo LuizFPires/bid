@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 export interface ToastOpts {
   actionLabel?: string;
@@ -42,6 +51,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     limpar();
     setToast(null);
   }, [limpar]);
+
+  // Limpa o timer pendente ao desmontar (evita setToast após unmount).
+  useEffect(() => limpar, [limpar]);
 
   const ctx = useMemo(() => show, [show]);
 

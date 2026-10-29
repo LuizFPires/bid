@@ -10,14 +10,10 @@ import {
   type PropostaExtraida,
   type Variacao,
 } from '@bid/core';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Icon } from '@bid/ui';
-import {
-  useCriarVersao,
-  useDefinirVencedora,
-  useDesfazerVencedora,
-  useProposta,
-} from '../data/hooks';
-import { extrairProposta, uploadPropostaArquivo } from '../data/mutations';
+import { invalidarVencedora, useCriarVersao, useDefinirVencedora, useProposta } from '../data/hooks';
+import { desfazerVencedora, extrairProposta, uploadPropostaArquivo } from '../data/mutations';
 import { urlArquivoProposta, type VersaoDetalhe } from '../data/queries';
 import { useToast } from '../app/Toast';
 
@@ -51,8 +47,8 @@ export function PropostaScreen() {
   const { data, isLoading, isError } = useProposta(id);
   const [modo, setModo] = useState<'ver' | 'nova'>('ver');
   const definir = useDefinirVencedora();
-  const desfazer = useDesfazerVencedora();
   const toast = useToast();
+  const qc = useQueryClient();
 
   if (isLoading) {
     return (
@@ -86,9 +82,18 @@ export function PropostaScreen() {
     if (!data) return;
     try {
       const anterior = await definir.mutateAsync(data.id);
+      const propostaId = data.id;
       toast('Definida como vencedora — certame adjudicado.', {
         actionLabel: 'Desfazer',
-        onAction: () => desfazer.mutate({ propostaId: data.id, anterior }),
+        // Raw + invalidação pelo queryClient global: sobrevive à navegação.
+        onAction: async () => {
+          try {
+            await desfazerVencedora({ propostaId, anterior });
+            invalidarVencedora(qc);
+          } catch {
+            toast('Não foi possível desfazer.');
+          }
+        },
       });
     } catch {
       toast('Não foi possível definir a vencedora.');

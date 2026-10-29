@@ -14,13 +14,20 @@ declare
   v_certame uuid;
   v_status_prop text;
   v_status_cert text;
+  v_vencedora_anterior uuid;
 begin
-  select p.org_id, p.certame_id, p.status, c.status
-    into v_org, v_certame, v_status_prop, v_status_cert
+  select p.org_id, p.certame_id, p.status, c.status, c.vencedora_proposta_id
+    into v_org, v_certame, v_status_prop, v_status_cert, v_vencedora_anterior
     from public.propostas p
     join public.certames c on c.id = p.certame_id
     where p.id = p_proposta and p.deleted_at is null and c.deleted_at is null;
   if v_org is null then raise exception 'proposta não encontrada'; end if;
+
+  -- Trocar vencedora: rebaixa a anterior (vencedora única por certame — não
+  -- deixa duas propostas 'vencedora'). Idempotente se for a mesma.
+  if v_vencedora_anterior is not null and v_vencedora_anterior <> p_proposta then
+    update public.propostas set status = 'analise' where id = v_vencedora_anterior;
+  end if;
 
   update public.propostas set status = 'vencedora' where id = p_proposta;
   update public.certames
@@ -55,25 +62,40 @@ set search_path = public
 as $$
 declare
   v_org uuid;
+  v_afetou integer;
 begin
-  if p_proposta_status not in ('recebida', 'analise', 'vencedora', 'desclassificada') then
-    raise exception 'status de proposta inválido';
+  -- Reverter nunca mantém 'vencedora' (senão não desfez nada).
+  if p_proposta_status not in ('recebida', 'analise', 'desclassificada') then
+    raise exception 'status de proposta inválido para desfazer';
   end if;
-  if p_certame_status not in ('aberta', 'analise', 'adjudicada') then
-    raise exception 'status de certame inválido';
+  if p_certame_status not in ('aberta', 'analise') then
+    raise exception 'status de certame inválido para desfazer';
   end if;
 
   select org_id into v_org from public.propostas where id = p_proposta and deleted_at is null;
   if v_org is null then raise exception 'proposta não encontrada'; end if;
 
+  -- Só desfaz se ESTA proposta é a vencedora corrente do certame (guarda real,
+  -- não baseada apenas no enum vindo do cliente).
   update public.certames
     set status = p_certame_status, vencedora_proposta_id = null
-    where id = p_certame and vencedora_proposta_id = p_proposta;
-  update public.propostas set status = p_proposta_status where id = p_proposta;
+    where id = p_certame and vencedora_proposta_id = p_proposta and status = 'adjudicada';
+  get diagnostics v_afetou = row_count;
+  if v_afetou = 0 then
+    raise exception 'nada a desfazer: a proposta não é a vencedora corrente';
+  end if;
+
+  update public.propostas set status = p_proposta_status
+    where id = p_proposta and status = 'vencedora';
 
   insert into public.eventos (org_id, entidade, entidade_id, tipo, payload)
     values (v_org, 'proposta', p_proposta, 'vencedora_desfeita',
             jsonb_build_object('certame', p_certame));
+exception
+  when unique_violation then
+    -- Reabrir o certame colidiu com outro certame ativo da mesma obra+categoria
+    -- (criado na janela do Desfazer).
+    raise exception 'não foi possível desfazer: já existe outro certame ativo desta categoria';
 end;
 $$;
 

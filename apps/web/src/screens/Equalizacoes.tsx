@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { compararPropostas, formatBRL, formatBRLCompact, type PropostaComparavel } from '@bid/core';
 import { Autocomplete, Button, Icon } from '@bid/ui';
+import { useQueryClient } from '@tanstack/react-query';
 import {
+  invalidarVencedora,
   useCriarEqualizacao,
   useDefinirVencedora,
-  useDesfazerVencedora,
   useEqualizacao,
   useEqualizacoes,
   useEqualizarIA,
@@ -15,6 +16,7 @@ import {
   usePropostasPorCategoria,
   useSugestoes,
 } from '../data/hooks';
+import { desfazerVencedora } from '../data/mutations';
 import { useToast } from '../app/Toast';
 
 /* ---------- Lista ---------- */
@@ -337,8 +339,8 @@ export function EqualizacaoScreen() {
   const { data, isLoading, isError } = useEqualizacao(id);
   const rodarIA = useEqualizarIA();
   const definir = useDefinirVencedora();
-  const desfazer = useDesfazerVencedora();
   const toast = useToast();
+  const qc = useQueryClient();
   const [erroIA, setErroIA] = useState<string | null>(null);
 
   const comp = useMemo(() => (data ? compararPropostas(data.propostas) : null), [data]);
@@ -384,7 +386,14 @@ export function EqualizacaoScreen() {
       const anterior = await definir.mutateAsync(propostaId);
       toast('Definida como vencedora — certame adjudicado.', {
         actionLabel: 'Desfazer',
-        onAction: () => desfazer.mutate({ propostaId, anterior }),
+        onAction: async () => {
+          try {
+            await desfazerVencedora({ propostaId, anterior });
+            invalidarVencedora(qc);
+          } catch {
+            toast('Não foi possível desfazer.');
+          }
+        },
       });
     } catch {
       toast('Não foi possível definir a vencedora.');
@@ -415,6 +424,7 @@ export function EqualizacaoScreen() {
           {data.propostas.map((p) => {
             const m = comp.marcadores[p.id];
             const recomendada = ia?.recomendacao?.proposta_id === p.id;
+            const ehVencedora = data.vencedoraPropostaId === p.id;
             return (
               <div
                 key={p.id}
@@ -437,16 +447,23 @@ export function EqualizacaoScreen() {
                 <Linha rotulo="Pagamento" valor={p.condicaoPagamento ?? '—'} />
                 <Linha rotulo="Garantia" valor={p.garantia ?? '—'} />
                 <div style={{ marginTop: 10 }}>
-                  <Button
-                    size="sm"
-                    variant={recomendada ? 'primary' : 'soft'}
-                    icon="trophy"
-                    block
-                    disabled={definir.isPending}
-                    onClick={() => marcarVencedora(p.id)}
-                  >
-                    Definir vencedora
-                  </Button>
+                  {ehVencedora ? (
+                    <span className="pill adjudicada" style={{ width: '100%', justifyContent: 'center' }}>
+                      <Icon name="trophy" style={{ width: 13, height: 13 }} />
+                      Vencedora
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={recomendada ? 'primary' : 'soft'}
+                      icon="trophy"
+                      block
+                      disabled={definir.isPending}
+                      onClick={() => marcarVencedora(p.id)}
+                    >
+                      Definir vencedora
+                    </Button>
+                  )}
                 </div>
               </div>
             );
