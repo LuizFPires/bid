@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { formatBRL, formatBRLCompact, formatNumber, parseBRL } from './money';
 
-//   é o espaço fino que o Intl insere depois de "R$".
-const nbsp = ' ';
+// O Intl insere um espaço não separável (U+00A0) depois de "R$".
+const nbsp = String.fromCharCode(0xa0);
 
 describe('formatBRL', () => {
   it('formata no padrão brasileiro', () => {
