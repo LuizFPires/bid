@@ -4,10 +4,20 @@ import {
   fetchObras,
   fetchObra,
   fetchProposta,
+  fetchEqualizacoes,
+  fetchEqualizacao,
+  fetchPropostasDoCertame,
+  fetchPropostasPorCategoria,
   fetchSugestoes,
   fetchMinhaOrg,
 } from './queries';
-import { criarObra, criarProposta, criarVersao } from './mutations';
+import {
+  criarObra,
+  criarProposta,
+  criarVersao,
+  criarEqualizacao,
+  equalizarIA,
+} from './mutations';
 
 export function useAcervo() {
   return useQuery({ queryKey: ['acervo'], queryFn: fetchAcervo });
@@ -30,6 +40,35 @@ export function useProposta(id: string | undefined) {
     queryKey: ['proposta', id],
     queryFn: () => fetchProposta(id as string),
     enabled: Boolean(id),
+  });
+}
+
+export function useEqualizacoes() {
+  return useQuery({ queryKey: ['equalizacoes'], queryFn: fetchEqualizacoes });
+}
+
+export function useEqualizacao(id: string | undefined) {
+  return useQuery({
+    queryKey: ['equalizacao', id],
+    queryFn: () => fetchEqualizacao(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+export function usePropostasDoCertame(certameId: string | undefined) {
+  return useQuery({
+    queryKey: ['propostas-certame', certameId],
+    queryFn: () => fetchPropostasDoCertame(certameId as string),
+    enabled: Boolean(certameId),
+  });
+}
+
+export function usePropostasPorCategoria(categoria: string) {
+  const c = categoria.trim();
+  return useQuery({
+    queryKey: ['propostas-categoria', c],
+    queryFn: () => fetchPropostasPorCategoria(c),
+    enabled: c.length > 0,
   });
 }
 
@@ -72,6 +111,28 @@ export function useCriarVersao() {
     onSuccess: (_n, vars) => {
       qc.invalidateQueries({ queryKey: ['proposta', vars.propostaId] });
       qc.invalidateQueries({ queryKey: ['acervo'] });
+    },
+  });
+}
+
+export function useCriarEqualizacao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: criarEqualizacao,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['equalizacoes'] });
+      qc.invalidateQueries({ queryKey: ['obras'] });
+    },
+  });
+}
+
+export function useEqualizarIA() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: equalizarIA,
+    onSuccess: (_v, equalizacaoId) => {
+      qc.invalidateQueries({ queryKey: ['equalizacao', equalizacaoId] });
+      qc.invalidateQueries({ queryKey: ['equalizacoes'] });
     },
   });
 }

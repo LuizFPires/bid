@@ -7,6 +7,7 @@ export { ObraScreen } from './Obra';
 export { NovaObraScreen } from './NovaObra';
 export { NovaPropostaScreen } from './NovaProposta';
 export { PropostaScreen } from './Proposta';
+export { EqualizacoesScreen, IniciarEqualizacaoScreen, EqualizacaoScreen } from './Equalizacoes';
 
 /** Telas ainda não implementadas (M4/M6) ficam como esqueleto. */
 function Placeholder({
@@ -37,17 +38,6 @@ function Placeholder({
         </div>
       </div>
     </>
-  );
-}
-
-export function EqualizacoesScreen() {
-  return (
-    <Placeholder
-      titulo="Equalizar"
-      lead="Compare concorrentes no mesmo nível, com apoio de IA."
-      icone="tab-equalizacoes"
-      vazio="Nenhuma equalização ainda. A comparação lado a lado chega no M4."
-    />
   );
 }
 

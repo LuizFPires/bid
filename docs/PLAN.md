@@ -35,11 +35,11 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** revisar uma proposta mantém o histórico; comparar duas versões mostra o que mudou. _(Revisão com arquivo PDF exige `ANTHROPIC_API_KEY`; o preenchimento manual funciona sem chave.)_
 
 ## M4 · Equalização (prioridade 3)
-- [ ] `core`: normalização e cálculo do comparativo (itens, prazo, pagamento, garantia, total; menor/maior).
-- [ ] Tela **Equalizações** (lista por estado) + **Iniciar equalização** (escopo, categoria, seleção de propostas).
-- [ ] Comparativo lado a lado + função `/ai/equalize` (análise e recomendação) salva em `equalizacoes`.
-- [ ] Equalização **entre obras** (mesma categoria, N obras).
-- **Aceite:** comparar um certame com várias propostas, rodar a IA e ver recomendação com justificativa; comparar a mesma categoria entre obras.
+- [x] `core`: comparativo (menor/maior valor e prazo, economia potencial) + normalização da análise IA — testados.
+- [x] Tela **Equalizar** (lista por estado) + **Iniciar equalização** (escopo, categoria, seleção de propostas).
+- [x] Comparativo lado a lado + função `/ai/equalize` (análise e recomendação) salva em `equalizacoes.resultado_ia`.
+- [x] Equalização **entre obras** (mesma categoria, N obras).
+- **Aceite:** comparar um certame com várias propostas, rodar a IA e ver recomendação com justificativa; comparar a mesma categoria entre obras. _(Comparativo lado a lado funciona sem chave; a recomendação da IA exige `ANTHROPIC_API_KEY` no servidor.)_
 
 ## M5 · Vencedora (prioridade 4a)
 - [ ] Definir vencedora pela equalização.
@@ -70,6 +70,10 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 ---
 
 ## Decisões
+- 30/10/2026 (revisão — M4) — Correções da revisão independente (0 crítico/alto, 2 médio, 4 baixo): o RPC `criar_equalizacao` passa a **amarrar as propostas ao escopo** (escopo obra → todas do certame; entre_obras → todas da categoria), fechando o furo intra-org; o banner de recomendação da IA só aparece quando aponta uma **proposta comparada** (id validado no core), com o fornecedor resolvido da proposta; `/ai/equalize` valida **≥2 propostas acessíveis** após o fetch e grava **evento `equalizacao_analisada`** (regra #10); empate TOTAL de valor/prazo não marca menor/maior (evita ruído); o comparativo preserva a **ordem de seleção** (`proposta_ids`). Sem vazamento entre orgs nem exposição de segredo.
+- 30/10/2026 (auto — M4) — **Comparativo lado a lado = client-side** com `core.compararPropostas` (menor/maior valor e prazo, economia potencial; nulos ignorados; só marca extremo com ≥2 bases). A **análise/recomendação por IA** (`/ai/equalize`) é **apoio opcional**, roda no servidor e grava em `equalizacoes.resultado_ia` — nunca decide sozinha (regra #6).
+- 30/10/2026 (auto — M4) — **Tabela `equalizacoes`** (SPEC): `escopo` ∈ {obra, entre_obras}, `categoria`, `certame_id` (nulo p/ entre_obras), `proposta_ids uuid[]`, `resultado_ia jsonb`, `criado_por`. Criada por **RPC `criar_equalizacao`** atômico (valida que as propostas são todas da org via RLS; para escopo obra exige certame e o move de `aberta`→`analise`; grava evento). RLS por org, soft-delete, `criado_por`/org imutáveis.
+- 30/10/2026 (auto — M4) — **Iniciar equalização**: escopo (uma obra ou entre obras) + categoria + seleção de propostas. Entre obras reúne propostas da mesma categoria de N obras (histórico de preços). Ação discreta no topo da aba Equalizar.
 - 30/10/2026 (revisão — M3) — Correções da revisão independente (0 crítico/1 alto/4 médio/3 baixo): **evento de auditoria** gravado em `criar_versao` **e** `criar_proposta` (fecha a regra #10, que o M2 tinha adiado); **data só-data** corrigida no core (`toDate` monta `YYYY-MM-DD` em horário local — não desloca -1 dia no Brasil), com teste; **upload separado da extração** nas duas telas (upload que falha não grava versão sem arquivo); **itens preservados** na nova versão (`dados_extraidos`); **corrida de versão** devolve mensagem amigável (`unique_violation`); join da proposta filtra `deleted_at`. Aceitos como follow-up: arquivo órfão no cancelamento após upload (limpeza por job futura; Nova proposta já tem dedupe) e revisar proposta já adjudicada permitido sem bloqueio (aviso sobre contrato derivado fica para o M6).
 - 30/10/2026 (auto — M3) — **Nova versão via RPC atômico** `criar_versao` (insere a versão n+1 e atualiza os campos "atuais" da proposta numa transação; histórico preservado). Reaproveita a extração por IA do M2 para preencher a revisão. Invariantes de numeração/atualização no banco; normalização pura no core.
 - 30/10/2026 (auto — M3) — **"Equalizar entre versões" = comparação client-side** (diff de valor/prazo/condições entre duas versões escolhidas), com os cálculos puros do `core` (`variacao`). A equalização **por IA** (com análise) é o M4; aqui não há IA.

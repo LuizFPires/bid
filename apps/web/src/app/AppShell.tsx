@@ -24,6 +24,17 @@ export function AppShell() {
               <Icon name="plus" />
             </button>
           )}
+          {active === 'equalizacoes' && (
+            <button
+              className="ticon"
+              type="button"
+              aria-label="Iniciar equalização"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => navigate('/equalizacoes/nova')}
+            >
+              <Icon name="plus" />
+            </button>
+          )}
           {active === 'obras' && (
             <button
               className="ticon"
