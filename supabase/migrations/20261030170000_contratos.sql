@@ -72,15 +72,29 @@ end $$;
 
 -- Storage: o PDF do contrato é gravado pela função (user-scoped) na pasta do
 -- usuário dentro do bucket privado `contratos`. (No M0 só havia SELECT do dono.)
+-- Caminho dos objetos: {org_id}/{user_id}/contrato-*.pdf. Além de owner_id,
+-- exige que a pasta do usuário (2º segmento) seja o próprio uid (defesa extra).
 drop policy if exists "bid_contratos_insert" on storage.objects;
 create policy "bid_contratos_insert" on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'contratos' and owner_id = (select auth.uid()::text));
+  with check (
+    bucket_id = 'contratos'
+    and owner_id = (select auth.uid()::text)
+    and (storage.foldername(name))[2] = (select auth.uid()::text)
+  );
 drop policy if exists "bid_contratos_update" on storage.objects;
 create policy "bid_contratos_update" on storage.objects
   for update to authenticated
-  using (bucket_id = 'contratos' and owner_id = (select auth.uid()::text))
-  with check (bucket_id = 'contratos' and owner_id = (select auth.uid()::text));
+  using (
+    bucket_id = 'contratos'
+    and owner_id = (select auth.uid()::text)
+    and (storage.foldername(name))[2] = (select auth.uid()::text)
+  )
+  with check (
+    bucket_id = 'contratos'
+    and owner_id = (select auth.uid()::text)
+    and (storage.foldername(name))[2] = (select auth.uid()::text)
+  );
 
 -- Criação atômica do contrato a partir da proposta VENCEDORA de um certame
 -- ADJUDICADO. As cláusulas (texto gerado no core) chegam em p_clausulas; o valor
