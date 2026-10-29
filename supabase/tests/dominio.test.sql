@@ -1,6 +1,6 @@
 -- Teste de política (pgTAP) do domínio. `supabase test db`.
 begin;
-select plan(11);
+select plan(14);
 
 -- Tabelas.
 select has_table('public', 'obras', 'obras existe');
@@ -53,6 +53,23 @@ select is(
     where schemaname='public' and tablename='eventos' and cmd='UPDATE'),
   0::bigint, 'eventos não tem UPDATE (append-only)'
 );
+
+-- Isolamento entre orgs: unique (id, org_id) nos pais (alvo das FKs compostas).
+select ok(
+  (select count(*) from pg_constraint
+    where conrelid = 'public.certames'::regclass and contype = 'u'
+      and conkey = (
+        select array_agg(attnum order by attnum) from pg_attribute
+        where attrelid = 'public.certames'::regclass and attname in ('id', 'org_id'))
+  ) >= 1,
+  'certames tem unique (id, org_id) para FK composta'
+);
+
+-- Triggers de integridade/segurança presentes.
+select isnt((select count(*) from pg_trigger where tgname = 'trg_propostas_guard_del'),
+  0::bigint, 'guard_soft_delete em propostas');
+select isnt((select count(*) from pg_trigger where tgname = 'trg_eventos_autor'),
+  0::bigint, 'force_evento_autor em eventos');
 
 select * from finish();
 rollback;
