@@ -70,6 +70,7 @@ begin
   return v_org;
 end;
 $$;
+revoke execute on function public.create_org(text) from public;
 grant execute on function public.create_org(text) to authenticated;
 
 -- Primeira organização + membership no cadastro do usuário.

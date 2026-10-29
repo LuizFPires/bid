@@ -3,7 +3,8 @@
 create or replace function public.registrar_sugestao(p_org uuid, p_tipo text, p_texto text)
 returns void language plpgsql security definer set search_path = public as $$
 begin
-  if auth.uid() is not null and not public.is_member(p_org) then
+  -- fail-closed: exige usuário autenticado e membro da org.
+  if auth.uid() is null or not public.is_member(p_org) then
     raise exception 'sem acesso à organização';
   end if;
   if coalesce(trim(p_texto), '') = '' then
@@ -15,4 +16,5 @@ begin
     do update set uso = public.sugestoes.uso + 1, updated_at = now();
 end;
 $$;
+revoke execute on function public.registrar_sugestao(uuid, text, text) from public;
 grant execute on function public.registrar_sugestao(uuid, text, text) to authenticated;
