@@ -54,15 +54,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const resp = await fetch(signed.signedUrl);
-  if (!resp.ok) {
+  if (!resp.ok || !resp.body) {
     res.status(502).json({ erro: 'Falha ao ler o arquivo do Storage.' });
     return;
   }
-  const buf = Buffer.from(await resp.arrayBuffer());
-  if (buf.byteLength > MAX_BYTES) {
+
+  // Corta ANTES de baixar: o Content-Length do objeto evita bufferizar à toa.
+  const declarado = Number(resp.headers.get('content-length'));
+  if (Number.isFinite(declarado) && declarado > MAX_BYTES) {
     res.status(413).json({ erro: 'Arquivo grande demais para extração (máx. 8 MB).' });
     return;
   }
+
+  // Defesa extra: lê em pedaços com contador e aborta se passar do limite
+  // (caso o Content-Length esteja ausente ou mentir).
+  const pedacos: Uint8Array[] = [];
+  let total = 0;
+  const reader = resp.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > MAX_BYTES) {
+      await reader.cancel();
+      res.status(413).json({ erro: 'Arquivo grande demais para extração (máx. 8 MB).' });
+      return;
+    }
+    pedacos.push(value);
+  }
+  const buf = Buffer.concat(pedacos);
 
   try {
     const dados = await extrairPropostaDePdf(buf.toString('base64'));

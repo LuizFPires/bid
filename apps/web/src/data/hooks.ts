@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAcervo, fetchObras, fetchObra, fetchSugestoes, fetchMinhaOrg } from './queries';
-import { criarObra } from './mutations';
+import { criarObra, criarProposta } from './mutations';
 
 export function useAcervo() {
   return useQuery({ queryKey: ['acervo'], queryFn: fetchAcervo });
@@ -32,6 +32,19 @@ export function useCriarObra() {
     mutationFn: criarObra,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['obras'] });
+      qc.invalidateQueries({ queryKey: ['sugestoes'] });
+    },
+  });
+}
+
+export function useCriarProposta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: criarProposta,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['acervo'] });
+      qc.invalidateQueries({ queryKey: ['obras'] });
+      qc.invalidateQueries({ queryKey: ['obra'] });
       qc.invalidateQueries({ queryKey: ['sugestoes'] });
     },
   });
