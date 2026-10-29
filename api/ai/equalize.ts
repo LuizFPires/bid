@@ -52,6 +52,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(502).json({ erro: 'Falha ao carregar as propostas.' });
     return;
   }
+  // As propostas podem ter perdido visibilidade (soft-delete) desde a criação:
+  // não analisa um conjunto degenerado.
+  if (props.length < 2) {
+    res.status(409).json({ erro: 'Menos de duas propostas acessíveis para comparar.' });
+    return;
+  }
 
   // Itens extraídos ficam na última versão de cada proposta (dados_extraidos).
   const { data: versoes } = await sb
@@ -87,11 +93,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const analise = await analisarEqualizacao(propostas);
-    const { error: upErr } = await sb.from('equalizacoes').update({ resultado_ia: analise }).eq('id', id);
-    if (upErr) {
+    const { data: eqRow, error: upErr } = await sb
+      .from('equalizacoes')
+      .update({ resultado_ia: analise })
+      .eq('id', id)
+      .select('org_id')
+      .single();
+    if (upErr || !eqRow) {
       res.status(502).json({ erro: 'Análise gerada, mas falhou ao salvar.' });
       return;
     }
+    // Trilha de auditoria: quem rodou a IA (regra #10). Best-effort.
+    await sb.from('eventos').insert({
+      org_id: (eqRow as { org_id: string }).org_id,
+      entidade: 'equalizacao',
+      entidade_id: id,
+      tipo: 'equalizacao_analisada',
+      payload: { recomendacao: analise.recomendacao.proposta_id },
+    });
     res.status(200).json({ analise });
   } catch (e) {
     if (e instanceof MissingEnvError) {

@@ -431,15 +431,20 @@ export function EqualizacaoScreen() {
       {ia ? (
         <div className="card">
           {ia.veredito && <p style={{ margin: '0 0 10px', fontWeight: 700 }}>{ia.veredito}</p>}
-          {ia.recomendacao?.fornecedor && (
-            <div className="banner ok" style={{ marginBottom: 10 }}>
-              <Icon name="trophy" />
-              <span>
-                <strong>Recomenda: {ia.recomendacao.fornecedor}.</strong>{' '}
-                {ia.recomendacao.justificativa ?? ''}
-              </span>
-            </div>
-          )}
+          {(() => {
+            // Só mostra a recomendação quando aponta uma proposta COMPARADA
+            // (o id é validado no core); o fornecedor vem da proposta resolvida.
+            const rec = data.propostas.find((p) => p.id === ia.recomendacao?.proposta_id);
+            if (!rec) return null;
+            return (
+              <div className="banner ok" style={{ marginBottom: 10 }}>
+                <Icon name="trophy" />
+                <span>
+                  <strong>Recomenda: {rec.fornecedor}.</strong> {ia.recomendacao?.justificativa ?? ''}
+                </span>
+              </div>
+            );
+          })()}
           {(ia.achados ?? []).map((a, i) => (
             <div key={i} style={{ marginBottom: 8 }}>
               <div style={{ fontWeight: 800, fontSize: 13 }}>{a.fornecedor}</div>

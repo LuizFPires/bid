@@ -378,7 +378,13 @@ export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe |
     .in('id', r.proposta_ids.length ? r.proposta_ids : ['00000000-0000-0000-0000-000000000000'])
     .is('deleted_at', null);
   if (pErr) throw pErr;
-  const propostas = ((pdata ?? []) as unknown as Parameters<typeof toComparavel>[0][]).map(toComparavel);
+  const mapaProp = new Map(
+    ((pdata ?? []) as unknown as Parameters<typeof toComparavel>[0][]).map((p) => [p.id, toComparavel(p)]),
+  );
+  // Preserva a ordem de seleção (`proposta_ids`): o Postgres não garante a ordem do `.in`.
+  const propostas = r.proposta_ids
+    .map((pid) => mapaProp.get(pid))
+    .filter((p): p is PropostaComparavel & { obraNome: string } => p !== undefined);
 
   const cert = one(r.certames);
   const obra = one(cert?.obras ?? null);

@@ -51,15 +51,18 @@ export function compararPropostas(props: readonly PropostaComparavel[]): Compara
 
   const comValor = valores.filter((v) => v !== null).length;
   const comPrazo = prazos.filter((v) => v !== null).length;
+  // Empate total (todos iguais) não marca nada — evita "menor" em todas.
+  const valorVaria = comValor > 1 && menorValor !== maiorValor;
+  const prazoVaria = comPrazo > 1 && menorPrazo !== maiorPrazo;
 
   const marcadores: Record<string, MarcadoresProposta> = {};
   for (const p of props) {
     marcadores[p.id] = {
       id: p.id,
-      menorValor: comValor > 1 && p.valor !== null && p.valor === menorValor,
-      maiorValor: comValor > 1 && p.valor !== null && p.valor === maiorValor,
-      menorPrazo: comPrazo > 1 && p.prazo !== null && p.prazo === menorPrazo,
-      maiorPrazo: comPrazo > 1 && p.prazo !== null && p.prazo === maiorPrazo,
+      menorValor: valorVaria && p.valor !== null && p.valor === menorValor,
+      maiorValor: valorVaria && p.valor !== null && p.valor === maiorValor,
+      menorPrazo: prazoVaria && p.prazo !== null && p.prazo === menorPrazo,
+      maiorPrazo: prazoVaria && p.prazo !== null && p.prazo === maiorPrazo,
     };
   }
 

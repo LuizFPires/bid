@@ -47,14 +47,29 @@ describe('compararPropostas', () => {
     expect(c.economiaPotencial).toBeNull();
   });
 
-  it('empate no menor valor marca ambos', () => {
+  it('empate total de valor não marca menor/maior (evita ruído)', () => {
     const c = compararPropostas([
       { id: 'a', fornecedor: 'A', valor: 1000, prazo: 90, condicaoPagamento: null, garantia: null },
       { id: 'b', fornecedor: 'B', valor: 1000, prazo: 80, condicaoPagamento: null, garantia: null },
     ]);
+    expect(c.marcadores['a']?.menorValor).toBe(false);
+    expect(c.marcadores['b']?.menorValor).toBe(false);
+    expect(c.economiaPotencial).toBeNull(); // maior == menor
+    // prazo varia, então marca o prazo normalmente
+    expect(c.marcadores['b']?.menorPrazo).toBe(true);
+    expect(c.marcadores['a']?.maiorPrazo).toBe(true);
+  });
+
+  it('empate parcial no menor valor marca os empatados (há um maior diferente)', () => {
+    const c = compararPropostas([
+      { id: 'a', fornecedor: 'A', valor: 1000, prazo: 90, condicaoPagamento: null, garantia: null },
+      { id: 'b', fornecedor: 'B', valor: 1000, prazo: 80, condicaoPagamento: null, garantia: null },
+      { id: 'c', fornecedor: 'C', valor: 1200, prazo: 70, condicaoPagamento: null, garantia: null },
+    ]);
     expect(c.marcadores['a']?.menorValor).toBe(true);
     expect(c.marcadores['b']?.menorValor).toBe(true);
-    expect(c.economiaPotencial).toBeNull(); // maior == menor
+    expect(c.marcadores['c']?.maiorValor).toBe(true);
+    expect(c.economiaPotencial).toBe(200);
   });
 
   it('lista vazia: tudo nulo', () => {

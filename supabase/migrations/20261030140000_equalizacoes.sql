@@ -120,6 +120,25 @@ begin
   end if;
   v_org := v_orgs[1];
 
+  -- As propostas precisam pertencer ao escopo informado (fronteira de confiança):
+  -- escopo obra => todas do certame; entre_obras => todas da categoria.
+  if p_escopo = 'obra' then
+    if exists (
+      select 1 from public.propostas
+      where id = any (p_proposta_ids) and certame_id is distinct from p_certame
+    ) then
+      raise exception 'todas as propostas devem ser do certame informado';
+    end if;
+  else
+    if exists (
+      select 1 from public.propostas p
+      join public.certames c on c.id = p.certame_id
+      where p.id = any (p_proposta_ids) and c.categoria is distinct from v_categoria
+    ) then
+      raise exception 'todas as propostas devem ser da categoria informada';
+    end if;
+  end if;
+
   insert into public.equalizacoes (org_id, escopo, categoria, certame_id, proposta_ids)
     values (v_org, p_escopo, v_categoria, v_certame, p_proposta_ids)
     returning id into v_eq;
