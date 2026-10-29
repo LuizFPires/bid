@@ -42,10 +42,10 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** comparar um certame com várias propostas, rodar a IA e ver recomendação com justificativa; comparar a mesma categoria entre obras. _(Comparativo lado a lado funciona sem chave; a recomendação da IA exige `ANTHROPIC_API_KEY` no servidor.)_
 
 ## M5 · Vencedora (prioridade 4a)
-- [ ] Definir vencedora pela equalização.
-- [ ] **Definir vencedora direto na proposta** (sem equalizar), incl. caso de proposta única; adjudica o certame.
-- [ ] "Desfazer" (toast) ao trocar vencedora; eventos de auditoria.
-- **Aceite:** marcar vencedora pelos dois caminhos; status e certame atualizam; aparece disponível para contrato.
+- [x] Definir vencedora pela equalização (botão em cada proposta do comparativo).
+- [x] **Definir vencedora direto na proposta** (sem equalizar), incl. caso de proposta única; adjudica o certame.
+- [x] "Desfazer" (toast de 5s) ao definir vencedora; eventos de auditoria (`vencedora_definida`/`_desfeita`).
+- **Aceite:** marcar vencedora pelos dois caminhos; status e certame atualizam; disponível para contrato (M6).
 
 ## M6 · Contrato a partir da vencedora (prioridade 4b)
 - [ ] Gerar contrato vinculando a proposta (Anexo I) e a equalização (anexo).

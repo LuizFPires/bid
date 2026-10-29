@@ -17,6 +17,8 @@ import {
   criarVersao,
   criarEqualizacao,
   equalizarIA,
+  definirVencedora,
+  desfazerVencedora,
 } from './mutations';
 
 export function useAcervo() {
@@ -123,6 +125,32 @@ export function useCriarEqualizacao() {
       qc.invalidateQueries({ queryKey: ['equalizacoes'] });
       qc.invalidateQueries({ queryKey: ['obras'] });
     },
+  });
+}
+
+/** Invalida tudo que reflete a adjudicação (proposta, acervo, obras, equalizações). */
+function invalidarVencedora(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['proposta'] });
+  qc.invalidateQueries({ queryKey: ['acervo'] });
+  qc.invalidateQueries({ queryKey: ['obras'] });
+  qc.invalidateQueries({ queryKey: ['obra'] });
+  qc.invalidateQueries({ queryKey: ['equalizacoes'] });
+  qc.invalidateQueries({ queryKey: ['equalizacao'] });
+}
+
+export function useDefinirVencedora() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: definirVencedora,
+    onSuccess: () => invalidarVencedora(qc),
+  });
+}
+
+export function useDesfazerVencedora() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: desfazerVencedora,
+    onSuccess: () => invalidarVencedora(qc),
   });
 }
 

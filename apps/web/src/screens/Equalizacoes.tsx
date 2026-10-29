@@ -4,6 +4,8 @@ import { compararPropostas, formatBRL, formatBRLCompact, type PropostaComparavel
 import { Autocomplete, Button, Icon } from '@bid/ui';
 import {
   useCriarEqualizacao,
+  useDefinirVencedora,
+  useDesfazerVencedora,
   useEqualizacao,
   useEqualizacoes,
   useEqualizarIA,
@@ -13,6 +15,7 @@ import {
   usePropostasPorCategoria,
   useSugestoes,
 } from '../data/hooks';
+import { useToast } from '../app/Toast';
 
 /* ---------- Lista ---------- */
 
@@ -333,6 +336,9 @@ export function EqualizacaoScreen() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useEqualizacao(id);
   const rodarIA = useEqualizarIA();
+  const definir = useDefinirVencedora();
+  const desfazer = useDesfazerVencedora();
+  const toast = useToast();
   const [erroIA, setErroIA] = useState<string | null>(null);
 
   const comp = useMemo(() => (data ? compararPropostas(data.propostas) : null), [data]);
@@ -370,6 +376,18 @@ export function EqualizacaoScreen() {
       await rodarIA.mutateAsync(id);
     } catch (err) {
       setErroIA(err instanceof Error ? err.message : 'Falha na análise por IA.');
+    }
+  }
+
+  async function marcarVencedora(propostaId: string) {
+    try {
+      const anterior = await definir.mutateAsync(propostaId);
+      toast('Definida como vencedora — certame adjudicado.', {
+        actionLabel: 'Desfazer',
+        onAction: () => desfazer.mutate({ propostaId, anterior }),
+      });
+    } catch {
+      toast('Não foi possível definir a vencedora.');
     }
   }
 
@@ -418,6 +436,18 @@ export function EqualizacaoScreen() {
                 <Linha rotulo="Prazo" valor={p.prazo != null ? `${p.prazo} dias` : '—'} badge={m?.menorPrazo ? 'menor' : m?.maiorPrazo ? 'maior' : null} />
                 <Linha rotulo="Pagamento" valor={p.condicaoPagamento ?? '—'} />
                 <Linha rotulo="Garantia" valor={p.garantia ?? '—'} />
+                <div style={{ marginTop: 10 }}>
+                  <Button
+                    size="sm"
+                    variant={recomendada ? 'primary' : 'soft'}
+                    icon="trophy"
+                    block
+                    disabled={definir.isPending}
+                    onClick={() => marcarVencedora(p.id)}
+                  >
+                    Definir vencedora
+                  </Button>
+                </div>
               </div>
             );
           })}

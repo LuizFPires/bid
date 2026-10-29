@@ -197,6 +197,38 @@ export async function equalizarIA(equalizacaoId: string): Promise<void> {
   }
 }
 
+/* ---------- Vencedora (adjudicação) ---------- */
+
+export interface VencedoraEstadoAnterior {
+  certame_id: string;
+  proposta_status_anterior: string;
+  certame_status_anterior: string;
+}
+
+/** Marca a proposta como vencedora e adjudica o certame. Devolve o estado
+ *  anterior para o "Desfazer". */
+export async function definirVencedora(propostaId: string): Promise<VencedoraEstadoAnterior> {
+  const { data, error } = await db().rpc('definir_vencedora', { p_proposta: propostaId });
+  if (error) throw error;
+  return data as VencedoraEstadoAnterior;
+}
+
+export interface DesfazerVencedoraInput {
+  propostaId: string;
+  anterior: VencedoraEstadoAnterior;
+}
+
+/** Desfaz a adjudicação, revertendo aos estados anteriores (toast de 5s). */
+export async function desfazerVencedora(input: DesfazerVencedoraInput): Promise<void> {
+  const { error } = await db().rpc('desfazer_vencedora', {
+    p_proposta: input.propostaId,
+    p_certame: input.anterior.certame_id,
+    p_proposta_status: input.anterior.proposta_status_anterior,
+    p_certame_status: input.anterior.certame_status_anterior,
+  });
+  if (error) throw error;
+}
+
 export interface NovaVersaoInput {
   propostaId: string;
   /** Dados já conferidos/editados pelo usuário. */

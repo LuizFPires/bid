@@ -11,9 +11,15 @@ import {
   type Variacao,
 } from '@bid/core';
 import { Button, Icon } from '@bid/ui';
-import { useCriarVersao, useProposta } from '../data/hooks';
+import {
+  useCriarVersao,
+  useDefinirVencedora,
+  useDesfazerVencedora,
+  useProposta,
+} from '../data/hooks';
 import { extrairProposta, uploadPropostaArquivo } from '../data/mutations';
 import { urlArquivoProposta, type VersaoDetalhe } from '../data/queries';
+import { useToast } from '../app/Toast';
 
 /** Mostra a variação de um valor entre versões, com seta e sinal (não só cor). */
 function Delta({ v, money }: { v: Variacao; money?: boolean }) {
@@ -44,6 +50,9 @@ export function PropostaScreen() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useProposta(id);
   const [modo, setModo] = useState<'ver' | 'nova'>('ver');
+  const definir = useDefinirVencedora();
+  const desfazer = useDesfazerVencedora();
+  const toast = useToast();
 
   if (isLoading) {
     return (
@@ -72,6 +81,19 @@ export function PropostaScreen() {
   }
 
   const label = PROPOSTA_LABEL[data.status];
+
+  async function marcarVencedora() {
+    if (!data) return;
+    try {
+      const anterior = await definir.mutateAsync(data.id);
+      toast('Definida como vencedora — certame adjudicado.', {
+        actionLabel: 'Desfazer',
+        onAction: () => desfazer.mutate({ propostaId: data.id, anterior }),
+      });
+    } catch {
+      toast('Não foi possível definir a vencedora.');
+    }
+  }
 
   return (
     <>
@@ -108,10 +130,15 @@ export function PropostaScreen() {
 
       {modo === 'ver' ? (
         <>
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
             <Button variant="soft" icon="layers" onClick={() => setModo('nova')}>
               Revisar (nova versão)
             </Button>
+            {data.status !== 'vencedora' && (
+              <Button icon="trophy" disabled={definir.isPending} onClick={marcarVencedora}>
+                {definir.isPending ? 'Definindo…' : 'Definir como vencedora'}
+              </Button>
+            )}
           </div>
           <Timeline versoes={data.versoes} />
           {data.versoes.length >= 2 && <Comparar versoes={data.versoes} />}

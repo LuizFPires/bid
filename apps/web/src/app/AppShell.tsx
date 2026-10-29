@@ -1,5 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BrandLogo, Icon, TabBar, type TabKey } from '@bid/ui';
+import { ToastProvider } from './Toast';
 
 /** Casca do app: topo com a marca, conteúdo roteado e abas inferiores. */
 export function AppShell() {
@@ -11,6 +12,7 @@ export function AppShell() {
   return (
     <div className="stage">
       <div className="device">
+        <ToastProvider>
         <header className="topbar">
           <BrandLogo />
           {active === 'propostas' && (
@@ -55,7 +57,8 @@ export function AppShell() {
           <Outlet />
         </main>
 
-        <TabBar active={active} onNavigate={(key) => navigate(`/${key}`)} />
+          <TabBar active={active} onNavigate={(key) => navigate(`/${key}`)} />
+        </ToastProvider>
       </div>
     </div>
   );

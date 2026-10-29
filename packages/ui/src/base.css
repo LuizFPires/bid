@@ -1239,6 +1239,47 @@ table.eq .high {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+.toast-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 84px;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  z-index: 60;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.toast .msg {
+  flex: 1;
+}
+.toast button {
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 6px 8px;
+  min-height: 36px;
+  border-radius: 8px;
+}
 .dropzone {
   display: flex;
   flex-direction: column;
