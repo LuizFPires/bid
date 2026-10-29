@@ -15,6 +15,8 @@ import {
   PropostaScreen,
   IniciarEqualizacaoScreen,
   EqualizacaoScreen,
+  NovoContratoScreen,
+  ContratoScreen,
 } from './screens';
 
 function Gate() {
@@ -50,6 +52,8 @@ function Gate() {
         <Route path="equalizacoes/nova" element={<IniciarEqualizacaoScreen />} />
         <Route path="equalizacoes/:id" element={<EqualizacaoScreen />} />
         <Route path="contratos" element={<ContratosScreen />} />
+        <Route path="contratos/nova" element={<NovoContratoScreen />} />
+        <Route path="contratos/:id" element={<ContratoScreen />} />
         <Route path="obras" element={<ObrasScreen />} />
         <Route path="obras/nova" element={<NovaObraScreen />} />
         <Route path="obras/:id" element={<ObraScreen />} />

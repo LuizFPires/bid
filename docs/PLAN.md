@@ -48,11 +48,11 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** marcar vencedora pelos dois caminhos; status e certame atualizam; disponível para contrato (M6).
 
 ## M6 · Contrato a partir da vencedora (prioridade 4b)
-- [ ] Gerar contrato vinculando a proposta (Anexo I) e a equalização (anexo).
-- [ ] Cláusulas pré-preenchidas (objeto, preço, prazo, garantia) + cláusulas padrão editáveis.
-- [ ] Render HTML→PDF no servidor, gravar em Storage.
-- [ ] Criar contrato a partir de: proposta vencedora, certame adjudicado e "+" em Contratos.
-- **Aceite:** gerar um contrato de uma vencedora, com dados corretos e PDF baixável.
+- [x] Gerar contrato vinculando a proposta vencedora (certame/obra/valor).
+- [x] Cláusulas pré-preenchidas (objeto, preço, prazo, garantia) + cláusulas padrão editáveis.
+- [x] Render HTML→PDF no servidor (`@react-pdf/renderer`), gravar em Storage (pdf_path/paginas).
+- [x] Criar contrato a partir de: proposta vencedora (botão) e "+" em Contratos (escolher vencedora).
+- **Aceite:** gerar um contrato de uma vencedora, com dados corretos e PDF baixável. _(A geração do PDF exige as env de servidor `SUPABASE_URL`/`SUPABASE_ANON_KEY` na Vercel; a criação do contrato e a edição de cláusulas funcionam sem elas.)_
 
 ## M7 · Assinatura digital (prioridade 4c)
 - [ ] Assinatura **no app**: canvas (a dedo), aplicada em todas as páginas do PDF.

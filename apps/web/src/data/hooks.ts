@@ -10,6 +10,7 @@ import {
   fetchPropostasPorCategoria,
   fetchContratos,
   fetchContrato,
+  fetchVencedoras,
   fetchSugestoes,
   fetchMinhaOrg,
 } from './queries';
@@ -89,6 +90,10 @@ export function useContrato(id: string | undefined) {
     queryFn: () => fetchContrato(id as string),
     enabled: Boolean(id),
   });
+}
+
+export function useVencedoras() {
+  return useQuery({ queryKey: ['vencedoras'], queryFn: fetchVencedoras });
 }
 
 export function useCriarContrato() {

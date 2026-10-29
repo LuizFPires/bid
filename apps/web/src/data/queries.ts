@@ -541,6 +541,39 @@ export async function fetchContrato(id: string): Promise<ContratoDetalhe | null>
   };
 }
 
+export interface VencedoraResumo {
+  id: string;
+  fornecedor: string;
+  categoria: string;
+  obraNome: string;
+}
+
+/** Propostas vencedoras (para criar contrato a partir delas). */
+export async function fetchVencedoras(): Promise<VencedoraResumo[]> {
+  const { data, error } = await db()
+    .from('propostas')
+    .select('id, fornecedor, certames!inner ( categoria, status, obras!inner ( nome ) )')
+    .eq('status', 'vencedora')
+    .eq('certames.status', 'adjudicada')
+    .is('deleted_at', null)
+    .is('certames.deleted_at', null);
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as {
+    id: string;
+    fornecedor: string;
+    certames: { categoria: string; obras: { nome: string } | { nome: string }[] | null } | { categoria: string }[] | null;
+  }[];
+  return rows.map((r) => {
+    const cert = one(r.certames as { categoria: string; obras?: { nome: string } | { nome: string }[] | null } | null);
+    return {
+      id: r.id,
+      fornecedor: r.fornecedor,
+      categoria: cert?.categoria ?? '',
+      obraNome: one(cert?.obras ?? null)?.nome ?? '',
+    };
+  });
+}
+
 /** URL assinada (curta) para baixar o PDF do contrato (bucket privado). */
 export async function urlContratoPdf(path: string): Promise<string> {
   const { data, error } = await db().storage.from('contratos').createSignedUrl(path, 120);

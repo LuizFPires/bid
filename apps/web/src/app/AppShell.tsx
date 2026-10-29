@@ -37,6 +37,17 @@ export function AppShell() {
               <Icon name="plus" />
             </button>
           )}
+          {active === 'contratos' && (
+            <button
+              className="ticon"
+              type="button"
+              aria-label="Novo contrato"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => navigate('/contratos/nova')}
+            >
+              <Icon name="plus" />
+            </button>
+          )}
           {active === 'obras' && (
             <button
               className="ticon"
