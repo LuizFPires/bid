@@ -12,7 +12,13 @@ const DIAS_CHEIO = [
 ] as const;
 
 function toDate(d: Date | string): Date {
-  return typeof d === 'string' ? new Date(d) : d;
+  if (typeof d !== 'string') return d;
+  // Data só-data ("YYYY-MM-DD", coluna `date` do Postgres): montar em horário
+  // LOCAL. `new Date("2026-10-30")` seria meia-noite UTC e, no Brasil (UTC-3),
+  // `getDate()` devolveria o dia anterior.
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(d);
 }
 
 function pad(n: number): string {

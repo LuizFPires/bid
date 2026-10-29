@@ -29,10 +29,10 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** informar obra + categoria, anexar arquivo, a IA preenche os dados, o usuário confere e arquiva; a proposta aparece no acervo. _(Fluxo e UI prontos; a extração ponta a ponta exige `ANTHROPIC_API_KEY` no servidor — verificação no preview da Vercel após provisionar.)_
 
 ## M3 · Controle de versões (prioridade 2)
-- [ ] Nova versão de uma proposta (novo arquivo + extração + histórico).
-- [ ] Tela da proposta: linha do tempo de versões, variação de valor/prazo, arquivos originais.
-- [ ] Equalização **entre versões** de uma proposta.
-- **Aceite:** revisar uma proposta mantém o histórico; comparar duas versões mostra o que mudou.
+- [x] Nova versão de uma proposta (novo arquivo + extração + histórico) via RPC atômico `criar_versao`.
+- [x] Tela da proposta (`/propostas/:id`): linha do tempo de versões, variação de valor/prazo, download dos arquivos originais (URL assinada).
+- [x] Equalização **entre versões** de uma proposta (diff client-side de valor/prazo/condições; a IA é M4).
+- **Aceite:** revisar uma proposta mantém o histórico; comparar duas versões mostra o que mudou. _(Revisão com arquivo PDF exige `ANTHROPIC_API_KEY`; o preenchimento manual funciona sem chave.)_
 
 ## M4 · Equalização (prioridade 3)
 - [ ] `core`: normalização e cálculo do comparativo (itens, prazo, pagamento, garantia, total; menor/maior).
@@ -70,6 +70,10 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 ---
 
 ## Decisões
+- 30/10/2026 (revisão — M3) — Correções da revisão independente (0 crítico/1 alto/4 médio/3 baixo): **evento de auditoria** gravado em `criar_versao` **e** `criar_proposta` (fecha a regra #10, que o M2 tinha adiado); **data só-data** corrigida no core (`toDate` monta `YYYY-MM-DD` em horário local — não desloca -1 dia no Brasil), com teste; **upload separado da extração** nas duas telas (upload que falha não grava versão sem arquivo); **itens preservados** na nova versão (`dados_extraidos`); **corrida de versão** devolve mensagem amigável (`unique_violation`); join da proposta filtra `deleted_at`. Aceitos como follow-up: arquivo órfão no cancelamento após upload (limpeza por job futura; Nova proposta já tem dedupe) e revisar proposta já adjudicada permitido sem bloqueio (aviso sobre contrato derivado fica para o M6).
+- 30/10/2026 (auto — M3) — **Nova versão via RPC atômico** `criar_versao` (insere a versão n+1 e atualiza os campos "atuais" da proposta numa transação; histórico preservado). Reaproveita a extração por IA do M2 para preencher a revisão. Invariantes de numeração/atualização no banco; normalização pura no core.
+- 30/10/2026 (auto — M3) — **"Equalizar entre versões" = comparação client-side** (diff de valor/prazo/condições entre duas versões escolhidas), com os cálculos puros do `core` (`variacao`). A equalização **por IA** (com análise) é o M4; aqui não há IA.
+- 30/10/2026 (auto — M3) — **Tela da proposta** em `/propostas/:id`: linha do tempo das versões (variação de valor/prazo entre revisões), download dos arquivos originais por **URL assinada** (bucket privado), e seletor para comparar duas versões. Navegação a partir das linhas do acervo.
 - 29/10/2026 (revisão — M2) — **Criação de proposta atômica via RPC**: a gravação proposta + 1ª versão + certame virou o RPC transacional `criar_proposta` (SECURITY INVOKER, RLS vale). Resolve achados da revisão independente: escrita não atômica (proposta órfã) e corrida de certame. Um **índice único parcial** (`uq_certame_ativo_obra_categoria`) garante no máximo um certame ativo por obra+categoria. Atomicidade/corrida só se resolvem no banco, então as **invariantes de escrita** moram no RPC; o `core` mantém as **normalizações puras** (reaproveitadas no caminho de gravação manual — regra #1). Revisão: aprovada com ressalvas, 0 crítico/1 alto/2 médio corrigidos; baixos (path posicional, arquivo órfão) mitigados/anotados.
 - 29/10/2026 (auto — M2) — **Wiring das funções: `/api` na raiz** (zero-config da Vercel, Root Directory = raiz). Handlers em `/api/**`, compartilhados em `/api/_lib/` (prefixo `_` não vira rota). A lógica pura de extração mora em `packages/core`. Substitui o pacote `apps/api` (sancionado pelo CLAUDE.md: "ou /api no Vercel").
 - 29/10/2026 (auto — M2) — **A IA lê o arquivo via Storage**: o cliente faz upload para o bucket privado `propostas` (owner = usuário); o servidor baixa com a `service_role` e envia o PDF à Claude como bloco `document`. Evita trafegar o arquivo no corpo da requisição (limite 4,5 MB) e mantém o arquivo privado.

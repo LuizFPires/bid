@@ -92,28 +92,36 @@ export function NovaPropostaScreen() {
     e.preventDefault();
     if (!file || !obraId || !categoria.trim()) return;
     setErro(null);
+
+    // 1) Upload: se falhar, NÃO avança (senão gravaria proposta sem o arquivo).
+    let enviado: { file: File; path: string; ehPdf: boolean };
     try {
-      const enviado =
+      enviado =
         enviadoRef.current?.file === file
           ? enviadoRef.current
           : { ...(await uploadPropostaArquivo(file)), file };
       enviadoRef.current = enviado;
       setArquivoPath(enviado.path);
-
-      if (enviado.ehPdf) {
-        setFase('lendo');
-        const dados = await extrairProposta(enviado.path);
-        preencher(dados);
-      } else {
-        preencher(VAZIO);
-      }
-      setFase('conferir');
     } catch (err) {
-      // Mesmo se a IA falhar, segue para conferência manual (arquivo já subiu).
-      setErro(err instanceof Error ? err.message : 'Falha ao preparar a proposta.');
+      setErro(err instanceof Error ? err.message : 'Não foi possível enviar o arquivo.');
+      return;
+    }
+
+    // 2) Extração (só PDF): se falhar, segue para conferência manual — o arquivo
+    // já subiu, então o usuário preenche os dados à mão.
+    if (!enviado.ehPdf) {
       preencher(VAZIO);
       setFase('conferir');
+      return;
     }
+    setFase('lendo');
+    try {
+      preencher(await extrairProposta(enviado.path));
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'A IA não conseguiu ler; confira manualmente.');
+      preencher(VAZIO);
+    }
+    setFase('conferir');
   }
 
   async function salvar(e: FormEvent) {
