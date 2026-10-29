@@ -5,3 +5,4 @@ export * from './versions';
 export * from './acervo';
 export * from './extracao';
 export * from './equalizacao';
+export * from './clausulas';
