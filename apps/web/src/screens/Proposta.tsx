@@ -305,6 +305,8 @@ function NovaVersao({
   const [pagamento, setPagamento] = useState('');
   const [garantia, setGarantia] = useState('');
   const [obs, setObs] = useState('');
+  // Itens extraídos (não editáveis aqui, mas preservados em dados_extraidos).
+  const [itens, setItens] = useState<PropostaExtraida['itens']>([]);
 
   const ehPdf = !!file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
 
@@ -314,24 +316,36 @@ function NovaVersao({
     setPagamento(d.condicao_pagamento ?? '');
     setGarantia(d.garantia ?? '');
     setObs(d.observacoes ?? '');
+    setItens(d.itens);
   }
 
   async function anexar(e: FormEvent) {
     e.preventDefault();
     if (!file) return;
     setErro(null);
+
+    // 1) Upload: se falhar, permanece em 'anexar' (não grava versão sem arquivo).
+    let enviado: { path: string; ehPdf: boolean };
     try {
-      const enviado = await uploadPropostaArquivo(file);
+      enviado = await uploadPropostaArquivo(file);
       setArquivoPath(enviado.path);
-      if (enviado.ehPdf) {
-        setEtapa('lendo');
-        preencher(await extrairProposta(enviado.path));
-      }
-      setEtapa('conferir');
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Falha ao preparar a versão.');
-      setEtapa('conferir');
+      setErro(err instanceof Error ? err.message : 'Não foi possível enviar o arquivo.');
+      return;
     }
+
+    // 2) Extração (só PDF): falha segue para conferência manual (arquivo já subiu).
+    if (!enviado.ehPdf) {
+      setEtapa('conferir');
+      return;
+    }
+    setEtapa('lendo');
+    try {
+      preencher(await extrairProposta(enviado.path));
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'A IA não conseguiu ler; confira manualmente.');
+    }
+    setEtapa('conferir');
   }
 
   async function salvar(e: FormEvent) {
@@ -343,7 +357,7 @@ function NovaVersao({
       condicao_pagamento: pagamento,
       garantia,
       observacoes: obs,
-      itens: [],
+      itens,
     });
     try {
       await criar.mutateAsync({ propostaId, dados: limpos, arquivoPath });

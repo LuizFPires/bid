@@ -43,7 +43,20 @@ begin
     garantia = p_garantia
   where id = p_proposta;
 
+  -- Trilha de auditoria (regra #10): registra a revisão. O autor é forçado ao
+  -- usuário autenticado pelo trigger force_evento_autor.
+  insert into public.eventos (org_id, entidade, entidade_id, tipo, payload)
+  values (
+    v_org, 'proposta', p_proposta, 'versao_criada',
+    jsonb_build_object('n', v_n, 'valor', p_valor, 'prazo', p_prazo)
+  );
+
   return v_n;
+exception
+  when unique_violation then
+    -- Corrida: outra sessão criou a versão n em paralelo. Mensagem amigável
+    -- (a transação é abortada por inteiro — sem versão duplicada nem update perdido).
+    raise exception 'Esta proposta foi revisada em paralelo. Recarregue e tente de novo.';
 end;
 $$;
 

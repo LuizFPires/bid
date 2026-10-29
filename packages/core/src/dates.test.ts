@@ -22,3 +22,12 @@ describe('formatNumeric', () => {
     expect(formatNumeric(qui)).toBe('03/12/2026');
   });
 });
+
+describe('string só-data (coluna date) não desloca por fuso', () => {
+  it('formata o mesmo dia, independe do fuso', () => {
+    expect(formatNumeric('2026-10-30')).toBe('30/10/2026');
+    expect(formatNumeric('2026-01-01')).toBe('01/01/2026');
+    expect(formatShort('2026-10-21')).toBe('qua 21/10');
+    expect(formatFull('2026-12-03')).toBe('quinta, 03/12/2026');
+  });
+});

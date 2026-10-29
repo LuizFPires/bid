@@ -223,6 +223,8 @@ export async function fetchProposta(id: string): Promise<PropostaDetalhe | null>
     )
     .eq('id', id)
     .is('deleted_at', null)
+    .is('certames.deleted_at', null)
+    .is('certames.obras.deleted_at', null)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
