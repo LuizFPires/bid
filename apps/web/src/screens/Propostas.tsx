@@ -7,6 +7,7 @@ import {
   formatBRLCompact,
   type PropostaAcervo,
 } from '@bid/core';
+import { useNavigate } from 'react-router-dom';
 import { Icon } from '@bid/ui';
 import { useAcervo } from '../data/hooks';
 
@@ -96,7 +97,7 @@ export function PropostasScreen() {
           </div>
           <div className="card empty">
             {props.length === 0
-              ? 'Nenhuma proposta ainda. O cadastro com extração por IA chega no M2.'
+              ? 'Nenhuma proposta ainda. Toque em + para arquivar a primeira.'
               : 'Nada encontrado para este filtro.'}
           </div>
         </>
@@ -121,9 +122,23 @@ export function PropostasScreen() {
 }
 
 function AcervoRow({ p }: { p: PropostaAcervo }) {
+  const navigate = useNavigate();
   const vencedora = p.status === 'vencedora';
+  const abrir = () => navigate(`/propostas/${p.id}`);
   return (
-    <div className="row">
+    <div
+      className="row"
+      role="button"
+      tabIndex={0}
+      style={{ cursor: 'pointer' }}
+      onClick={abrir}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          abrir();
+        }
+      }}
+    >
       <span
         className="ic"
         style={vencedora ? { background: 'var(--ok-soft)', color: 'var(--ok)' } : undefined}

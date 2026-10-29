@@ -6,6 +6,7 @@ export { ObrasScreen } from './Obras';
 export { ObraScreen } from './Obra';
 export { NovaObraScreen } from './NovaObra';
 export { NovaPropostaScreen } from './NovaProposta';
+export { PropostaScreen } from './Proposta';
 
 /** Telas ainda não implementadas (M4/M6) ficam como esqueleto. */
 function Placeholder({

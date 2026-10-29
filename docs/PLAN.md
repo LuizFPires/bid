@@ -29,10 +29,10 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** informar obra + categoria, anexar arquivo, a IA preenche os dados, o usuário confere e arquiva; a proposta aparece no acervo. _(Fluxo e UI prontos; a extração ponta a ponta exige `ANTHROPIC_API_KEY` no servidor — verificação no preview da Vercel após provisionar.)_
 
 ## M3 · Controle de versões (prioridade 2)
-- [ ] Nova versão de uma proposta (novo arquivo + extração + histórico).
-- [ ] Tela da proposta: linha do tempo de versões, variação de valor/prazo, arquivos originais.
-- [ ] Equalização **entre versões** de uma proposta.
-- **Aceite:** revisar uma proposta mantém o histórico; comparar duas versões mostra o que mudou.
+- [x] Nova versão de uma proposta (novo arquivo + extração + histórico) via RPC atômico `criar_versao`.
+- [x] Tela da proposta (`/propostas/:id`): linha do tempo de versões, variação de valor/prazo, download dos arquivos originais (URL assinada).
+- [x] Equalização **entre versões** de uma proposta (diff client-side de valor/prazo/condições; a IA é M4).
+- **Aceite:** revisar uma proposta mantém o histórico; comparar duas versões mostra o que mudou. _(Revisão com arquivo PDF exige `ANTHROPIC_API_KEY`; o preenchimento manual funciona sem chave.)_
 
 ## M4 · Equalização (prioridade 3)
 - [ ] `core`: normalização e cálculo do comparativo (itens, prazo, pagamento, garantia, total; menor/maior).
