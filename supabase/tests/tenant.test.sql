@@ -1,6 +1,6 @@
 -- Teste de política (pgTAP) do modelo multi-tenant. `supabase test db`.
 begin;
-select plan(8);
+select plan(12);
 
 select has_table('public', 'organizacoes', 'tabela organizacoes existe');
 select has_table('public', 'membros', 'tabela membros existe');
@@ -16,6 +16,26 @@ select is(
 );
 
 select has_function('public', 'is_member', ARRAY['uuid'], 'função is_member existe');
+select has_function('public', 'is_gestor', ARRAY['uuid'], 'função is_gestor existe');
+select has_function('public', 'create_org', ARRAY['text'], 'função create_org existe');
+
+-- Criação só por RPC/trigger: sem INSERT direto pelo cliente.
+select is(
+  (select count(*) from pg_policies
+    where schemaname='public' and tablename='membros' and cmd='INSERT'),
+  0::bigint, 'membros não tem policy de INSERT pelo cliente'
+);
+select is(
+  (select count(*) from pg_policies
+    where schemaname='public' and tablename='organizacoes' and cmd='INSERT'),
+  0::bigint, 'organizacoes não tem policy de INSERT pelo cliente'
+);
+-- org_update exige gestor.
+select ok(
+  (select qual from pg_policies where schemaname='public' and tablename='organizacoes' and policyname='org_update')
+  like '%is_gestor%',
+  'org_update exige is_gestor'
+);
 
 -- trigger de signup presente em auth.users
 select isnt(

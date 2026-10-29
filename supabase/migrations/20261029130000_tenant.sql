@@ -42,6 +42,36 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
+-- Papel de gestor na org (para ações administrativas, ex.: editar a org).
+create or replace function public.is_gestor(p_org uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.membros
+    where org_id = p_org and user_id = auth.uid() and papel = 'gestor'
+  );
+$$;
+
+-- Criação de organização pelo cliente: insere a org e o vínculo de gestor do
+-- próprio usuário atomicamente. É o ÚNICO caminho de criação pelo cliente
+-- (não há INSERT direto em organizacoes/membros) — evita órfãs e evita que
+-- alguém se adicione a uma org alheia.
+create or replace function public.create_org(p_nome text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  v_org uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'não autenticado';
+  end if;
+  insert into public.organizacoes (nome)
+    values (coalesce(nullif(trim(p_nome), ''), 'Minha organização'))
+    returning id into v_org;
+  insert into public.membros (org_id, user_id, papel) values (v_org, auth.uid(), 'gestor');
+  return v_org;
+end;
+$$;
+grant execute on function public.create_org(text) to authenticated;
+
 -- Primeira organização + membership no cadastro do usuário.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -65,16 +95,15 @@ create trigger on_auth_user_created
 alter table public.organizacoes enable row level security;
 alter table public.membros enable row level security;
 
--- organizacoes: membros leem e editam a própria org; qualquer autenticado pode criar.
+-- organizacoes: membros leem; só gestor edita. A criação é pela RPC create_org
+-- (SECURITY DEFINER) — não há INSERT direto pelo cliente.
 create policy "org_select" on public.organizacoes
   for select to authenticated using (public.is_member(id));
-create policy "org_insert" on public.organizacoes
-  for insert to authenticated with check (true);
 create policy "org_update" on public.organizacoes
-  for update to authenticated using (public.is_member(id)) with check (public.is_member(id));
+  for update to authenticated using (public.is_gestor(id)) with check (public.is_gestor(id));
 
--- membros: cada um vê os membros das suas orgs; cria o próprio vínculo.
+-- membros: cada um vê os membros das suas orgs. Vínculos são criados só pelo
+-- trigger de signup e pela RPC create_org (ambos SECURITY DEFINER); não há
+-- INSERT direto pelo cliente (evita entrar em qualquer org).
 create policy "membros_select" on public.membros
   for select to authenticated using (public.is_member(org_id));
-create policy "membros_insert_self" on public.membros
-  for insert to authenticated with check (user_id = (select auth.uid()));
