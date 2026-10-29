@@ -7,11 +7,11 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 ---
 
 ## M0 · Fundação do projeto
-- [ ] Monorepo (web, core, ui, supabase) + Vite + TypeScript + PWA.
-- [ ] Supabase: projeto, Auth (magic link), buckets privados (`propostas`, `contratos`, `assinaturas`).
-- [ ] CI (lint, typecheck, testes) e deploy na Vercel (preview + production).
-- [ ] Design system bid em `packages/ui` (tokens índigo, componentes base, logomarca de propostas empilhadas em 3D).
-- **Aceite:** app vazio no ar (preview), login funcionando, pipeline verde.
+- [x] Monorepo (web, core, ui, supabase) + Vite + TypeScript + PWA.
+- [~] Supabase: projeto, Auth (magic link), buckets privados (`propostas`, `contratos`, `assinaturas`). — *código pronto* (config.toml, migration dos buckets + RLS por dono, login por link mágico no cliente); **aguarda o projeto Supabase (ação externa do usuário).**
+- [~] CI (lint, typecheck, testes) e deploy na Vercel (preview + production). — *arquivos prontos* (`.github/workflows/ci.yml`, `vercel.json`); **aguarda GitHub + Vercel (ação externa do usuário).**
+- [x] Design system bid em `packages/ui` (tokens índigo, componentes base, logomarca de propostas empilhadas em 3D).
+- **Aceite:** app vazio no ar (preview), login funcionando, pipeline verde. — *Parcial:* app roda e o login renderiza localmente (preview verificado); verificação local verde (lint, typecheck, 20 testes, build PWA). O **"no ar", o pipeline verde e o login real** dependem do provisionamento externo acima.
 
 ## M1 · Acervo de propostas (prioridade 1)
 - [ ] Modelo de dados: `obras`, `certames`, `propostas`, `proposta_versoes`, `sugestoes`, `eventos` (+ RLS).
@@ -77,3 +77,9 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - 29/10/2026 — **Vencedora pode ser definida direto** na proposta, sem equalização (caso de proposta única).
 - 29/10/2026 — Assinatura: **eletrônica simples** (a dedo + auditoria); ICP-Brasil fora de escopo nesta fase.
 - 29/10/2026 — App é **independente do CONTRO**.
+- 29/10/2026 (auto — recomendado) — **Monorepo pnpm workspaces**; TypeScript estrito; ESLint flat + Prettier; Vitest.
+- 29/10/2026 (auto — recomendado) — **API em Vercel Functions** (`apps/api`), não Edge Functions, por alinhar ao deploy Vercel e evitar runtime Deno extra. Edge Functions ficam como opção para webhooks/cron.
+- 29/10/2026 (auto — recomendado) — Web: **React Router v6**, **TanStack Query v5**, **vite-plugin-pwa** (autoUpdate). Fonte **Nunito Sans** via Google Fonts.
+- 29/10/2026 (auto — recomendado) — Como ainda não há remote/CI, os itens do M0 foram **commits locais na `main`** (um por item). O ciclo branch→PR→CI→merge do roteiro passa a valer quando o GitHub for conectado.
+- 29/10/2026 (segurança) — RLS de Storage **escopada ao dono** (`owner_id = auth.uid()`) no M0, corrigindo achado de IDOR entre inquilinos; `assinaturas` é trilha imutável só do servidor. O **escopo por organização** entra no M1 junto com o modelo de dados.
+- 29/10/2026 (pendência M0) — Fronteira de API (`apps/api`) são **stubs 501**; `@anthropic-ai/sdk` e o engine HTML→PDF entram nos milestones que os usam (M2/M4/M6). Mapeamento final das funções na Vercel a definir quando o deploy for conectado (um projeto raiz vs. projeto por app).
