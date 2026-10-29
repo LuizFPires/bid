@@ -74,6 +74,20 @@ describe('resumoAcervo', () => {
   it('conta e acha o menor valor', () => {
     expect(resumoAcervo(base)).toEqual({ total: 3, menorValor: 486300 });
   });
+  it('menorValor nulo quando todos os valores são nulos', () => {
+    const semValor = base.map((p) => ({ ...p, valor: null }));
+    expect(resumoAcervo(semValor)).toEqual({ total: 3, menorValor: null });
+  });
+});
+
+describe('filtrarAcervo · bordas', () => {
+  it('propostas sem valor vão para o fim da ordenação', () => {
+    const comNulo: PropostaAcervo[] = [
+      { ...base[0]!, id: 'x', valor: null },
+      { ...base[2]! },
+    ];
+    expect(filtrarAcervo(comNulo).map((p) => p.id)).toEqual(['h1', 'x']);
+  });
 });
 
 describe('categoriasDoAcervo', () => {
@@ -98,5 +112,10 @@ describe('sugestões', () => {
   it('filtra por termo sem acento', () => {
     expect(filtrarSugestoes(s, 'eletr').map((x) => x.texto)).toEqual(['Elétrica']);
     expect(filtrarSugestoes(s, 'es').map((x) => x.texto)).toEqual(['Esquadrias', 'Estrutura pré-moldada']);
+  });
+  it('respeita o limite', () => {
+    const muitas = Array.from({ length: 20 }, (_, i) => ({ texto: `Item ${i}`, uso: 1 }));
+    expect(filtrarSugestoes(muitas, '', 8)).toHaveLength(8);
+    expect(filtrarSugestoes(muitas, '')).toHaveLength(8); // default
   });
 });

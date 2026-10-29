@@ -5,6 +5,7 @@ import {
   podeContrato,
   PROPOSTA_LABEL,
   CERTAME_LABEL,
+  certameAtivo,
 } from './status';
 
 describe('transições de certame', () => {
@@ -40,5 +41,13 @@ describe('rótulos', () => {
   it('mapeiam tom para as pills', () => {
     expect(PROPOSTA_LABEL.vencedora.tom).toBe('adjudicada');
     expect(CERTAME_LABEL.aberta.tom).toBe('aberta');
+  });
+});
+
+describe('certameAtivo', () => {
+  it('ativo enquanto não adjudicado', () => {
+    expect(certameAtivo('aberta')).toBe(true);
+    expect(certameAtivo('analise')).toBe(true);
+    expect(certameAtivo('adjudicada')).toBe(false);
   });
 });

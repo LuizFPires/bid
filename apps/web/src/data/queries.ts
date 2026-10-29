@@ -1,4 +1,4 @@
-import type { PropostaAcervo, PropostaStatus } from '@bid/core';
+import { certameAtivo, type CertameStatus, type PropostaAcervo, type PropostaStatus } from '@bid/core';
 import { supabase } from '../lib/supabase';
 import type { Obra, Organizacao } from './types';
 
@@ -40,7 +40,9 @@ export async function fetchAcervo(): Promise<PropostaAcervo[]> {
       `id, fornecedor, status, valor_atual, versao_atual, certame_id,
        certames!inner ( id, titulo, categoria, obra_id, obras!inner ( id, nome ) )`,
     )
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('certames.deleted_at', null)
+    .is('certames.obras.deleted_at', null);
   if (error) throw error;
 
   const rows = (data ?? []) as unknown as RawAcervoRow[];
@@ -81,6 +83,7 @@ export async function fetchObras(): Promise<ObraResumo[]> {
        certames ( id, status )`,
     )
     .is('deleted_at', null)
+    .is('certames.deleted_at', null)
     .order('nome');
   if (error) throw error;
 
@@ -91,7 +94,7 @@ export async function fetchObras(): Promise<ObraResumo[]> {
     return {
       ...rest,
       totalCertames: cs.length,
-      ativos: cs.filter((c) => c.status !== 'adjudicada').length,
+      ativos: cs.filter((c) => certameAtivo(c.status as CertameStatus)).length,
     };
   });
 }

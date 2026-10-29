@@ -39,8 +39,13 @@ export async function criarObra(input: NovaObraInput): Promise<Obra> {
     .single();
   if (error) throw error;
 
-  await registrarSugestao(org.id, 'obra', input.nome);
-  if (input.cidade) await registrarSugestao(org.id, 'local', input.cidade);
+  // Registrar sugestões é best-effort: não deve derrubar a criação da obra.
+  try {
+    await registrarSugestao(org.id, 'obra', input.nome);
+    if (input.cidade) await registrarSugestao(org.id, 'local', input.cidade);
+  } catch {
+    // ignora — a obra já foi criada; sugestões são secundárias.
+  }
 
   return data as Obra;
 }

@@ -47,6 +47,11 @@ export const CERTAME_LABEL: Record<CertameStatus, { texto: string; tom: StatusTo
   adjudicada: { texto: 'Adjudicada', tom: 'adjudicada' },
 };
 
+/** Certame ativo = ainda não adjudicado (regra de domínio, vive no core). */
+export function certameAtivo(status: CertameStatus): boolean {
+  return status !== 'adjudicada';
+}
+
 export const PROPOSTA_LABEL: Record<PropostaStatus, { texto: string; tom: StatusTone }> = {
   recebida: { texto: 'Recebida', tom: 'aberta' },
   analise: { texto: 'Em análise', tom: 'analise' },

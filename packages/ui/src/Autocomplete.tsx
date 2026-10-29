@@ -34,6 +34,7 @@ export function Autocomplete({
 }: AutocompleteProps) {
   const autoId = useId();
   const fieldId = id ?? autoId;
+  const listId = `${fieldId}-list`;
   const [aberto, setAberto] = useState(false);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,6 +57,7 @@ export function Autocomplete({
         type="text"
         role="combobox"
         aria-expanded={aberto && matches.length > 0}
+        aria-controls={listId}
         aria-autocomplete="list"
         autoComplete="off"
         placeholder={placeholder}
@@ -71,6 +73,7 @@ export function Autocomplete({
       />
       {aberto && matches.length > 0 && (
         <ul
+          id={listId}
           role="listbox"
           style={{
             listStyle: 'none',
@@ -89,7 +92,7 @@ export function Autocomplete({
           }}
         >
           {matches.map((op) => (
-            <li key={op} role="option" aria-selected={op === value}>
+            <li key={op} id={`${listId}-${op}`} role="option" aria-selected={op === value}>
               <button
                 type="button"
                 onMouseDown={() => {
@@ -98,10 +101,11 @@ export function Autocomplete({
                 onClick={() => escolher(op)}
                 style={{
                   width: '100%',
+                  minHeight: 44,
                   textAlign: 'left',
                   border: 0,
                   background: 'none',
-                  padding: '10px 10px',
+                  padding: '11px 10px',
                   borderRadius: 9,
                   font: 'inherit',
                   fontWeight: 700,

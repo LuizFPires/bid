@@ -55,7 +55,7 @@ export function ObraScreen() {
       ) : (
         <div className="card rowlist">
           {certames.map((c) => {
-            const tom = CERTAME_LABEL[c.status as CertameStatus]?.tom ?? 'neutro';
+            const label = CERTAME_LABEL[c.status as CertameStatus] ?? { texto: c.status, tom: 'neutro' as const };
             return (
               <div key={c.id} className="row">
                 <span className="ic">
@@ -65,11 +65,20 @@ export function ObraScreen() {
                   <span className="t1">{c.categoria}</span>
                   <span className="t2">
                     {c.totalPropostas} proposta{c.totalPropostas === 1 ? '' : 's'}
-                    {c.vencedoraFornecedor ? ` · ✓ ${c.vencedoraFornecedor}` : ''}
+                    {c.vencedoraFornecedor && (
+                      <>
+                        {' · '}
+                        <Icon name="trophy" style={{ width: 13, height: 13, color: 'var(--ok)' }} />
+                        {c.vencedoraFornecedor}
+                      </>
+                    )}
                   </span>
                 </span>
                 <span className="rt">
-                  <span className={`dot ${tom}`} aria-label={CERTAME_LABEL[c.status as CertameStatus]?.texto} />
+                  <span className={`pill ${label.tom}`}>
+                    <span className={`dot ${label.tom}`} />
+                    {label.texto}
+                  </span>
                 </span>
               </div>
             );
