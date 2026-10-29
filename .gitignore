@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+.vite/
+
+# Env / secrets (NUNCA versionar)
+.env
+.env.*
+!.env.example
+*.local
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Vercel
+.vercel/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testes / cobertura
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Estado local do roteiro (não versionar)
+.claude/roteiro.json

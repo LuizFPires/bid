@@ -1,0 +1,791 @@
+<title>bid</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800;0,6..12,900&display=swap">
+<style>
+/* App de celular, UI calma: aparelho centralizado no desktop, tela cheia no telefone. Prioridade pela ordem das abas. */
+:root{
+  --bg:#F3F4F6; --surface:#FFFFFF; --surface-2:#F6F7F9;
+  --ink:#191A22; --muted:#73768257; --muted:#737682; --faint:#A2A5B2;
+  --line:#EBECF1; --line-2:#F1F2F6;
+  --accent:#7D8CF5; --accent-deep:#434ED1; --accent-soft:#EEF0FE; --accent-ink:#141B50;
+  --danger:#C62828; --danger-soft:#FBEAEA;
+  --ok:#2E7D55; --ok-soft:#E7F3EC;
+  --warn:#B0711C; --warn-soft:#FBF1E2;
+  --shadow:0 1px 2px rgba(20,22,40,.04), 0 8px 24px rgba(20,22,40,.05);
+  --radius:18px;
+  --ff:"Nunito Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#0E0F13; --surface:#17181F; --surface-2:#1C1E26;
+  --ink:#F1F2F6; --muted:#9A9DAB; --faint:#6E7180;
+  --line:#262833; --line-2:#20222B;
+  --accent:#7C8AF0; --accent-deep:#AEB7FF; --accent-soft:#1C2150; --accent-ink:#E6E9FF;
+  --danger:#F08B8B; --danger-soft:#331B1B;
+  --ok:#7FC79E; --ok-soft:#172A20;
+  --warn:#E0A95C; --warn-soft:#2E2414;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.4);
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0E0F13; --surface:#17181F; --surface-2:#1C1E26;
+  --ink:#F1F2F6; --muted:#9A9DAB; --faint:#6E7180;
+  --line:#262833; --line-2:#20222B;
+  --accent:#7C8AF0; --accent-deep:#AEB7FF; --accent-soft:#1C2150; --accent-ink:#E6E9FF;
+  --danger:#F08B8B; --danger-soft:#331B1B;
+  --ok:#7FC79E; --ok-soft:#172A20;
+  --warn:#E0A95C; --warn-soft:#2E2414;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.4);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ff);font-weight:600;-webkit-font-smoothing:antialiased;line-height:1.5}
+button{font-family:inherit;cursor:pointer}
+h1,h2,h3,h4{margin:0;font-weight:800;text-wrap:balance;letter-spacing:-.015em}
+.num{font-weight:800;font-variant-numeric:tabular-nums}
+
+/* ---------- Device shell ---------- */
+.stage{height:100%;display:flex;justify-content:center;align-items:stretch;background:var(--bg)}
+.device{position:relative;width:100%;max-width:440px;height:100%;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+@media(min-width:620px){
+  .stage{align-items:center;padding:26px 16px;background:linear-gradient(165deg,var(--surface-2),var(--bg))}
+  .device{height:min(940px,calc(100% - 52px));border:1px solid var(--line);border-radius:42px;box-shadow:0 30px 80px rgba(16,18,40,.20)}
+}
+.topbar{display:flex;align-items:center;gap:11px;flex:0 0 auto;background:var(--bg);
+  padding:14px max(18px,env(safe-area-inset-right,0px)) 10px max(18px,env(safe-area-inset-left,0px));min-height:56px}
+.topbar .logo{width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center;flex:0 0 auto}
+.topbar .logo svg{width:18px;height:18px}
+.topbar .name{font-weight:900;letter-spacing:.09em;font-size:15px}
+.topbar .back{margin-right:auto;border:0;background:none;color:var(--ink);border-radius:9px;height:36px;padding:0 8px 0 0;font-weight:800;font-size:13.5px;display:none;align-items:center;gap:4px}
+.topbar .back svg{width:17px;height:17px}
+.topbar .bell{margin-left:auto;width:38px;height:38px;border-radius:12px;border:0;background:var(--surface);color:var(--muted);display:grid;place-items:center;box-shadow:var(--shadow)}
+.topbar .bell svg{width:18px;height:18px}
+.content{flex:1;min-width:0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:6px max(18px,env(safe-area-inset-left,0px)) 28px max(18px,env(safe-area-inset-right,0px))}
+
+.tabbar{display:flex;flex:0 0 auto;background:var(--bg);border-top:1px solid var(--line);
+  padding:8px max(10px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+.tab{flex:1;border:0;background:none;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:4px 2px;font-size:10.5px;font-weight:800;min-height:48px}
+.tab svg{width:23px;height:23px}
+.tab .tb{display:grid;place-items:center;width:52px;height:28px;border-radius:14px;transition:.15s}
+.tab.on{color:var(--accent-deep)}
+.tab.on .tb{background:var(--accent-soft)}
+
+/* ---------- Headings ---------- */
+.page-head{margin:8px 0 18px}
+.page-head h1{font-size:27px}
+.page-head p.lead{color:var(--muted);font-weight:600;margin:4px 0 0;font-size:13.5px}
+.crumb{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted);margin:2px 0 10px;flex-wrap:wrap}
+.crumb button{border:0;background:none;color:var(--accent-deep);font-weight:800;padding:0;font-size:12.5px}
+.crumb svg{width:12px;height:12px;color:var(--faint)}
+.sub{color:var(--muted);font-weight:700;font-size:13px}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 17px;border-radius:14px;
+  font-weight:800;font-size:14px;border:1px solid transparent;white-space:nowrap}
+.btn svg{width:17px;height:17px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:var(--surface);color:var(--ink);border-color:var(--line);box-shadow:var(--shadow)}
+.btn.sm{min-height:38px;padding:0 13px;font-size:13px;border-radius:11px}
+.btn.block{width:100%}
+.btn.soft{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+
+/* ---------- Cards ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.section-title{display:flex;align-items:baseline;gap:10px;margin:26px 0 12px}
+.section-title h2{font-size:14px;font-weight:800}
+.section-title .c{margin-left:auto;color:var(--faint);font-weight:800;font-size:12px}
+
+/* ---------- Pills ---------- */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:4px 10px;border-radius:30px;line-height:1.4}
+.pill.aberta{background:var(--accent-soft);color:var(--accent-ink)}
+.pill.analise{background:var(--warn-soft);color:var(--warn)}
+.pill.adjudicada{background:var(--ok-soft);color:var(--ok)}
+.pill.neutro{background:var(--line-2);color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.dot.aberta{background:var(--accent)} .dot.analise{background:var(--warn)} .dot.adjudicada{background:var(--ok)} .dot.neutro{background:var(--faint)}
+
+/* ---------- Lists ---------- */
+.rowlist{display:flex;flex-direction:column;overflow:hidden}
+.rowlist .row{display:flex;align-items:center;gap:13px;padding:15px 16px;border-top:1px solid var(--line-2);text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;width:100%;color:inherit;font-family:inherit}
+.rowlist .row:first-child{border-top:0}
+.rowlist button.row:active{background:var(--surface-2)}
+.row .ic{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;flex:0 0 auto}
+.row .ic svg{width:20px;height:20px}
+.row .tt{min-width:0;flex:1}
+.row .tt .t1{font-weight:800;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .tt .t2{font-size:12.5px;color:var(--muted);font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.row .rt{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:0 0 auto}
+.row .rt .v{font-weight:900;font-size:14px;font-variant-numeric:tabular-nums}
+.row .chev{color:var(--faint);flex:0 0 auto;margin-left:2px}
+.row .chev svg{width:18px;height:18px}
+
+/* ---------- Big cards (obra/certame) ---------- */
+.ucard{padding:16px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);
+  box-shadow:var(--shadow);display:flex;flex-direction:column;gap:11px;width:100%;font-family:inherit;color:inherit;margin-bottom:12px}
+.ucard .hd{display:flex;align-items:center;gap:12px}
+.ucard .cat-ic{width:44px;height:44px;border-radius:13px;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;flex:0 0 auto}
+.ucard .cat-ic svg{width:23px;height:23px}
+.ucard h3{font-size:15.5px}
+.ucard .foot{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-weight:700;font-size:12.5px;padding-top:11px;border-top:1px solid var(--line-2)}
+.ucard .foot .go{display:flex;align-items:center;gap:5px;color:var(--accent-deep);font-weight:800}
+.ucard .foot .go svg{width:16px;height:16px}
+
+/* ---------- Summary grid (proposta) ---------- */
+.sumgrid{display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+.sumgrid>div{padding:14px 16px;display:flex;flex-direction:column;gap:3px;border-top:1px solid var(--line-2);border-left:1px solid var(--line-2)}
+.sumgrid>div:nth-child(-n+2){border-top:0}
+.sumgrid>div:nth-child(odd){border-left:0}
+.sumgrid .k{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+.sumgrid .val{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums}
+
+/* ---------- Search / filters ---------- */
+.searchbar{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 14px;height:48px;box-shadow:var(--shadow)}
+.searchbar svg{width:18px;height:18px;color:var(--faint);flex:0 0 auto}
+.searchbar input{border:0;outline:0;background:none;flex:1;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--ink);min-width:0}
+.searchbar input::placeholder{color:var(--faint);font-weight:700}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:13px 2px 2px;margin:0 -2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.ch{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:30px;padding:8px 14px;font-weight:800;font-size:12.5px;min-height:38px;white-space:nowrap;flex:0 0 auto}
+.ch.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.scopebar{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--muted);overflow-x:auto;scrollbar-width:none}
+.scopebar::-webkit-scrollbar{display:none}
+.scopebar .sc{border:0;background:none;color:var(--faint);font-weight:800;padding:4px 0;white-space:nowrap;flex:0 0 auto;border-bottom:2px solid transparent}
+.scopebar .sc.on{color:var(--ink);border-bottom-color:var(--accent)}
+
+/* ---------- Table (equalização) ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+table.eq{border-collapse:collapse;width:100%;min-width:540px;font-size:12.5px}
+table.eq th,table.eq td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line-2);vertical-align:top}
+table.eq thead th{position:sticky;top:0;background:var(--surface);z-index:1;font-size:11.5px}
+table.eq thead th.forn{min-width:118px}
+table.eq .itm{font-weight:700;color:var(--muted)}
+table.eq td.val{font-variant-numeric:tabular-nums;font-weight:700}
+table.eq tr.total td{border-top:2px solid var(--line);font-weight:900;font-size:13.5px}
+table.eq .best{color:var(--ok);font-weight:900}
+table.eq .high{color:var(--danger);font-weight:800}
+.fornhd{display:flex;flex-direction:column;gap:3px}
+.fornhd .nm{font-weight:900;font-size:12.5px}
+.fornhd .vz{font-size:10.5px;color:var(--faint);font-weight:700}
+.mark{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px}
+.mark.y{background:var(--ok-soft);color:var(--ok)} .mark.n{background:var(--danger-soft);color:var(--danger)} .mark.p{background:var(--warn-soft);color:var(--warn)}
+.mark svg{width:13px;height:13px}
+
+/* ---------- AI ---------- */
+.ai{border:1px solid var(--accent);border-radius:var(--radius);background:linear-gradient(180deg,var(--accent-soft),var(--surface) 74%);overflow:hidden}
+.ai .ai-h{display:flex;align-items:center;gap:11px;padding:15px 16px;border-bottom:1px solid var(--line)}
+.ai .ai-h .sp{width:34px;height:34px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:0 0 auto}
+.ai .ai-h .sp svg{width:19px;height:19px}
+.ai .ai-h h3{font-size:14.5px}
+.ai .ai-h small{color:var(--muted);font-weight:700;font-size:11px}
+.ai .ai-b{padding:16px;display:flex;flex-direction:column;gap:14px}
+.ai .verdict{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px;font-size:13px;font-weight:600}
+.ai .verdict .tag{font-size:10.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-deep)}
+.ai .verdict b{font-weight:900}
+.ai .finding{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;font-weight:600}
+.ai .finding .d{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:0 0 auto}
+.ai .finding .d.r{background:var(--danger)} .ai .finding .d.w{background:var(--warn)} .ai .finding .d.g{background:var(--ok)}
+.ai .finding b{font-weight:900}
+.ai-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:13px;padding:30px 20px}
+.ai-empty .sp{width:46px;height:46px;border-radius:13px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.ai-empty .sp svg{width:25px;height:25px}
+.ai-empty p{color:var(--muted);font-weight:700;font-size:12.5px;margin:0}
+.thinking{display:inline-flex;gap:5px;align-items:center}
+.thinking i{width:7px;height:7px;border-radius:50%;background:var(--accent-deep);animation:bl 1s infinite}
+.thinking i:nth-child(2){animation-delay:.15s} .thinking i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,60%,100%{opacity:.25} 30%{opacity:1}}
+
+/* ---------- Timeline ---------- */
+.timeline{display:flex;flex-direction:column;padding-left:2px}
+.tl{display:flex;gap:13px;padding-bottom:14px;position:relative}
+.tl:not(:last-child)::before{content:"";position:absolute;left:13px;top:28px;bottom:-2px;width:2px;background:var(--line)}
+.tl .tdot{width:28px;height:28px;border-radius:50%;background:var(--surface);border:2px solid var(--line);display:grid;place-items:center;font-size:10.5px;font-weight:900;color:var(--muted);flex:0 0 auto;z-index:1}
+.tl.cur .tdot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tl .tbody{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px;box-shadow:var(--shadow)}
+.tl .tbody .th{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tl .tbody .th .d{font-size:11.5px;color:var(--muted);font-weight:700;margin-left:auto}
+.tl .tbody .vls{display:flex;gap:22px;flex-wrap:wrap;margin-top:9px}
+.tl .tbody .vls .v{font-size:11.5px;font-weight:700;color:var(--muted)}
+.tl .tbody .vls .v b{display:block;font-size:14.5px;font-weight:900;color:var(--ink)}
+.tl .tbody .obs{font-size:12px;color:var(--muted);font-weight:600;margin-top:9px}
+.delta.up{color:var(--danger)} .delta.down{color:var(--ok)}
+.files{display:flex;flex-direction:column;gap:8px;margin-top:11px}
+.file{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2)}
+.file .fi{width:28px;height:32px;border-radius:5px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;flex:0 0 auto;font-size:8px;font-weight:900;color:var(--danger)}
+.file .fn{min-width:0;flex:1;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .fn small{display:block;color:var(--muted);font-weight:700;font-size:10.5px}
+
+/* ---------- Banner / contrato ---------- */
+.banner{display:flex;gap:11px;align-items:flex-start;border-radius:14px;padding:13px 14px;font-size:12.5px;font-weight:700;margin-bottom:18px}
+.banner.ok{background:var(--ok-soft);color:var(--ok)}
+.banner.warn{background:var(--warn-soft);color:var(--warn)}
+.banner svg{width:19px;height:19px;flex:0 0 auto;margin-top:1px}
+.clause{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:11px;background:var(--surface);box-shadow:var(--shadow)}
+.clause .cnum{font-size:10.5px;font-weight:900;color:var(--accent-deep);letter-spacing:.05em;text-transform:uppercase}
+.clause h4{font-size:14px;margin:3px 0 6px}
+.clause p{margin:0;font-size:12.5px;font-weight:600;color:var(--ink)}
+.clause .src{margin-top:10px;font-size:11px;font-weight:800;color:var(--accent-deep);display:inline-flex;gap:6px;align-items:center;background:var(--accent-soft);padding:5px 10px;border-radius:8px}
+.clause .src svg{width:12px;height:12px}
+.annex{padding:13px 14px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:11px}
+.annex:last-child{border-bottom:0}
+.annex .okic{color:var(--ok);display:grid;place-items:center;flex:0 0 auto}
+.annex .okic svg{width:19px;height:19px}
+.empty{text-align:center;padding:44px 18px;color:var(--muted);font-weight:700;font-size:13px}
+
+.topbar .ticon{width:38px;height:38px;border-radius:12px;border:0;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;margin-left:8px}
+.topbar .ticon svg{width:20px;height:20px}
+.party{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line-2)}
+.party:last-child{border-bottom:0}
+.party .pic{width:38px;height:38px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);font-weight:900;font-size:13px;flex:0 0 auto}
+.party .pic svg{width:18px;height:18px;color:var(--ok)}
+.party .pn{flex:1;min-width:0}
+.party .pn .r{font-weight:800;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.party .pn .s{font-size:11.5px;color:var(--muted);font-weight:700}
+.sigimg{height:36px;max-width:120px;object-fit:contain;flex:0 0 auto}
+.padwrap{position:relative}
+.pad{width:100%;height:200px;border:1.5px dashed var(--line);border-radius:14px;background:var(--surface);touch-action:none;display:block}
+.padline{position:absolute;left:20px;right:20px;bottom:44px;border-bottom:1.5px solid var(--line);pointer-events:none}
+.padhint{position:absolute;left:0;right:0;bottom:20px;text-align:center;color:var(--faint);font-weight:700;font-size:12px;pointer-events:none}
+.linkbox{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:12.5px;font-weight:700}
+.wa{background:#25D366;color:#083d22;border-color:#25D366}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin-bottom:6px}
+.field input,.field select{width:100%;height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:0 13px;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--ink);box-shadow:var(--shadow)}
+.field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.dropzone{display:flex;flex-direction:column;align-items:center;gap:4px;border:1.5px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted);font-weight:800;font-size:13px;background:var(--surface-2);cursor:pointer}
+.dropzone svg{width:26px;height:26px;color:var(--faint)}
+.dropzone small{color:var(--faint);font-weight:700;font-size:11px}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:9px;font-weight:800;font-size:13px;color:var(--muted);min-height:42px}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+#toast{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);
+  padding:12px 17px;border-radius:13px;font-weight:800;font-size:12.5px;box-shadow:0 12px 32px rgba(0,0,0,.3);max-width:84%;text-align:center;opacity:0;transition:.2s;pointer-events:none}
+</style>
+
+<div class="stage">
+  <div class="device">
+    <header class="topbar">
+      <button class="back" id="mback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>Voltar</button>
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#141B50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></svg></span>
+      <span class="name">bid</span>
+      <button class="bell" aria-label="Avisos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
+      <button class="ticon" id="topadd" hidden aria-label="Adicionar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    </header>
+    <main class="content" id="view"></main>
+    <nav class="tabbar">
+      <button class="tab" data-nav="propostas"><span class="tb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>Propostas</button>
+      <button class="tab" data-nav="equalizacoes"><span class="tb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M7 7l-4 7h8zM17 7l-4 7h8z"/><path d="M8 21h8M5 7h14"/></svg></span>Equalizar</button>
+      <button class="tab" data-nav="contratos"><span class="tb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></span>Contratos</button>
+      <button class="tab" data-nav="obras"><span class="tb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Obras</button>
+    </nav>
+  </div>
+</div>
+
+<script>
+"use strict";
+const I = {
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
+  scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M7 7l-4 7h8zM17 7l-4 7h8z"/><path d="M8 21h8M5 7h14"/></svg>',
+  trophy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v2a3 3 0 0 0 3 3M18 6h3v2a3 3 0 0 1-3 3M9 18h6M10 14v4M14 14v4M8 21h8"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  tilde:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13c1.5-3 3.5-3 5 0s3.5 3 5 0 3.5-3 5 0"/></svg>',
+  doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  bldg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>',
+  layers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>',
+  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>',
+  dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>',
+  arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>'
+};
+
+const CATS = {
+  premold:{nome:'Estrutura pré-moldada', ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'},
+  hvac:{nome:'Climatização', ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>'},
+  esq:{nome:'Esquadrias', ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/></svg>'},
+  eletr:{nome:'Elétrica', ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>'},
+  hidr:{nome:'Hidráulica', ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>'},
+  pisos:{nome:'Pisos', ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>'}
+};
+
+const C_PREMOLD = {
+  id:'c-premold-jardins', obra:'jardins', cat:'premold', titulo:'Estrutura pré-moldada de concreto', status:'analise',
+  escopo:'Fornecimento, transporte e montagem da estrutura pré-moldada do pavilhão principal (620 m²).',
+  abertura:'02/10/2026', limite:'04/11/2026', vencedora:null,
+  propostas:[
+    {id:'p1', forn:'Premold Paulista', vz:2, status:'analise', valor:1284500, prazo:95, cond:'30/40/30%', garantia:'5 anos',
+     versoes:[{n:1,data:'06/10/2026',valor:1342000,prazo:100,obs:'Proposta inicial com projeto executivo incluso.'},{n:2,data:'20/10/2026',valor:1284500,prazo:95,obs:'Revisão após visita técnica: desconto de 4,3%.'}]},
+    {id:'p2', forn:'Concretex Estruturas', vz:3, status:'analise', valor:1198900, prazo:110, cond:'À vista −6%', garantia:'3 anos',
+     versoes:[{n:1,data:'05/10/2026',valor:1255000,prazo:115,obs:'Menor preço de fabricação do certame.'},{n:2,data:'15/10/2026',valor:1210000,prazo:110,obs:'Inclui ART e projeto de ligações.'},{n:3,data:'22/10/2026',valor:1198900,prazo:110,obs:'Desconto adicional — transporte por conta da construtora.'}]},
+    {id:'p3', forn:'Pré-Fabricar SP', vz:1, status:'recebida', valor:1350000, prazo:80, cond:'50/50%', garantia:'5 anos',
+     versoes:[{n:1,data:'08/10/2026',valor:1350000,prazo:80,obs:'Prazo mais curto do certame. Laje alveolar cotada à parte.'}]},
+    {id:'p4', forn:'Modular Brasil', vz:2, status:'analise', valor:1242300, prazo:90, cond:'20/50/30%', garantia:'7 anos',
+     versoes:[{n:1,data:'07/10/2026',valor:1298000,prazo:92,obs:'Escopo completo, maior garantia do certame.'},{n:2,data:'21/10/2026',valor:1242300,prazo:90,obs:'Revisão comercial: desconto de 4,3%.'}]}
+  ]
+};
+
+const OBRAS = {
+  jardins:{id:'jardins', nome:'Residencial Aurora', cidade:'São Paulo · SP', fase:'Obra em andamento', faseP:'aberta',
+    concs:[ C_PREMOLD,
+      {id:'c-hvac-jardins', obra:'jardins', cat:'hvac', titulo:'Climatização (HVAC) — VRF', status:'aberta', abertura:'18/10/2026', limite:'08/11/2026', vencedora:null,
+       propostas:[{id:'h1',forn:'ClimaTech Engenharia',vz:1,status:'recebida',valor:486300,prazo:45,cond:'40/60%',garantia:'2 anos',versoes:[{n:1,data:'19/10/2026',valor:486300,prazo:45,obs:'Proposta recebida.'}]},
+                  {id:'h2',forn:'Ar Pleno Instalações',vz:1,status:'recebida',valor:512000,prazo:40,cond:'À vista',garantia:'3 anos',versoes:[{n:1,data:'21/10/2026',valor:512000,prazo:40,obs:'Proposta recebida.'}]}]},
+      {id:'c-esq-jardins', obra:'jardins', cat:'esq', titulo:'Esquadrias de alumínio e vidros', status:'adjudicada', abertura:'12/09/2026', limite:'03/10/2026', vencedora:'Vidro & Forma Esquadrias',
+       propostas:[{id:'e1',forn:'Vidro & Forma Esquadrias',vz:2,status:'vencedora',valor:318700,prazo:38,cond:'30/70%',garantia:'5 anos',versoes:[{n:1,data:'15/09/2026',valor:331000,prazo:40,obs:'Proposta inicial.'},{n:2,data:'28/09/2026',valor:318700,prazo:38,obs:'Revisão final, vencedora.'}]},
+                  {id:'e2',forn:'AlumiSP Fachadas',vz:1,status:'desclass',valor:355000,prazo:35,cond:'50/50%',garantia:'3 anos',versoes:[{n:1,data:'16/09/2026',valor:355000,prazo:35,obs:'Proposta recebida.'}]},
+                  {id:'e3',forn:'Portal Vidros',vz:1,status:'desclass',valor:342900,prazo:50,cond:'À vista',garantia:'4 anos',versoes:[{n:1,data:'18/09/2026',valor:342900,prazo:50,obs:'Proposta recebida.'}]}]},
+      {id:'c-eletr-jardins', obra:'jardins', cat:'eletr', titulo:'Instalações elétricas e SPDA', status:'aberta', abertura:'24/10/2026', limite:'14/11/2026', vencedora:null,
+       propostas:[{id:'el1',forn:'Elétrica Central',vz:1,status:'recebida',valor:274500,prazo:55,cond:'Parcelado',garantia:'2 anos',versoes:[{n:1,data:'25/10/2026',valor:274500,prazo:55,obs:'Proposta recebida.'}]}]}
+    ]},
+  moema:{id:'moema', nome:'Centro Clínico Pinheiros', cidade:'São Paulo · SP', fase:'Pré-obra', faseP:'neutro',
+    concs:[
+      {id:'c-premold-moema', obra:'moema', cat:'premold', titulo:'Estrutura pré-moldada de concreto', status:'aberta', abertura:'20/10/2026', limite:'17/11/2026', vencedora:null,
+       propostas:[{id:'pm1',forn:'Premold Paulista',vz:1,status:'recebida',valor:1189000,prazo:90,cond:'30/40/30%',garantia:'5 anos',versoes:[{n:1,data:'22/10/2026',valor:1189000,prazo:90,obs:'Proposta recebida.'}]},
+                  {id:'pm2',forn:'Modular Brasil',vz:1,status:'recebida',valor:1205000,prazo:88,cond:'20/50/30%',garantia:'7 anos',versoes:[{n:1,data:'23/10/2026',valor:1205000,prazo:88,obs:'Proposta recebida.'}]}]},
+      {id:'c-hidr-moema', obra:'moema', cat:'hidr', titulo:'Instalações hidráulicas', status:'analise', abertura:'10/10/2026', limite:'31/10/2026', vencedora:null,
+       propostas:[{id:'hm1',forn:'HidroServ',vz:2,status:'analise',valor:198400,prazo:42,cond:'40/60%',garantia:'3 anos',versoes:[{n:1,data:'12/10/2026',valor:206000,prazo:44,obs:'Proposta inicial.'},{n:2,data:'24/10/2026',valor:198400,prazo:42,obs:'Revisão com desconto.'}]},
+                  {id:'hm2',forn:'Fluxo Engenharia',vz:1,status:'recebida',valor:215000,prazo:38,cond:'À vista',garantia:'2 anos',versoes:[{n:1,data:'14/10/2026',valor:215000,prazo:38,obs:'Proposta recebida.'}]}]}
+    ]},
+  campinas:{id:'campinas', nome:'Arena Esportiva Campinas', cidade:'Campinas · SP', fase:'Planejamento', faseP:'neutro',
+    concs:[
+      {id:'c-premold-camp', obra:'campinas', cat:'premold', titulo:'Estrutura pré-moldada de concreto', status:'adjudicada', abertura:'01/08/2026', limite:'29/08/2026', vencedora:'Concretex Estruturas',
+       propostas:[{id:'pc1',forn:'Concretex Estruturas',vz:2,status:'vencedora',valor:1095000,prazo:105,cond:'À vista −6%',garantia:'5 anos',versoes:[{n:1,data:'05/08/2026',valor:1140000,prazo:108,obs:'Proposta inicial.'},{n:2,data:'20/08/2026',valor:1095000,prazo:105,obs:'Revisão final, vencedora.'}]},
+                  {id:'pc2',forn:'Pré-Fabricar SP',vz:1,status:'desclass',valor:1180000,prazo:85,cond:'50/50%',garantia:'5 anos',versoes:[{n:1,data:'07/08/2026',valor:1180000,prazo:85,obs:'Proposta recebida.'}]}]},
+      {id:'c-pisos-camp', obra:'campinas', cat:'pisos', titulo:'Pisos e revestimentos', status:'aberta', abertura:'22/10/2026', limite:'19/11/2026', vencedora:null,
+       propostas:[{id:'ps1',forn:'Revest Brasil',vz:1,status:'recebida',valor:167000,prazo:30,cond:'Parcelado',garantia:'2 anos',versoes:[{n:1,data:'24/10/2026',valor:167000,prazo:30,obs:'Proposta recebida.'}]}]}
+    ]}
+};
+
+const CONTRATOS = [
+  {id:'ct-esq', obra:'jardins', cat:'esq', forn:'Vidro & Forma Esquadrias', valor:318700, status:'rascunho', base:'c-esq-jardins', criado:'04/10/2026'},
+  {id:'ct-premold-camp', obra:'campinas', cat:'premold', forn:'Concretex Estruturas', valor:1095000, status:'assinado', base:'c-premold-camp', criado:'30/08/2026'}
+];
+
+const $ = s => document.querySelector(s);
+const view = $('#view');
+const brl = n => 'R$ '+n.toLocaleString('pt-BR');
+const brlk = n => 'R$ '+(n/1000).toLocaleString('pt-BR',{maximumFractionDigits:0})+' mil';
+const STAT = {aberta:['aberta','Recebendo'],analise:['analise','Em equalização'],adjudicada:['adjudicada','Vencedora definida'],
+  recebida:['neutro','Recebida'],vencedora:['adjudicada','Vencedora'],desclass:['neutro','Não escolhida']};
+function pill(s,txt){const [c,t]=STAT[s]||['neutro',s];return `<span class="pill ${c}">${txt||t}</span>`}
+function allConcs(){return Object.values(OBRAS).flatMap(o=>o.concs.map(c=>({...c,obraNome:OBRAS[o.id].nome})))}
+function findConc(id){for(const o of Object.values(OBRAS)){const c=o.concs.find(x=>x.id===id);if(c)return c}return null}
+function allProps(){const out=[];for(const o of Object.values(OBRAS))for(const c of o.concs)for(const p of c.propostas)
+  out.push({...p,obra:o.id,obraNome:o.nome,cat:c.cat,concId:c.id,concTitulo:c.titulo,concStatus:c.status});return out}
+
+let stack=[];
+function go(screen,params,push=true){ if(push) stack.push({screen,params}); render(screen,params||{}); updNav(screen); view.scrollTop=0;}
+function back(){ stack.pop(); const prev=stack[stack.length-1]||{screen:'propostas',params:{}}; render(prev.screen,prev.params); updNav(prev.screen); view.scrollTop=0;}
+function updNav(screen){
+  const map={prop:'propostas',nova:'propostas',conc:'equalizacoes',equalizar:'equalizacoes',vencedora:'equalizacoes',iniciar:'equalizacoes',contrato:'contratos',novocontrato:'contratos',assinar:'contratos',enviarass:'contratos',assinado:'contratos',obra:'obras'};
+  const root=['propostas','equalizacoes','contratos','obras'].includes(screen)?screen:(map[screen]||'propostas');
+  document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===root));
+  $('#mback').style.display = ['propostas','equalizacoes','contratos','obras'].includes(screen)?'none':'inline-flex';
+  const add=$('#topadd'); const amap={propostas:'nova',equalizacoes:'iniciar',contratos:'novocontrato'};
+  if(amap[screen]){add.hidden=false;add.dataset.go=amap[screen];} else add.hidden=true;
+}
+document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.nav)));
+$('#mback').addEventListener('click',back);
+$('#topadd').addEventListener('click',()=>go($('#topadd').dataset.go||'nova'));
+function render(screen,p){ (SCREENS[screen]||SCREENS.propostas)(p); }
+const SCREENS={};
+
+/* ===== 1 · PROPOSTAS (acervo) ===== */
+let fCat='all', fScope='todas', fQ='';
+SCREENS.propostas=()=>{
+  view.innerHTML=`
+  <div class="page-head"><h1>Propostas</h1><p class="lead">O acervo de propostas de obra.</p></div>
+  <div class="searchbar">${I.search}<input id="propq" placeholder="Buscar fornecedor, categoria, obra" value="${fQ}"></div>
+  <div class="chips" id="catf">
+    <button class="ch ${fCat==='all'?'on':''}" data-cat="all">Todas</button>
+    ${Object.entries(CATS).map(([k,v])=>`<button class="ch ${k===fCat?'on':''}" data-cat="${k}">${v.nome}</button>`).join('')}
+  </div>
+  <div class="scopebar" id="scope">
+    <button class="sc ${fScope==='todas'?'on':''}" data-scope="todas">Todo o sistema</button>
+    ${Object.values(OBRAS).map(o=>`<button class="sc ${fScope===o.id?'on':''}" data-scope="${o.id}">${o.nome}</button>`).join('')}
+  </div>
+  <div id="propres"></div>`;
+  renderPropList();
+  $('#propq').addEventListener('input',e=>{fQ=e.target.value;renderPropList()});
+  document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{fCat=b.dataset.cat;SCREENS.propostas()}));
+  document.querySelectorAll('[data-scope]').forEach(b=>b.addEventListener('click',()=>{fScope=b.dataset.scope;SCREENS.propostas()}));
+};
+function filteredProps(){
+  let r=allProps();
+  if(fCat!=='all') r=r.filter(p=>p.cat===fCat);
+  if(fScope!=='todas') r=r.filter(p=>p.obra===fScope);
+  if(fQ.trim()){const q=fQ.toLowerCase();r=r.filter(p=>(p.forn+' '+p.obraNome+' '+p.concTitulo+' '+CATS[p.cat].nome).toLowerCase().includes(q))}
+  return r.sort((a,b)=>a.valor-b.valor);
+}
+function renderPropList(){
+  const r=filteredProps(); const cont=$('#propres');
+  const resumo = r.length?`${r.length} propostas${fCat!=='all'?' · a partir de '+brlk(Math.min(...r.map(x=>x.valor))):''}`:'';
+  if(!r.length){cont.innerHTML=`<div class="section-title"><h2>Acervo</h2></div><div class="card empty">Nada encontrado.</div>`;return}
+  cont.innerHTML=`<div class="section-title"><h2>${fCat==='all'?'Acervo':CATS[fCat].nome}</h2><span class="c">${resumo}</span></div>
+  <div class="card rowlist">
+    ${r.map(p=>`<button class="row" data-prop="${p.id}" data-conc="${p.concId}">
+      <span class="ic" style="${p.status==='vencedora'?'background:var(--ok-soft);color:var(--ok)':''}">${p.status==='vencedora'?I.trophy:CATS[p.cat].ic}</span>
+      <span class="tt"><span class="t1">${p.forn}</span>
+        <span class="t2">${CATS[p.cat].nome} · ${p.obraNome}${p.vz>1?' · v'+p.vz:''}</span></span>
+      <span class="rt"><span class="v">${brl(p.valor)}</span></span>
+      <span class="chev">${I.chev}</span></button>`).join('')}</div>
+  ${fCat!=='all'&&fScope==='todas'&&new Set(r.map(p=>p.obra)).size>1?`<button class="btn soft block" style="margin-top:14px" onclick="toast('Equalização entre obras (protótipo)')">${I.scale} Equalizar entre obras</button>`:''}`;
+  bindProp();
+}
+
+/* ===== 2 · PROPOSTA (versões) ===== */
+SCREENS.prop=({id,conc})=>{
+  const c=findConc(conc); const p=c.propostas.find(x=>x.id===id); const vs=p.versoes;
+  view.innerHTML=`
+  <div class="crumb"><button data-nav="propostas">Propostas</button>${I.chev}<span>${p.forn}</span></div>
+  <div class="page-head"><h1>${p.forn}</h1><p class="lead">${CATS[c.cat].nome} · ${OBRAS[c.obra].nome}</p>
+    <div style="margin-top:10px">${pill(p.status)}</div></div>
+  <div class="card sumgrid" style="margin-bottom:16px">
+    <div><span class="k">Valor atual</span><span class="val">${brl(p.valor)}</span></div>
+    <div><span class="k">Prazo</span><span class="val">${p.prazo} dias</span></div>
+    <div><span class="k">Pagamento</span><span class="val" style="font-size:14px">${p.cond||'—'}</span></div>
+    <div><span class="k">Garantia</span><span class="val" style="font-size:14px">${p.garantia||'—'}</span></div>
+  </div>
+  <div class="section-title"><h2>Versões</h2><span class="c">${vs.length} ${vs.length>1?'revisões':'versão'}</span></div>
+  <div class="timeline">
+    ${[...vs].reverse().map((v,i)=>{const atual=i===0;const idx=vs.length-1-i;const prev=vs[idx-1];const dv=prev?v.valor-prev.valor:0;
+      return `<div class="tl ${atual?'cur':''}"><div class="tdot">v${v.n}</div>
+        <div class="tbody"><div class="th"><b style="font-size:13.5px">Versão ${v.n}</b>${atual?'<span class="pill aberta">Atual</span>':''}<span class="d">${v.data}</span></div>
+          <div class="vls"><div class="v">Valor<b>${brl(v.valor)} ${dv?`<span class="delta ${dv>0?'up':'down'}" style="font-size:11px">${dv>0?'▲':'▼'}${brl(Math.abs(dv))}</span>`:''}</b></div><div class="v">Prazo<b>${v.prazo} dias</b></div></div>
+          <div class="obs">${v.obs}</div>
+          <div class="files"><div class="file"><span class="fi">PDF</span><span class="fn">Proposta_${p.forn.split(' ')[0]}_v${v.n}.pdf<small>${v.data}</small></span><button class="btn sm ghost" onclick="toast('Abrir PDF (protótipo)')">${I.dl}</button></div></div>
+        </div></div>`}).join('')}
+  </div>
+  <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">
+    ${p.status==='vencedora'
+      ? `<button class="btn primary block" onclick="go('contrato',{conc:'${conc}',prop:'${id}'})">${I.doc} Gerar contrato</button>`
+      : `<button class="btn primary block" id="setwin">${I.trophy} Definir como vencedora</button>`}
+    <div style="display:flex;gap:9px">
+      <button class="btn ghost" style="flex:1" onclick="toast('Registrar nova versão (protótipo)')">${I.upload} Nova versão</button>
+      ${c.propostas.length>1?`<button class="btn ghost" style="flex:1" onclick="go('conc',{id:'${conc}'})">${I.scale} Equalizar</button>`:''}
+    </div>
+  </div>
+  ${p.status!=='vencedora'&&c.propostas.length===1?`<p class="sub" style="text-align:center;margin-top:12px;font-size:12px">Só uma proposta? Pode torná-la vencedora direto, sem equalizar.</p>`:''}`;
+  const sw=$('#setwin'); if(sw) sw.addEventListener('click',()=>{definirVencedora(conc,id);toast(p.forn+' definida como vencedora · liberada para contrato');go('prop',{id,conc},false);});
+  bindProp();
+};
+function definirVencedora(concId,propId){
+  const c=findConc(concId);
+  c.propostas.forEach(x=>x.status = x.id===propId?'vencedora':'desclass');
+  c.status='adjudicada'; c.vencedora=c.propostas.find(x=>x.id===propId).forn;
+}
+
+/* ===== 3 · EQUALIZAÇÕES ===== */
+SCREENS.equalizacoes=()=>{
+  const units=allConcs();
+  const grupos=[['analise','Aguardam decisão'],['aberta','Recebendo propostas'],['adjudicada','Concluídas']];
+  view.innerHTML=`
+  <div class="page-head"><h1>Equalizações</h1><p class="lead">Compare as propostas e defina a vencedora.</p></div>
+  ${grupos.map(([st,lbl])=>{const list=units.filter(c=>c.status===st);if(!list.length)return'';
+    return `<div class="section-title"><h2>${lbl}</h2><span class="c">${list.length}</span></div>
+    <div class="card rowlist">${list.map(c=>`<button class="row" data-conc="${c.id}">
+      <span class="ic" style="${st==='adjudicada'?'background:var(--ok-soft);color:var(--ok)':''}">${st==='adjudicada'?I.trophy:CATS[c.cat].ic}</span>
+      <span class="tt"><span class="t1">${CATS[c.cat].nome}</span>
+        <span class="t2">${c.obraNome} · ${c.propostas.length} propostas</span></span>
+      <span class="rt"><span class="dot ${STAT[c.status][0]}"></span></span>
+      <span class="chev">${I.chev}</span></button>`).join('')}</div>`;}).join('')}`;
+  bindConc();
+};
+
+SCREENS.conc=({id})=>{
+  const c=findConc(id); const o=OBRAS[c.obra]; const ord=[...c.propostas].sort((a,b)=>a.valor-b.valor); const menor=ord[0]?.valor; const multi=c.propostas.length>1;
+  view.innerHTML=`
+  <div class="crumb"><button data-nav="equalizacoes">Equalizações</button>${I.chev}<span>${CATS[c.cat].nome}</span></div>
+  <div class="page-head"><h1>${CATS[c.cat].nome}</h1><p class="lead">${o.nome} · encerra ${c.limite||'—'}</p>
+    <div style="margin-top:10px">${pill(c.status)}</div></div>
+  ${c.status==='adjudicada'?`<div class="banner ok">${I.trophy}<div><b>${c.vencedora}</b> venceu — liberada para contrato.</div></div><button class="btn primary block" style="margin-bottom:16px" onclick="go('contrato',{conc:'${c.id}'})">${I.doc} Gerar contrato</button>`:''}
+  <div class="section-title"><h2>Propostas</h2><span class="c">${c.propostas.length}</span></div>
+  <div class="card rowlist" style="margin-bottom:16px">
+    ${ord.map(p=>`<button class="row" data-prop="${p.id}" data-conc="${c.id}">
+      <span class="ic" style="${p.status==='vencedora'?'background:var(--ok-soft);color:var(--ok)':''}">${p.status==='vencedora'?I.trophy:I.doc}</span>
+      <span class="tt"><span class="t1">${p.forn}</span><span class="t2">${p.prazo} dias${p.vz>1?' · v'+p.vz:''}</span></span>
+      <span class="rt"><span class="v" style="${p.valor===menor&&c.status!=='adjudicada'?'color:var(--ok)':''}">${brl(p.valor)}</span></span>
+      <span class="chev">${I.chev}</span></button>`).join('')}
+  </div>
+  ${multi?`<button class="btn primary block" id="eqbtn">${I.scale} Equalizar propostas</button>`:''}`;
+  bindProp();
+  const eq=$('#eqbtn'); if(eq) eq.addEventListener('click',()=>go('equalizar',{id:c.id}));
+};
+
+SCREENS.equalizar=({id,modo,prop})=>{
+  const c=findConc(id); const o=OBRAS[c.obra]; const versoes=modo==='versoes'; let cols,title;
+  if(versoes){const p=c.propostas.find(x=>x.id===prop);cols=p.versoes.map(v=>({nm:'Versão '+v.n,vz:v.data,valor:v.valor,prazo:v.prazo,_p:p}));title='Versões · '+p.forn;}
+  else {cols=c.propostas.map(p=>({nm:p.forn,vz:'v'+p.vz,valor:p.valor,prazo:p.prazo,_p:p}));title=CATS[c.cat].nome;}
+  const menor=Math.min(...cols.map(x=>x.valor)); const maior=Math.max(...cols.map(x=>x.valor)); const mp=Math.min(...cols.map(x=>x.prazo));
+  const rich=!versoes && c.id==='c-premold-jardins';
+  const itens=rich?[['Projeto executivo','y','y','y','y'],['Pilares e vigas','y','y','y','y'],['Lajes alveolares','y','y','n','y'],['Transporte e içamento','y','n','y','y'],['Montagem','y','y','y','y'],['ART e documentação','y','y','p','y']]:null;
+  const mk=v=>v==='y'?'<span class="mark y">'+I.check+'</span>':v==='n'?'<span class="mark n">'+I.x+'</span>':'<span class="mark p">'+I.tilde+'</span>';
+  view.innerHTML=`
+  <div class="crumb"><button data-nav="equalizacoes">Equalizações</button>${I.chev}<button id="eb">${CATS[c.cat].nome}</button>${I.chev}<span>Comparar</span></div>
+  <div class="page-head"><h1>${title}</h1><p class="lead">${versoes?'Evolução entre revisões.':o.nome}</p></div>
+  <div class="tablewrap" style="margin-bottom:16px"><table class="eq">
+    <thead><tr><th>Item</th>${cols.map(x=>`<th class="forn"><div class="fornhd"><span class="nm">${x.nm}</span><span class="vz">${x.vz}</span></div></th>`).join('')}</tr></thead>
+    <tbody>
+      ${itens?itens.map(r=>`<tr><td class="itm">${r[0]}</td>${r.slice(1).map(v=>`<td>${mk(v)}</td>`).join('')}</tr>`).join(''):''}
+      <tr><td class="itm">Prazo</td>${cols.map(x=>`<td class="val ${x.prazo===mp?'best':''}">${x.prazo}d</td>`).join('')}</tr>
+      ${!versoes?`<tr><td class="itm">Pagamento</td>${cols.map(x=>`<td>${x._p.cond||'—'}</td>`).join('')}</tr><tr><td class="itm">Garantia</td>${cols.map(x=>`<td>${x._p.garantia||'—'}</td>`).join('')}</tr>`:''}
+      <tr class="total"><td>Total</td>${cols.map(x=>`<td class="val ${x.valor===menor?'best':x.valor===maior?'high':''}">${brl(x.valor)}</td>`).join('')}</tr>
+    </tbody></table></div>
+  <div class="ai" id="aibox"><div class="ai-empty"><span class="sp">${I.spark}</span>
+    <p>A IA lê planilhas e PDFs e aponta escopo faltando, risco e melhor custo-benefício.</p>
+    <button class="btn primary" id="runai">${I.spark} Analisar com IA</button></div></div>`;
+  $('#eb').addEventListener('click',()=>go('conc',{id}));
+  $('#runai').addEventListener('click',()=>runAI(c,versoes));
+};
+function runAI(c,versoes){
+  const box=$('#aibox');
+  box.innerHTML=`<div class="ai-empty"><span class="sp">${I.spark}</span><div class="thinking"><i></i><i></i><i></i></div><p>Normalizando escopos…</p></div>`;
+  setTimeout(()=>{let html;
+    if(versoes){html=`<div class="ai-h"><span class="sp">${I.spark}</span><div><h3>Evolução das versões</h3><small>Claude</small></div></div><div class="ai-b">
+      <div class="verdict"><div class="tag">Resumo</div><div style="margin-top:4px">Queda consistente de preço entre as revisões, sem perda de escopo.</div></div>
+      <div class="finding"><span class="d w"></span><div><b>Conferir:</b> itens que variaram antes de comparar com concorrentes.</div></div></div>`;
+    } else if(c.id==='c-premold-jardins'){html=`<div class="ai-h"><span class="sp">${I.spark}</span><div><h3>4 propostas equalizadas</h3><small>Claude</small></div></div><div class="ai-b">
+      <div class="verdict"><div class="tag">Recomendação</div><div style="margin-top:4px"><b>Modular Brasil — R$ 1.242.300.</b> Escopo completo (transporte e laje), maior garantia e bom prazo.</div></div>
+      <div class="finding"><span class="d r"></span><div><b>Concretex:</b> transporte por conta da construtora (~R$ 48 mil) — fica mais cara que a Modular.</div></div>
+      <div class="finding"><span class="d r"></span><div><b>Pré-Fabricar:</b> laje alveolar fora do escopo; prazo curto, porém mais cara.</div></div>
+      <button class="btn primary block" onclick="go('vencedora',{id:'c-premold-jardins',prop:'p4'})">${I.trophy} Definir vencedora</button></div>`;
+    } else {html=`<div class="ai-h"><span class="sp">${I.spark}</span><div><h3>${c.propostas.length} propostas</h3><small>Claude</small></div></div><div class="ai-b">
+      <div class="verdict"><div class="tag">Resumo</div><div style="margin-top:4px">Valores próximos. Confirme se o escopo cobre o mesmo quantitativo.</div></div>
+      <div class="finding"><span class="d g"></span><div><b>Menor:</b> ${brl(Math.min(...c.propostas.map(p=>p.valor)))}.</div></div></div>`;}
+    box.innerHTML=html;
+  },1200);
+}
+
+SCREENS.vencedora=({id,prop})=>{
+  const c=findConc(id); const p=c.propostas.find(x=>x.id===prop);
+  view.innerHTML=`
+  <div class="crumb"><button data-nav="equalizacoes">Equalizações</button>${I.chev}<button id="vb">${CATS[c.cat].nome}</button>${I.chev}<span>Vencedora</span></div>
+  <div class="page-head"><h1>Confirmar vencedora</h1><p class="lead">A proposta vencedora fica liberada para contrato.</p></div>
+  <div class="card" style="overflow:hidden;margin-bottom:16px">
+    <div style="padding:16px;display:flex;gap:13px;align-items:center;background:var(--ok-soft)">
+      <span style="width:44px;height:44px;border-radius:13px;background:var(--ok);color:#fff;display:grid;place-items:center;flex:0 0 auto">${I.trophy}</span>
+      <div style="min-width:0"><div style="font-weight:900;font-size:16px">${p.forn}</div><div class="sub">${CATS[c.cat].nome}</div></div>
+      <span class="num" style="margin-left:auto;font-size:17px">${brl(p.valor)}</span></div>
+    <div class="sumgrid">
+      <div><span class="k">Prazo</span><span class="val" style="font-size:15px">${p.prazo} dias</span></div>
+      <div><span class="k">Garantia</span><span class="val" style="font-size:15px">${p.garantia||'—'}</span></div>
+    </div>
+  </div>
+  <button class="btn primary block" id="confw" style="margin-bottom:9px">${I.trophy} Liberar para contrato</button>
+  <button class="btn ghost block" id="cancw">Cancelar</button>`;
+  $('#vb').addEventListener('click',()=>go('conc',{id}));
+  $('#cancw').addEventListener('click',back);
+  $('#confw').addEventListener('click',()=>{toast(p.forn+' liberada para contrato');setTimeout(()=>go('contrato',{conc:id,prop:prop}),750)});
+};
+
+/* ===== 4 · CONTRATOS + assinatura digital ===== */
+const SIGN={}; const PAGINAS=7;
+function sigState(base){return SIGN[base]||(SIGN[base]={contratante:null,contratada:null})}
+function ctData(arg){let ct,c,p;
+  if(arg.id){ct=CONTRATOS.find(x=>x.id===arg.id);c=findConc(ct.base);p=c.propostas.find(x=>x.status==='vencedora');}
+  else{c=findConc(arg.conc);p=arg.prop?c.propostas.find(x=>x.id===arg.prop):(c.propostas.find(x=>x.status==='vencedora')||[...c.propostas].sort((a,b)=>a.valor-b.valor)[0]);
+    ct=CONTRATOS.find(x=>x.base===arg.conc)||{id:'g-'+arg.conc,obra:c.obra,cat:c.cat,forn:p.forn,valor:p.valor,status:'rascunho',base:arg.conc};}
+  return {ct,c,p,o:OBRAS[ct.obra]};}
+SCREENS.contratos=()=>{
+  view.innerHTML=`
+  <div class="page-head"><h1>Contratos</h1><p class="lead">A vencedora vira contrato — toque em + para gerar um novo.</p></div>
+  <div class="card rowlist">
+    ${CONTRATOS.map(ct=>{const o=OBRAS[ct.obra];const sg=SIGN[ct.base];const ass=sg&&sg.contratante&&sg.contratada||ct.status==='assinado';return `<button class="row" data-contrato="${ct.id}">
+      <span class="ic">${I.doc}</span>
+      <span class="tt"><span class="t1">${CATS[ct.cat].nome}</span><span class="t2">${o.nome} · ${ct.forn}</span></span>
+      <span class="rt"><span class="v">${brl(ct.valor)}</span><span class="pill ${ass?'adjudicada':'analise'}">${ass?'Assinado':'Rascunho'}</span></span>
+      <span class="chev">${I.chev}</span></button>`}).join('')}
+  </div>`;
+  document.querySelectorAll('[data-contrato]').forEach(b=>b.addEventListener('click',()=>go('contrato',{id:b.dataset.contrato})));
+};
+SCREENS.novocontrato=()=>{
+  const vencs=allConcs().filter(c=>c.status==='adjudicada');
+  view.innerHTML=`
+  <div class="crumb"><button data-nav="contratos">Contratos</button>${I.chev}<span>Novo</span></div>
+  <div class="page-head"><h1>Novo contrato</h1><p class="lead">Escolha a proposta vencedora que vira contrato.</p></div>
+  ${vencs.length?`<div class="card rowlist">${vencs.map(c=>`<button class="row" data-gc="${c.id}">
+      <span class="ic" style="background:var(--ok-soft);color:var(--ok)">${I.trophy}</span>
+      <span class="tt"><span class="t1">${c.vencedora}</span><span class="t2">${CATS[c.cat].nome} · ${c.obraNome}</span></span>
+      <span class="rt"><span class="v">${brl(c.propostas.find(p=>p.status==='vencedora').valor)}</span></span>
+      <span class="chev">${I.chev}</span></button>`).join('')}</div>`
+    :`<div class="card empty">Nenhuma proposta vencedora disponível.</div>`}`;
+  document.querySelectorAll('[data-gc]').forEach(b=>b.addEventListener('click',()=>{toast('Contrato gerado a partir da vencedora');setTimeout(()=>go('contrato',{conc:b.dataset.gc}),650)}));
+};
+SCREENS.contrato=(arg)=>{
+  const {ct,c,p,o}=ctData(arg); const base=ct.base; const sg=sigState(base); const assinado=sg.contratante&&sg.contratada;
+  view.innerHTML=`
+  <div class="crumb"><button data-nav="contratos">Contratos</button>${I.chev}<span>${CATS[ct.cat].nome}</span></div>
+  <div class="page-head"><h1>${CATS[ct.cat].nome}</h1><p class="lead">${o.nome} · ${ct.forn}</p>
+    <div style="margin-top:10px">${pill(assinado?'adjudicada':'analise',assinado?'Assinado':'Rascunho')}</div></div>
+  ${assinado?`<div class="banner ok">${I.check}<div><b>Contrato assinado</b> pelas duas partes.</div></div>`:''}
+  <div class="section-title"><h2>Vínculo</h2></div>
+  <div class="card" style="overflow:hidden;margin-bottom:16px">
+    <div class="annex"><span class="okic">${I.check}</span><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:13px">Anexo I — Proposta vencedora</div><small class="sub" style="font-size:11px">${ct.forn} · v${p.vz}</small></div><button class="btn sm ghost" onclick="go('prop',{id:'${p.id}',conc:'${base}'})">Ver</button></div>
+    <div class="annex"><span class="okic">${I.check}</span><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:13px">Anexo II — Equalização</div><small class="sub" style="font-size:11px">Comparativo do certame</small></div><button class="btn sm ghost" onclick="go('equalizar',{id:'${base}'})">Ver</button></div>
+  </div>
+  <div class="section-title"><h2>Minuta</h2><span class="c">${PAGINAS} páginas · da proposta</span></div>
+  <div class="clause"><div class="cnum">Cláusula 1 · Objeto</div><h4>Do objeto</h4><p>Contratação de ${ct.forn} para ${c.escopo||CATS[ct.cat].nome.toLowerCase()+' da '+o.nome}.</p><span class="src">${I.link} Proposta v${p.vz}</span></div>
+  <div class="clause"><div class="cnum">Cláusula 2 · Preço</div><h4>Valor e pagamento</h4><p><b>${brl(ct.valor)}</b>, pago em <b>${p.cond}</b>.</p><span class="src">${I.link} da proposta</span></div>
+  <div class="clause"><div class="cnum">Cláusula 3 · Prazo</div><h4>Execução</h4><p><b>${p.prazo} dias úteis</b> a contar da ordem de serviço.</p><span class="src">${I.link} da proposta</span></div>
+  <div class="clause" style="border-style:dashed;color:var(--muted);box-shadow:none"><div class="cnum">Cláusulas 4–12</div><h4>Garantia, multas, rescisão…</h4><p>Cláusulas do modelo, editáveis.</p></div>
+  <div class="section-title"><h2>Assinaturas</h2><span class="c">digital</span></div>
+  <div class="card" style="overflow:hidden;margin-bottom:16px">
+    ${parteRow(base,'contratante','Sua empresa','Contratante',sg.contratante)}
+    ${parteRow(base,'contratada',ct.forn,'Contratada',sg.contratada)}
+  </div>
+  <button class="btn ghost block" onclick="toast('Baixar PDF (protótipo)')">${I.dl} Baixar PDF</button>`;
+};
+function parteRow(base,parte,nome,papel,sig){
+  const safe=String(nome).replace(/['"\\]/g,'');
+  return `<div class="party"><span class="pic">${sig?I.check:(nome[0]||'?')}</span>
+    <div class="pn"><div class="r">${nome}</div><div class="s">${papel}${sig?' · assinado nas '+PAGINAS+' páginas':''}</div></div>
+    ${sig?`<img class="sigimg" src="${sig}" alt="assinatura">`:`<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto">
+      <button class="btn sm primary" onclick="go('assinar',{conc:'${base}',parte:'${parte}',nome:'${safe}'})">Assinar</button>
+      <button class="btn sm ghost" onclick="go('enviarass',{conc:'${base}',parte:'${parte}',nome:'${safe}'})">Enviar link</button></div>`}</div>`;
+}
+SCREENS.assinar=({conc,parte,nome,ext})=>{
+  const {ct}=ctData({conc});
+  view.innerHTML=`
+  ${ext?`<div class="banner warn" style="margin-top:4px">${I.alert}<div>Documento enviado pelo <b>bid</b> para sua assinatura.</div></div>`:`<div class="crumb"><button onclick="back()">Contrato</button>${I.chev}<span>Assinar</span></div>`}
+  <div class="page-head"><h1>${ext?'Assinar documento':'Sua assinatura'}</h1><p class="lead">${nome||''} · ${CATS[ct.cat].nome} · ${brl(ct.valor)}</p></div>
+  <p class="sub" style="margin-bottom:9px">Assine com o dedo no quadro. A mesma assinatura é aplicada nas ${PAGINAS} páginas.</p>
+  <div class="padwrap"><canvas id="pad" class="pad"></canvas><div class="padline"></div><div class="padhint" id="padhint">assine aqui</div></div>
+  <div style="display:flex;gap:9px;margin:12px 0 4px"><button class="btn ghost" style="flex:1" id="clear">Limpar</button><button class="btn primary" style="flex:2" id="confirm">${I.check} Confirmar</button></div>`;
+  setupPad(conc,parte,ext);
+};
+function setupPad(conc,parte,ext){
+  const cv=$('#pad'),hint=$('#padhint'),ctx=cv.getContext('2d');
+  const r=cv.getBoundingClientRect();cv.width=r.width*2;cv.height=r.height*2;ctx.scale(2,2);
+  ctx.lineWidth=2.4;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#171821';
+  let drawing=false,empty=true,last=null;
+  const pos=e=>{const b=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-b.left,y:t.clientY-b.top}};
+  cv.addEventListener('pointerdown',e=>{drawing=true;empty=false;hint.style.display='none';last=pos(e);e.preventDefault();});
+  cv.addEventListener('pointermove',e=>{if(!drawing)return;const q=pos(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(q.x,q.y);ctx.stroke();last=q;e.preventDefault();});
+  window.addEventListener('pointerup',()=>{drawing=false;});
+  $('#clear').addEventListener('click',()=>{ctx.clearRect(0,0,cv.width,cv.height);empty=true;hint.style.display='';});
+  $('#confirm').addEventListener('click',()=>{if(empty){toast('Assine no quadro primeiro');return;}
+    sigState(conc)[parte]=cv.toDataURL('image/png');
+    if(ext)go('assinado',{conc,parte});else{toast('Assinatura registrada');setTimeout(()=>go('contrato',{conc}),600);}});
+}
+SCREENS.assinado=({conc})=>{
+  view.innerHTML=`
+  <div style="text-align:center;margin-top:42px">
+    <div style="width:66px;height:66px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;margin:0 auto 16px">${I.check}</div>
+    <h1 style="font-size:24px">Assinatura concluída</h1>
+    <p class="lead" style="margin-top:6px">O documento foi assinado e já aparece assinado no bid.</p>
+  </div>
+  <button class="btn primary block" style="margin-top:22px" onclick="go('contrato',{conc:'${conc}'})">Ver no contrato</button>`;
+};
+SCREENS.enviarass=({conc,parte,nome})=>{
+  const {ct}=ctData({conc}); const link='bid.app/a/'+String(conc).replace(/[^a-z0-9]/gi,'').slice(0,8);
+  const msg=encodeURIComponent('Segue o contrato de '+CATS[ct.cat].nome+' para assinatura digital: https://'+link);
+  view.innerHTML=`
+  <div class="crumb"><button onclick="back()">Contrato</button>${I.chev}<span>Enviar p/ assinatura</span></div>
+  <div class="page-head"><h1>Enviar para assinatura</h1><p class="lead">Para quem não usa o bid: a outra parte assina pelo navegador.</p></div>
+  <div class="field"><label>Link de assinatura</label><div class="linkbox"><span style="flex:1;min-width:0;word-break:break-all">${link}</span><button class="btn sm ghost" id="copy">Copiar</button></div></div>
+  <a class="btn wa block" href="https://wa.me/?text=${msg}" target="_blank" rel="noopener" style="margin-bottom:10px"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.7 7.4L3 21l2.2-5.2A8.5 8.5 0 1 1 21 11.5z"/></svg> Compartilhar no WhatsApp</a>
+  <p class="sub" style="text-align:center;margin-bottom:14px">A outra parte abre o link, assina com o dedo e confirma — o documento aparece assinado aqui.</p>
+  <button class="btn ghost block" id="simular">Simular: abrir como a outra parte</button>`;
+  $('#copy').addEventListener('click',()=>{try{navigator.clipboard.writeText('https://'+link)}catch(e){}toast('Link copiado')});
+  $('#simular').addEventListener('click',()=>go('assinar',{conc,parte,nome,ext:true}));
+};
+
+/* ===== Obras ===== */
+SCREENS.obras=()=>{
+  view.innerHTML=`
+  <div class="page-head"><h1>Obras</h1><p class="lead">O acervo organizado por obra.</p></div>
+  ${Object.values(OBRAS).map(o=>{const ativas=o.concs.filter(c=>c.status!=='adjudicada').length;
+    return `<button class="ucard" data-obra="${o.id}"><div class="hd"><span class="cat-ic">${I.bldg}</span>
+      <div style="min-width:0"><h3>${o.nome}</h3><div class="sub">${o.cidade}</div></div></div>
+      <div class="foot"><span>${o.concs.length} equalizações · ${ativas} ativas</span><span class="go">Abrir ${I.chev}</span></div></button>`}).join('')}`;
+  document.querySelectorAll('[data-obra]').forEach(b=>b.addEventListener('click',()=>go('obra',{id:b.dataset.obra})));
+};
+SCREENS.obra=({id})=>{
+  const o=OBRAS[id];
+  view.innerHTML=`
+  <div class="crumb"><button data-nav="obras">Obras</button>${I.chev}<span>${o.nome}</span></div>
+  <div class="page-head"><h1>${o.nome}</h1><p class="lead">${o.cidade} · ${o.concs.length} equalizações</p></div>
+  <div class="card rowlist">
+    ${o.concs.map(c=>`<button class="row" data-conc="${c.id}">
+      <span class="ic">${CATS[c.cat].ic}</span>
+      <span class="tt"><span class="t1">${CATS[c.cat].nome}</span><span class="t2">${c.propostas.length} propostas${c.vencedora?' · ✓ '+c.vencedora:''}</span></span>
+      <span class="rt"><span class="dot ${STAT[c.status][0]}"></span></span>
+      <span class="chev">${I.chev}</span></button>`).join('')}
+  </div>`;
+  bindConc();
+};
+
+/* ===== Iniciar equalização ===== */
+let eqScope='obra', eqObra='jardins', eqCatName='Estrutura pré-moldada';
+SCREENS.iniciar=()=>{
+  const inObra = eqScope==='obra'; const nm=eqCatName.trim().toLowerCase();
+  let matches=[], concId=null;
+  if(inObra){const c=OBRAS[eqObra].concs.find(x=>CATS[x.cat].nome.toLowerCase()===nm); if(c){concId=c.id; matches=c.propostas.map(p=>({...p,obraNome:OBRAS[eqObra].nome}))}}
+  else matches=allProps().filter(p=>CATS[p.cat].nome.toLowerCase()===nm);
+  view.innerHTML=`
+  <div class="crumb"><button data-nav="equalizacoes">Equalizações</button>${I.chev}<span>Iniciar</span></div>
+  <div class="page-head"><h1>Iniciar equalização</h1><p class="lead">Escolha o que comparar.</p></div>
+  <div class="field"><label>Escopo</label>
+    <div class="seg"><button class="${inObra?'on':''}" data-sc="obra">Em uma obra</button><button class="${!inObra?'on':''}" data-sc="entre">Entre obras</button></div></div>
+  ${inObra?`<div class="field"><label>Obra</label><select id="i-obra">${Object.values(OBRAS).map(o=>`<option value="${o.id}" ${o.id===eqObra?'selected':''}>${o.nome}</option>`).join('')}</select></div>`:''}
+  <div class="field"><label>Categoria de serviço</label><input id="i-cat" list="cats2" value="${eqCatName}" placeholder="Digite ou escolha" autocomplete="off"><datalist id="cats2">${[...new Set(allProps().map(p=>CATS[p.cat].nome))].map(n=>`<option value="${n}"></option>`).join('')}</datalist></div>
+  <div class="section-title"><h2>Propostas a comparar</h2><span class="c">${matches.length}</span></div>
+  ${matches.length?`<div class="card rowlist" style="margin-bottom:16px">${matches.sort((a,b)=>a.valor-b.valor).map(p=>`<div class="row">
+      <span class="ic" style="background:var(--ok-soft);color:var(--ok)">${I.check}</span>
+      <span class="tt"><span class="t1">${p.forn}</span><span class="t2">${p.obraNome}${p.vz>1?' · v'+p.vz:''}</span></span>
+      <span class="rt"><span class="v">${brl(p.valor)}</span></span></div>`).join('')}</div>`
+    :`<div class="card empty" style="margin-bottom:16px">Nenhuma proposta nessa categoria${inObra?' nesta obra':''}.</div>`}
+  <button class="btn primary block" id="start" ${matches.length<2?'disabled style="opacity:.45"':''}>${I.scale} Equalizar ${matches.length} propostas</button>`;
+  document.querySelectorAll('[data-sc]').forEach(b=>b.addEventListener('click',()=>{eqScope=b.dataset.sc;SCREENS.iniciar()}));
+  const so=$('#i-obra'); if(so) so.addEventListener('change',()=>{eqObra=so.value;SCREENS.iniciar()});
+  $('#i-cat').addEventListener('change',e=>{eqCatName=e.target.value;SCREENS.iniciar()});
+  const st=$('#start'); if(st) st.addEventListener('click',()=>{if(matches.length<2)return;
+    if(inObra&&concId) go('equalizar',{id:concId}); else toast('Equalização entre obras — comparativo de '+matches.length+' propostas (protótipo)');});
+};
+
+/* ===== Nova proposta — a IA lê os dados do arquivo ===== */
+SCREENS.nova=()=>{
+  view.innerHTML=`
+  <div class="crumb"><button data-nav="propostas">Propostas</button>${I.chev}<span>Nova proposta</span></div>
+  <div class="page-head"><h1>Nova proposta</h1><p class="lead">Diga a obra e a categoria e anexe o arquivo — a IA lê o resto da proposta.</p></div>
+  <div class="field"><label>Obra</label><select id="f-obra">${Object.values(OBRAS).map(o=>`<option value="${o.id}">${o.nome}</option>`).join('')}</select></div>
+  <div class="field"><label>Categoria de serviço</label><input id="f-cat" list="cats" placeholder="Digite ou escolha — ex.: Impermeabilização" autocomplete="off"><datalist id="cats">${[...new Set(allProps().map(p=>CATS[p.cat].nome))].map(n=>`<option value="${n}"></option>`).join('')}</datalist></div>
+  <div class="field"><label>Arquivo da proposta</label>
+    <label class="dropzone" for="f-file">${I.upload}<div>Anexar PDF ou planilha</div><small>a IA extrai fornecedor, valor, prazo, pagamento e garantia</small></label>
+    <input id="f-file" type="file" hidden></div>
+  <div id="extract"></div>
+  <button class="btn ghost block" id="cancel0" style="margin-top:4px">Cancelar</button>`;
+  $('#cancel0').addEventListener('click',back);
+  $('#f-file').addEventListener('change',e=>{if(e.target.files.length){document.querySelector('.dropzone div').textContent=e.target.files[0].name;extrairProposta()}});
+};
+function extrairProposta(){
+  const ex=$('#extract');
+  ex.innerHTML=`<div class="ai" style="margin:4px 0 14px"><div class="ai-empty"><span class="sp">${I.spark}</span><div class="thinking"><i></i><i></i><i></i></div><p>Lendo a proposta e extraindo os dados…</p></div></div>`;
+  setTimeout(()=>{
+    const d=[['Fornecedor','Metalça Esquadrias',14],['Valor','R$ 436.800',16],['Prazo','43 dias',14],['Pagamento','30% / 70%',14],['Garantia','4 anos',14],['Planilha','18 itens',14]];
+    ex.innerHTML=`
+    <div class="ai" style="margin:4px 0 14px"><div class="ai-h"><span class="sp">${I.spark}</span><div><h3>Dados lidos pela IA</h3><small>Claude · confira antes de arquivar</small></div></div>
+      <div class="ai-b" style="padding:0;gap:0"><div class="sumgrid" style="border:0">
+        ${d.map(([k,v,s])=>`<div><span class="k">${k}</span><span class="val" style="font-size:${s}px">${v}</span></div>`).join('')}
+      </div></div></div>
+    <button class="btn ghost block" style="margin-bottom:9px" onclick="toast('Corrigir dados lidos (protótipo)')">Corrigir dados lidos</button>
+    <button class="btn primary block" id="save">${I.check} Arquivar no acervo</button>`;
+    $('#save').addEventListener('click',()=>{toast('Proposta arquivada no acervo');setTimeout(()=>go('propostas'),800)});
+  },1400);
+}
+function bindConc(){document.querySelectorAll('[data-conc]').forEach(b=>{if(!b.dataset.prop)b.addEventListener('click',()=>go('conc',{id:b.dataset.conc}))})}
+function bindProp(){document.querySelectorAll('[data-prop]').forEach(b=>b.addEventListener('click',()=>go('prop',{id:b.dataset.prop,conc:b.dataset.conc})))}
+
+let tt;
+function toast(msg){let el=$('#toast');if(!el){el=document.createElement('div');el.id='toast';(document.querySelector('.device')||document.body).appendChild(el)}
+  el.textContent=msg;el.style.opacity='1';clearTimeout(tt);tt=setTimeout(()=>el.style.opacity='0',2400)}
+window.go=go; window.toast=toast; window.back=back;
+go('propostas',{},true);
+</script>

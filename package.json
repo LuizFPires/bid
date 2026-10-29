@@ -1,0 +1,29 @@
+{
+  "name": "bid",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "bid · propostas, equalização e contratos de obra (PWA)",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "pnpm --filter @bid/web dev",
+    "build": "pnpm -r --filter=./packages/* --filter=./apps/web build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1"
+  }
+}
