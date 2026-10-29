@@ -1,0 +1,150 @@
+-- M1 · Modelo de dados do domínio (acervo). Tudo escopado por org_id, RLS por
+-- pertencimento. Exclusão é lógica (deleted_at); DELETE físico fica negado para
+-- usuários (sem policy de delete) — só o servidor (service_role) ignora a RLS.
+
+-- ---------- obras ----------
+create table if not exists public.obras (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizacoes(id) on delete cascade,
+  nome text not null,
+  cidade text,
+  fase text,
+  fase_pill text not null default 'neutro' check (fase_pill in ('aberta', 'analise', 'adjudicada', 'neutro')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create index if not exists idx_obras_org on public.obras(org_id);
+create trigger trg_obras_updated before update on public.obras
+  for each row execute function public.set_updated_at();
+
+-- ---------- certames (tomada de preços) ----------
+create table if not exists public.certames (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizacoes(id) on delete cascade,
+  obra_id uuid not null references public.obras(id) on delete cascade,
+  categoria text not null,
+  titulo text not null,
+  escopo text,
+  status text not null default 'aberta' check (status in ('aberta', 'analise', 'adjudicada')),
+  abertura date,
+  limite date,
+  vencedora_proposta_id uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create index if not exists idx_certames_org on public.certames(org_id);
+create index if not exists idx_certames_obra on public.certames(obra_id);
+create index if not exists idx_certames_categoria on public.certames(categoria);
+create trigger trg_certames_updated before update on public.certames
+  for each row execute function public.set_updated_at();
+
+-- ---------- propostas ----------
+create table if not exists public.propostas (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizacoes(id) on delete cascade,
+  certame_id uuid not null references public.certames(id) on delete cascade,
+  fornecedor text not null,
+  status text not null default 'recebida' check (status in ('recebida', 'analise', 'vencedora', 'desclassificada')),
+  valor_atual numeric(14, 2),
+  prazo_atual integer,
+  condicao_pagamento text,
+  garantia text,
+  versao_atual integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create index if not exists idx_propostas_org on public.propostas(org_id);
+create index if not exists idx_propostas_certame on public.propostas(certame_id);
+create trigger trg_propostas_updated before update on public.propostas
+  for each row execute function public.set_updated_at();
+
+-- FK da vencedora (depois que propostas existe)
+alter table public.certames
+  drop constraint if exists certames_vencedora_fk,
+  add constraint certames_vencedora_fk
+    foreign key (vencedora_proposta_id) references public.propostas(id) on delete set null;
+
+-- ---------- proposta_versoes ----------
+create table if not exists public.proposta_versoes (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizacoes(id) on delete cascade,
+  proposta_id uuid not null references public.propostas(id) on delete cascade,
+  n integer not null,
+  data date not null default current_date,
+  valor numeric(14, 2),
+  prazo integer,
+  condicao_pagamento text,
+  garantia text,
+  obs text,
+  arquivo_path text,
+  dados_extraidos jsonb,
+  created_at timestamptz not null default now(),
+  unique (proposta_id, n)
+);
+create index if not exists idx_versoes_org on public.proposta_versoes(org_id);
+create index if not exists idx_versoes_proposta on public.proposta_versoes(proposta_id);
+
+-- ---------- sugestoes (autocomplete, campo livre) ----------
+create table if not exists public.sugestoes (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizacoes(id) on delete cascade,
+  tipo text not null check (tipo in ('categoria', 'fornecedor', 'obra', 'local')),
+  texto text not null,
+  uso integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (org_id, tipo, texto)
+);
+create index if not exists idx_sugestoes_org_tipo on public.sugestoes(org_id, tipo);
+create trigger trg_sugestoes_updated before update on public.sugestoes
+  for each row execute function public.set_updated_at();
+
+-- ---------- eventos (auditoria, append-only) ----------
+create table if not exists public.eventos (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizacoes(id) on delete cascade,
+  entidade text not null,
+  entidade_id uuid,
+  tipo text not null,
+  payload jsonb,
+  autor uuid default auth.uid(),
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_eventos_org on public.eventos(org_id);
+create index if not exists idx_eventos_entidade on public.eventos(entidade, entidade_id);
+
+-- ---------- RLS (por pertencimento à org) ----------
+alter table public.obras enable row level security;
+alter table public.certames enable row level security;
+alter table public.propostas enable row level security;
+alter table public.proposta_versoes enable row level security;
+alter table public.sugestoes enable row level security;
+alter table public.eventos enable row level security;
+
+-- obras / certames / propostas / proposta_versoes / sugestoes:
+-- select+insert+update para membros da org. Sem DELETE (exclusão é lógica).
+do $$
+declare t text;
+begin
+  foreach t in array array['obras', 'certames', 'propostas', 'proposta_versoes', 'sugestoes']
+  loop
+    execute format($f$
+      create policy "%1$s_select" on public.%1$s
+        for select to authenticated using (public.is_member(org_id));
+      create policy "%1$s_insert" on public.%1$s
+        for insert to authenticated with check (public.is_member(org_id));
+      create policy "%1$s_update" on public.%1$s
+        for update to authenticated using (public.is_member(org_id)) with check (public.is_member(org_id));
+    $f$, t);
+  end loop;
+end $$;
+
+-- eventos: membros leem; inserem com autor = próprio usuário. Sem update/delete.
+create policy "eventos_select" on public.eventos
+  for select to authenticated using (public.is_member(org_id));
+create policy "eventos_insert" on public.eventos
+  for insert to authenticated
+  with check (public.is_member(org_id) and (autor is null or autor = (select auth.uid())));
