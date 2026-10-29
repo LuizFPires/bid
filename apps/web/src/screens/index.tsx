@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { Icon, type IconName } from '@bid/ui';
 
-/**
- * Telas de M0 são esqueletos (empty states). O conteúdo real do acervo,
- * equalização, contratos e obras entra nos milestones M1+.
- */
-function Screen({
+export { PropostasScreen } from './Propostas';
+export { ObrasScreen } from './Obras';
+export { ObraScreen } from './Obra';
+export { NovaObraScreen } from './NovaObra';
+
+/** Telas ainda não implementadas (M4/M6) ficam como esqueleto. */
+function Placeholder({
   titulo,
   lead,
   icone,
@@ -36,20 +38,9 @@ function Screen({
   );
 }
 
-export function PropostasScreen() {
-  return (
-    <Screen
-      titulo="Propostas"
-      lead="O acervo de propostas por categoria de serviço."
-      icone="tab-propostas"
-      vazio="Nenhuma proposta ainda. O cadastro com extração por IA chega no M2."
-    />
-  );
-}
-
 export function EqualizacoesScreen() {
   return (
-    <Screen
+    <Placeholder
       titulo="Equalizar"
       lead="Compare concorrentes no mesmo nível, com apoio de IA."
       icone="tab-equalizacoes"
@@ -60,22 +51,11 @@ export function EqualizacoesScreen() {
 
 export function ContratosScreen() {
   return (
-    <Screen
+    <Placeholder
       titulo="Contratos"
       lead="A proposta vencedora vira contrato, assinado digitalmente."
       icone="tab-contratos"
       vazio="Nenhum contrato ainda. A geração a partir da vencedora chega no M6."
-    />
-  );
-}
-
-export function ObrasScreen() {
-  return (
-    <Screen
-      titulo="Obras"
-      lead="Organize propostas e certames por obra."
-      icone="tab-obras"
-      vazio="Nenhuma obra ainda. O organizador por obra chega no M1."
     />
   );
 }

@@ -70,6 +70,11 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 ---
 
 ## Decisões
+- 29/10/2026 (auto — M1) — **Multi-tenant por organização**: tabelas `organizacoes` e `membros`; toda tabela de domínio tem `org_id`; RLS = usuário é membro da org. Trigger em `auth.users` cria uma org pessoal + membership no primeiro login (perfil Equipe compartilha dados da org).
+- 29/10/2026 (auto — M1) — **Categoria é texto livre** (sem lista fechada tipo CATS do protótipo): ícone genérico por categoria na UI + troféu para vencedora. `sugestoes` por org (tipo: categoria/fornecedor/obra/local), `uso` ordena o autocomplete.
+- 29/10/2026 (auto — M1) — **Acervo**: busca e filtros no cliente sobre um fetch agregado único (sem N+1); lista ordenada por valor. Derivados calculados no cliente com o `core`.
+- 29/10/2026 (auto — M1) — Tipos do banco escritos à mão em `apps/web/src/data` por enquanto (gerar via Supabase CLI depois).
+
 - 29/10/2026 — Nome do app: **bid**. Pasta do projeto: `18 BID`.
 - 29/10/2026 — Logomarca: **propostas empilhadas em 3D** (três camadas), conforme protótipo.
 - 29/10/2026 — Categoria de serviço é **campo livre** com autocompletar (não há cadastro fechado).

@@ -9,6 +9,8 @@ import {
   EqualizacoesScreen,
   ContratosScreen,
   ObrasScreen,
+  ObraScreen,
+  NovaObraScreen,
 } from './screens';
 
 function Gate() {
@@ -41,6 +43,8 @@ function Gate() {
         <Route path="equalizacoes" element={<EqualizacoesScreen />} />
         <Route path="contratos" element={<ContratosScreen />} />
         <Route path="obras" element={<ObrasScreen />} />
+        <Route path="obras/nova" element={<NovaObraScreen />} />
+        <Route path="obras/:id" element={<ObraScreen />} />
         <Route path="*" element={<Navigate to="/propostas" replace />} />
       </Route>
     </Routes>
