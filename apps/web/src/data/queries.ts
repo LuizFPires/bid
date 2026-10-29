@@ -1,6 +1,6 @@
 import type { PropostaAcervo, PropostaStatus } from '@bid/core';
 import { supabase } from '../lib/supabase';
-import type { Obra } from './types';
+import type { Obra, Organizacao } from './types';
 
 function db() {
   if (!supabase) throw new Error('Supabase não configurado.');
@@ -152,6 +152,20 @@ export async function fetchObra(id: string): Promise<ObraDetalhe | null> {
     };
   });
   return { obra: obra as Obra, certames: resumos };
+}
+
+/* ---------- Organização ---------- */
+
+/** A organização do usuário (a primeira; criada no signup). RLS garante o escopo. */
+export async function fetchMinhaOrg(): Promise<Organizacao | null> {
+  const { data, error } = await db()
+    .from('organizacoes')
+    .select('id, nome')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Organizacao | null) ?? null;
 }
 
 /* ---------- Sugestões (autocomplete) ---------- */
