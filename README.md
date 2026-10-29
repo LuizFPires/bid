@@ -17,7 +17,7 @@ docs            PRD, SPEC, PLAN, protótipo
 
 ## Pré-requisitos
 
-- Node >= 20
+- Node >= 22 (o pnpm 11 exige Node 22.13+)
 - pnpm (`corepack enable` ou `npm i -g pnpm`)
 
 ## Começar
