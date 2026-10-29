@@ -4,3 +4,4 @@ export * from './status';
 export * from './versions';
 export * from './acervo';
 export * from './extracao';
+export * from './equalizacao';
