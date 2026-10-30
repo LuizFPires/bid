@@ -13,3 +13,14 @@ export function userClient(accessToken: string): SupabaseClient {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/**
+ * Cliente com `service_role` — IGNORA a RLS. Uso ESTRITO: o fluxo de assinatura
+ * por LINK externo, em que o signatário não tem sessão (sem como passar RLS).
+ * Nunca exposto ao cliente; a chave só existe no servidor.
+ */
+export function serviceClient(): SupabaseClient {
+  return createClient(env.supabaseUrl(), env.supabaseServiceKey(), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
