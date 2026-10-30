@@ -39,6 +39,22 @@ export async function registrarAssinatura(sb: SupabaseClient, d: DadosAssinatura
   if (baixado.error || !baixado.data) throw new Error('PDF do contrato indisponível.');
   const pdfBytes = new Uint8Array(await baixado.data.arrayBuffer());
 
+  // Integridade: o PDF atual precisa bater com o doc_hash da última assinatura
+  // (se houver). Se não bater, foi alterado fora do fluxo — aborta.
+  const { data: ultima } = await sb
+    .from('assinaturas')
+    .select('doc_hash')
+    .eq('contrato_id', d.contratoId)
+    .not('doc_hash', 'is', null)
+    .order('assinado_em', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const hashAtual = createHash('sha256').update(pdfBytes).digest('hex');
+  const docHashAnterior = (ultima as { doc_hash: string | null } | null)?.doc_hash;
+  if (docHashAnterior && docHashAnterior !== hashAtual) {
+    throw new Error('O documento foi alterado desde a última assinatura.');
+  }
+
   const pngBytes = Uint8Array.from(Buffer.from(d.pngBase64, 'base64'));
   const assinado = await aplicarAssinatura(pdfBytes, pngBytes, d.parte, d.nome);
   const docHash = createHash('sha256').update(assinado).digest('hex');
@@ -85,14 +101,24 @@ export async function registrarAssinatura(sb: SupabaseClient, d: DadosAssinatura
     assinadoEm: l.assinado_em,
   }));
   if (ambasPartesAssinaram(resumo)) {
-    await sb.from('contratos').update({ status: 'assinado' }).eq('id', d.contratoId);
-    await sb.from('eventos').insert({
-      org_id: d.orgId,
-      entidade: 'contrato',
-      entidade_id: d.contratoId,
-      tipo: 'contrato_assinado',
-      payload: { por: d.parte },
-    });
+    // Transição condicional: evita evento 'contrato_assinado' em duplicata se as
+    // duas partes finalizarem quase ao mesmo tempo.
+    const { data: trans } = await sb
+      .from('contratos')
+      .update({ status: 'assinado' })
+      .eq('id', d.contratoId)
+      .neq('status', 'assinado')
+      .select('id')
+      .maybeSingle();
+    if (trans) {
+      await sb.from('eventos').insert({
+        org_id: d.orgId,
+        entidade: 'contrato',
+        entidade_id: d.contratoId,
+        tipo: 'contrato_assinado',
+        payload: { por: d.parte },
+      });
+    }
   } else {
     await sb.from('eventos').insert({
       org_id: d.orgId,

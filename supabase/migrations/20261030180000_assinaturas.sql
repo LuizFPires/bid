@@ -63,8 +63,11 @@ declare
   v_token text;
   v_assinado timestamptz;
 begin
-  if p_parte not in ('contratante', 'contratada') then
-    raise exception 'parte inválida';
+  -- O link externo é só para a CONTRATADA (fornecedor). A CONTRATANTE (a org)
+  -- assina no app. Mantém a separação dos dois caminhos (não emite link da
+  -- contratante nem por chamada direta ao RPC).
+  if p_parte <> 'contratada' then
+    raise exception 'o link de assinatura é apenas para a contratada';
   end if;
   select org_id into v_org from public.contratos where id = p_contrato and deleted_at is null;
   if v_org is null then raise exception 'contrato não encontrado'; end if;

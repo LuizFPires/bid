@@ -37,7 +37,7 @@ returns trigger language plpgsql as $$
 begin
   if auth.uid() is not null and exists (
     select 1 from public.assinaturas a
-    where a.contrato_id = coalesce(new.contrato_id, old.contrato_id)
+    where a.contrato_id in (new.contrato_id, old.contrato_id)  -- cobre mover de contrato
       and a.assinado_em is not null
   ) then
     raise exception 'o contrato já tem assinatura: não é possível editar cláusulas';

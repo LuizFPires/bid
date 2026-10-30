@@ -1,15 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { formatBRL } from '@bid/core';
+import { MissingEnvError } from '../_lib/env';
 import { bearer, requireMethod } from '../_lib/respond';
 import { renderContratoPdf } from '../_lib/pdf';
-import { userClient } from '../_lib/supabase';
+import { serviceClient, userClient } from '../_lib/supabase';
 
 /**
  * POST /api/contracts/pdf
  * Entrada: { id } — id do contrato.
- * Ação: carrega contrato + cláusulas (RLS, user-scoped), renderiza o PDF
- * (@react-pdf), faz upload ao bucket privado `contratos` na pasta do usuário e
- * grava `pdf_path`/`paginas`. Não usa service_role.
+ * Ação: autoriza pela sessão (RLS no load), renderiza o PDF (@react-pdf) e grava
+ * no bucket privado `contratos` via SERVICE_ROLE (o PDF é escrito só pelo
+ * servidor — membros não sobrescrevem). Recusa se o contrato já tem assinatura.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!requireMethod(req, res, 'POST')) return;
@@ -58,6 +59,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // Não regerar um contrato que já tem assinatura (o PDF assinado é imutável).
+  const { data: assinadas } = await sb
+    .from('assinaturas')
+    .select('id')
+    .eq('contrato_id', c.id)
+    .not('assinado_em', 'is', null)
+    .limit(1);
+  if (assinadas && assinadas.length > 0) {
+    res.status(409).json({ erro: 'Contrato já assinado: o PDF não pode ser regerado.' });
+    return;
+  }
+
+  // O PDF é escrito SÓ pelo servidor (service_role) — membros não sobrescrevem.
+  let svc;
+  try {
+    svc = serviceClient();
+  } catch (e) {
+    if (e instanceof MissingEnvError) {
+      res.status(503).json({ erro: 'Geração de PDF não configurada no servidor.' });
+      return;
+    }
+    throw e;
+  }
+
   let buffer: Buffer;
   let paginas: number;
   try {
@@ -76,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Caminho ORG-scoped e determinístico: qualquer membro regrava o mesmo objeto
   // (sem órfãos) e todos da org conseguem baixar (policies por is_member).
   const path = `${c.org_id}/contrato-${c.id}.pdf`;
-  const { error: upErr } = await sb.storage
+  const { error: upErr } = await svc.storage
     .from('contratos')
     .upload(path, buffer, { upsert: true, contentType: 'application/pdf' });
   if (upErr) {
@@ -84,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const { error: updErr } = await sb
+  const { error: updErr } = await svc
     .from('contratos')
     .update({ pdf_path: path, paginas })
     .eq('id', c.id);

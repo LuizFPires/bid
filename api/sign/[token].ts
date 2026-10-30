@@ -148,6 +148,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     res.status(200).json({ ok: true });
   } catch (e) {
+    // Falha transitória: devolve o token (reivindicado antes) para o link não
+    // morrer permanentemente — só é invalidado de fato ao assinar com sucesso.
+    await sb
+      .from('assinaturas')
+      .update({ token_hash: tokenHash })
+      .eq('id', (claim as { id: string }).id)
+      .is('assinado_em', null);
     res.status(502).json({ erro: e instanceof Error ? e.message : 'Falha ao assinar.' });
   }
 }
