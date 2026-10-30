@@ -167,6 +167,7 @@ export function ContratoScreen() {
   const toast = useToast();
   const [editando, setEditando] = useState<string | null>(null);
   const [rascunho, setRascunho] = useState('');
+  const [pdfDefasado, setPdfDefasado] = useState(false);
 
   if (isLoading) {
     return (
@@ -200,6 +201,7 @@ export function ContratoScreen() {
     try {
       await atualizar.mutateAsync({ clausulaId, texto: rascunho });
       setEditando(null);
+      if (data?.pdfPath) setPdfDefasado(true);
     } catch {
       toast('Não foi possível salvar a cláusula.');
     }
@@ -208,6 +210,7 @@ export function ContratoScreen() {
   async function gerar() {
     try {
       await gerarPdf.mutateAsync();
+      setPdfDefasado(false);
       toast('PDF gerado.');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Falha ao gerar o PDF.');
@@ -252,10 +255,16 @@ export function ContratoScreen() {
           </Button>
           {data.pdfPath && (
             <Button variant="soft" icon="dl" onClick={baixar}>
-              Baixar PDF{data.paginas ? ` (${data.paginas}p)` : ''}
+              Baixar PDF{data.paginas ? ` (~${data.paginas}p)` : ''}
             </Button>
           )}
         </div>
+        {pdfDefasado && (
+          <div className="banner warn" role="status" style={{ marginTop: 10 }}>
+            <Icon name="alert" />
+            <span>Você editou cláusulas — gere o PDF de novo para atualizá-lo.</span>
+          </div>
+        )}
       </div>
 
       <div className="section-title">

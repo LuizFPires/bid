@@ -73,7 +73,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const path = `${c.org_id}/${userData.user.id}/contrato-${c.id}.pdf`;
+  // Caminho ORG-scoped e determinístico: qualquer membro regrava o mesmo objeto
+  // (sem órfãos) e todos da org conseguem baixar (policies por is_member).
+  const path = `${c.org_id}/contrato-${c.id}.pdf`;
   const { error: upErr } = await sb.storage
     .from('contratos')
     .upload(path, buffer, { upsert: true, contentType: 'application/pdf' });

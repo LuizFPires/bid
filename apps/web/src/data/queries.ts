@@ -563,15 +563,23 @@ export async function fetchVencedoras(): Promise<VencedoraResumo[]> {
     fornecedor: string;
     certames: { categoria: string; obras: { nome: string } | { nome: string }[] | null } | { categoria: string }[] | null;
   }[];
-  return rows.map((r) => {
-    const cert = one(r.certames as { categoria: string; obras?: { nome: string } | { nome: string }[] | null } | null);
-    return {
-      id: r.id,
-      fornecedor: r.fornecedor,
-      categoria: cert?.categoria ?? '',
-      obraNome: one(cert?.obras ?? null)?.nome ?? '',
-    };
-  });
+  // Exclui as vencedoras que já viraram contrato (evita duplicar).
+  const { data: cts } = await db().from('contratos').select('proposta_id').is('deleted_at', null);
+  const jaContratadas = new Set(((cts ?? []) as { proposta_id: string }[]).map((c) => c.proposta_id));
+
+  return rows
+    .filter((r) => !jaContratadas.has(r.id))
+    .map((r) => {
+      const cert = one(
+        r.certames as { categoria: string; obras?: { nome: string } | { nome: string }[] | null } | null,
+      );
+      return {
+        id: r.id,
+        fornecedor: r.fornecedor,
+        categoria: cert?.categoria ?? '',
+        obraNome: one(cert?.obras ?? null)?.nome ?? '',
+      };
+    });
 }
 
 /** URL assinada (curta) para baixar o PDF do contrato (bucket privado). */

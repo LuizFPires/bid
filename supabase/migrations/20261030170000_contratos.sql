@@ -22,7 +22,9 @@ create table if not exists public.contratos (
   foreign key (obra_id, org_id) references public.obras(id, org_id) on delete cascade
 );
 create index if not exists idx_contratos_org on public.contratos(org_id);
-create index if not exists idx_contratos_proposta on public.contratos(proposta_id);
+-- Um contrato por proposta (evita duplicatas por cliques repetidos).
+create unique index if not exists uq_contrato_proposta
+  on public.contratos(proposta_id) where deleted_at is null;
 
 create table if not exists public.contrato_clausulas (
   id uuid primary key default gen_random_uuid(),
@@ -70,31 +72,24 @@ begin
 end $$;
 -- Sem DELETE (exclusão é lógica).
 
--- Storage: o PDF do contrato é gravado pela função (user-scoped) na pasta do
--- usuário dentro do bucket privado `contratos`. (No M0 só havia SELECT do dono.)
--- Caminho dos objetos: {org_id}/{user_id}/contrato-*.pdf. Além de owner_id,
--- exige que a pasta do usuário (2º segmento) seja o próprio uid (defesa extra).
+-- Storage: o PDF do contrato é gravado pela função (user-scoped). Caminho
+-- determinístico e ORG-scoped: {org_id}/contrato-{id}.pdf — assim qualquer
+-- membro da org lê/regrava o mesmo objeto (coerente com a RLS da tabela, que é
+-- por org) e não há órfãos ao regerar. O acesso é por pertencimento à org
+-- (1º segmento do caminho = org_id). Substitui o SELECT owner-scoped do M0.
+drop policy if exists "bid_contratos_select" on storage.objects;
+create policy "bid_contratos_select" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'contratos' and public.is_member(((storage.foldername(name))[1])::uuid));
 drop policy if exists "bid_contratos_insert" on storage.objects;
 create policy "bid_contratos_insert" on storage.objects
   for insert to authenticated
-  with check (
-    bucket_id = 'contratos'
-    and owner_id = (select auth.uid()::text)
-    and (storage.foldername(name))[2] = (select auth.uid()::text)
-  );
+  with check (bucket_id = 'contratos' and public.is_member(((storage.foldername(name))[1])::uuid));
 drop policy if exists "bid_contratos_update" on storage.objects;
 create policy "bid_contratos_update" on storage.objects
   for update to authenticated
-  using (
-    bucket_id = 'contratos'
-    and owner_id = (select auth.uid()::text)
-    and (storage.foldername(name))[2] = (select auth.uid()::text)
-  )
-  with check (
-    bucket_id = 'contratos'
-    and owner_id = (select auth.uid()::text)
-    and (storage.foldername(name))[2] = (select auth.uid()::text)
-  );
+  using (bucket_id = 'contratos' and public.is_member(((storage.foldername(name))[1])::uuid))
+  with check (bucket_id = 'contratos' and public.is_member(((storage.foldername(name))[1])::uuid));
 
 -- Criação atômica do contrato a partir da proposta VENCEDORA de um certame
 -- ADJUDICADO. As cláusulas (texto gerado no core) chegam em p_clausulas; o valor
@@ -122,6 +117,13 @@ begin
       and c.status = 'adjudicada' and c.vencedora_proposta_id = p_proposta;
   if v_org is null then
     raise exception 'contrato exige uma proposta vencedora de certame adjudicado';
+  end if;
+
+  -- Idempotente: se já há contrato dessa proposta, devolve o existente.
+  select id into v_contrato from public.contratos
+    where proposta_id = p_proposta and deleted_at is null limit 1;
+  if v_contrato is not null then
+    return v_contrato;
   end if;
 
   insert into public.contratos (org_id, certame_id, proposta_id, obra_id, categoria, valor, status)
