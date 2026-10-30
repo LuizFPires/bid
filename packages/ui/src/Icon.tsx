@@ -22,6 +22,8 @@ export type IconName =
   | 'search'
   | 'arrow'
   | 'bell'
+  | 'user'
+  | 'logout'
   | 'cat-estrutura'
   | 'cat-pisos'
   | 'cat-clima'
@@ -66,6 +68,8 @@ const PATHS: Record<IconName, { sw: number; el: React.ReactNode }> = {
   search: { sw: 2, el: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></> },
   arrow: { sw: 2, el: <path d="M5 12h14M13 6l6 6-6 6" /> },
   bell: { sw: 1.9, el: <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" /> },
+  user: { sw: 1.9, el: <><circle cx="12" cy="8" r="4" /><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6" /></> },
+  logout: { sw: 1.9, el: <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11" /> },
   'cat-estrutura': {
     sw: 1.8,
     el: (

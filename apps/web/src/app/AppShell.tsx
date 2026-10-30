@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BrandLogo, Icon, TabBar, type TabKey } from '@bid/ui';
 import { ToastProvider } from './Toast';
+import { ProfileMenu } from './ProfileMenu';
 
 /** Casca do app: topo com a marca, conteúdo roteado e abas inferiores. */
 export function AppShell() {
@@ -59,9 +60,7 @@ export function AppShell() {
               <Icon name="plus" />
             </button>
           )}
-          <button className="bell" type="button" aria-label="Notificações">
-            <Icon name="bell" />
-          </button>
+          <ProfileMenu />
         </header>
 
         <main className="content">
