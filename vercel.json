@@ -3,6 +3,6 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @bid/core build && pnpm --filter @bid/server build && pnpm --filter @bid/web build",
   "outputDirectory": "apps/web/dist",
-  "functions": { "api/**/*.ts": { "maxDuration": 60, "memory": 3009 } },
+  "functions": { "api/**/*.ts": { "maxDuration": 60 } },
   "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
 }
