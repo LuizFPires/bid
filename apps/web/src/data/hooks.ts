@@ -11,6 +11,7 @@ import {
   fetchContratos,
   fetchContrato,
   fetchVencedoras,
+  fetchAssinaturas,
   fetchSugestoes,
   fetchMinhaOrg,
 } from './queries';
@@ -25,6 +26,7 @@ import {
   criarContrato,
   atualizarClausula,
   gerarPdfContrato,
+  assinarApp,
 } from './mutations';
 
 export function useAcervo() {
@@ -118,6 +120,26 @@ export function useGerarPdf(contratoId: string) {
   return useMutation({
     mutationFn: () => gerarPdfContrato(contratoId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['contrato', contratoId] }),
+  });
+}
+
+export function useAssinaturas(contratoId: string | undefined) {
+  return useQuery({
+    queryKey: ['assinaturas', contratoId],
+    queryFn: () => fetchAssinaturas(contratoId as string),
+    enabled: Boolean(contratoId),
+  });
+}
+
+export function useAssinarApp(contratoId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: assinarApp,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['assinaturas', contratoId] });
+      qc.invalidateQueries({ queryKey: ['contrato', contratoId] });
+      qc.invalidateQueries({ queryKey: ['contratos'] });
+    },
   });
 }
 

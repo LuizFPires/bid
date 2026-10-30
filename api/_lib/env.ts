@@ -21,6 +21,8 @@ export const env = {
   anthropicKey: () => req('ANTHROPIC_API_KEY'),
   supabaseUrl: () => req('SUPABASE_URL'),
   supabaseAnonKey: () => req('SUPABASE_ANON_KEY'),
+  // SÓ para o fluxo que não tem sessão de usuário (assinatura por link externo).
+  supabaseServiceKey: () => req('SUPABASE_SERVICE_ROLE_KEY'),
   modelExtract: () => process.env.ANTHROPIC_MODEL_EXTRACT ?? 'claude-haiku-5-5',
   modelEqualize: () => process.env.ANTHROPIC_MODEL_EQUALIZE ?? 'claude-sonnet-5-5',
 };

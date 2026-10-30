@@ -1,8 +1,17 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { CONTRATO_LABEL, formatBRL } from '@bid/core';
+import {
+  CONTRATO_LABEL,
+  PARTES,
+  PARTE_LABEL,
+  formatBRL,
+  formatNumeric,
+  linkWhatsApp,
+} from '@bid/core';
 import { Button, Icon } from '@bid/ui';
 import {
+  useAssinarApp,
+  useAssinaturas,
   useAtualizarClausula,
   useContrato,
   useContratos,
@@ -10,7 +19,9 @@ import {
   useGerarPdf,
   useVencedoras,
 } from '../data/hooks';
+import { gerarTokenAssinatura } from '../data/mutations';
 import { urlContratoPdf } from '../data/queries';
+import { SignaturePad, type SignaturePadHandle } from '../components/SignaturePad';
 import { useToast } from '../app/Toast';
 
 /* ---------- Lista ---------- */
@@ -310,6 +321,112 @@ export function ContratoScreen() {
             )}
           </div>
         ))}
+      </div>
+
+      {data.pdfPath && <Assinaturas contratoId={data.id} />}
+    </>
+  );
+}
+
+/* ---------- Assinaturas (status + assinar no app + enviar link) ---------- */
+
+function Assinaturas({ contratoId }: { contratoId: string }) {
+  const { data } = useAssinaturas(contratoId);
+  const assinar = useAssinarApp(contratoId);
+  const toast = useToast();
+  const padRef = useRef<SignaturePadHandle>(null);
+  const [assinandoApp, setAssinandoApp] = useState(false);
+  const [nome, setNome] = useState('');
+
+  const linhas = data ?? [];
+  function estado(parte: 'contratante' | 'contratada') {
+    return linhas.find((l) => l.parte === parte);
+  }
+
+  async function confirmarApp() {
+    const png = padRef.current?.toPngBase64();
+    if (!png) {
+      toast('Assine no quadro antes de confirmar.');
+      return;
+    }
+    try {
+      await assinar.mutateAsync({ contratoId, parte: 'contratante', signatarioNome: nome, pngBase64: png });
+      setAssinandoApp(false);
+      setNome('');
+      toast('Assinatura registrada.');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Falha ao assinar.');
+    }
+  }
+
+  async function enviarLink() {
+    const signatario = window.prompt('Nome de quem vai assinar (contratada/fornecedor):') ?? '';
+    try {
+      const token = await gerarTokenAssinatura({ contratoId, parte: 'contratada', signatario });
+      const url = `${window.location.origin}/sign/${token}`;
+      window.open(linkWhatsApp(url, 'Assine o contrato:'), '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Não foi possível gerar o link.');
+    }
+  }
+
+  return (
+    <>
+      <div className="section-title">
+        <h2>Assinaturas</h2>
+      </div>
+      <div className="card" style={{ display: 'grid', gap: 12 }}>
+        {PARTES.map((parte) => {
+          const a = estado(parte);
+          const assinado = Boolean(a?.assinadoEm);
+          return (
+            <div key={parte} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+              <span>
+                <strong style={{ fontSize: 13 }}>{PARTE_LABEL[parte]}</strong>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>
+                  {assinado
+                    ? `Assinou em ${formatNumeric((a?.assinadoEm ?? '').slice(0, 10))}${a?.via === 'link' ? ' (link)' : ''}`
+                    : 'Pendente'}
+                </span>
+              </span>
+              {assinado ? (
+                <span className="pill adjudicada">
+                  <Icon name="check" style={{ width: 13, height: 13 }} />
+                  Assinado
+                </span>
+              ) : parte === 'contratante' ? (
+                <Button size="sm" icon="link" onClick={() => setAssinandoApp((v) => !v)}>
+                  Assinar no app
+                </Button>
+              ) : (
+                <Button size="sm" variant="soft" icon="link" onClick={enviarLink}>
+                  Enviar link
+                </Button>
+              )}
+            </div>
+          );
+        })}
+
+        {assinandoApp && (
+          <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+            <div className="field">
+              <label>Seu nome (contratante)</label>
+              <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Quem assina pela contratante" />
+            </div>
+            <div className="field">
+              <label>Assinatura</label>
+              <SignaturePad ref={padRef} />
+            </div>
+            <div className="pair">
+              <Button type="button" variant="ghost" onClick={() => setAssinandoApp(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" icon="check" disabled={assinar.isPending || !nome.trim()} onClick={confirmarApp}>
+                {assinar.isPending ? 'Assinando…' : 'Assinar'}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

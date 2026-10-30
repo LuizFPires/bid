@@ -55,11 +55,17 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** gerar um contrato de uma vencedora, com dados corretos e PDF baixável. _(A geração do PDF exige as env de servidor `SUPABASE_URL`/`SUPABASE_ANON_KEY` na Vercel; a criação do contrato e a edição de cláusulas funcionam sem elas.)_
 
 ## M7 · Assinatura digital (prioridade 4c)
-- [ ] Assinatura **no app**: canvas (a dedo), aplicada em todas as páginas do PDF.
-- [ ] **Enviar para assinatura**: link tokenizado + compartilhar por WhatsApp.
-- [ ] Página de assinatura externa (`/sign/:token`): resumo + assinatura + confirmação.
-- [ ] Trilha de auditoria (data/hora, IP, user agent, hash); contrato vira **Assinado** quando as duas partes assinam.
-- **Aceite:** assinar pelos dois caminhos; documento aparece assinado no app; auditoria registrada; token expira/uso único.
+- [x] Assinatura **no app**: canvas (a dedo), aplicada em todas as páginas do PDF (`pdf-lib`).
+- [x] **Enviar para assinatura**: link tokenizado + compartilhar por WhatsApp.
+- [x] Página de assinatura externa (`/sign/:token`, pública): resumo + assinatura + confirmação.
+- [x] Trilha de auditoria (data/hora, IP, user agent, doc_hash) **server-authoritative**; contrato vira **Assinado** quando as duas partes assinam.
+- **Aceite:** assinar pelos dois caminhos; documento assinado no app; auditoria registrada; token uso único/expira. _(O link externo exige `SUPABASE_SERVICE_ROLE_KEY` no servidor — code-complete, inativo até provisionar; a assinatura no app também grava a trilha via service_role.)_
+
+### Decisões de revisão (M7) — independente
+Revisão independente (0 crítico/alto, 2 médio, 3 baixo): **integridade** — a assinatura só é aplicada se o PDF atual bater com o `doc_hash` da assinatura anterior (detecta adulteração entre assinaturas); PDF do contrato é **server-only** (policies de escrita de cliente removidas; `/api/contracts/pdf` grava via `service_role` e recusa se já assinado); contrato criado **só via RPC** (`criar_contrato` SECURITY DEFINER + is_member; INSERT de cliente removido). **Robustez do link**: o token é **revertido** se a assinatura falhar (não morre em falha transitória). **Corrida**: evento `contrato_assinado` só na transição real; a regravação concorrente do PDF por ambas as partes ao mesmo tempo é limitação conhecida da assinatura simples (raro: contratante no app, contratada por link). Link externo restrito à **contratada**. Baixos (doc_hash intermediário; `valor` visível na página pública de assinatura) aceitos no modelo simples (regra #9). O retorno do token em claro ao membro que gera o link é **intencional** (ele envia ao fornecedor) — vínculo de identidade/OTP é modelo ICP, fora de escopo (regra #9); o gerador fica auditado.
+
+### Decisões de revisão (M7)
+Revisão de commit endureceu a trilha (achados HIGH): escrita de `assinaturas` é **só do servidor** (sem INSERT/UPDATE de cliente); token guardado como **hash** (claro sai 1x do RPC); no app só se assina como **contratante** (fornecedor via link); caminho do PDF **derivado no servidor**; token reivindicado **atomicamente** (uso único sem corrida); `status`/`pdf_path`/`valor` do contrato são **server-only** (trigger); cláusulas não editam após haver assinatura; auditoria de quem gerou o token. Modelo é **assinatura eletrônica simples** (regra #9; ICP/vínculo de identidade fora de escopo).
 
 ## M8 · Polimento e offline (desejável)
 - [ ] Ações otimistas + fila offline (upload em segundo plano).
@@ -70,6 +76,8 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 ---
 
 ## Decisões
+- 30/10/2026 (auto — M7) — **Assinatura eletrônica simples** (regra #9): tabela `assinaturas` (partes `contratante`/`contratada`, `via` app/link, `token` de uso único com expiração, trilha `assinado_em`/`ip`/`user_agent`/`doc_hash`). Aplicação da assinatura ao PDF com **`pdf-lib`** (carimbo em todas as páginas, posição por parte); o PDF assinado regrava o objeto do contrato. Contrato vira **assinado** quando **ambas** as partes assinam (`core.ambasPartesAssinaram`, testado). Compartilhamento por `wa.me` (`core.linkWhatsApp`).
+- 30/10/2026 (auto — M7) — **Dois caminhos**: (a) **no app** — função `/api/contracts/sign` com cliente **user-scoped** (assinante logado, RLS vale); (b) **link externo** `/sign/:token` — função `/api/sign/[token]` com **`service_role`** (assinante sem login não passa RLS). O link externo fica **code-complete porém inativo** até a `SUPABASE_SERVICE_ROLE_KEY` ser provisionada (bloqueio externo real). Token aleatório (`pgcrypto`), uso único, expira; invalida ao assinar.
 - 30/10/2026 (revisão — M6) — Correções da revisão independente (2 médio, 3 baixo): o PDF do contrato passou a **org-scoped e determinístico** (`{org}/contrato-{id}.pdf`), com policies de storage por `is_member` (membro da org baixa o PDF do colega; substitui o SELECT owner-scoped do M0 e elimina órfãos ao regerar); **um contrato por proposta** (índice único parcial + RPC idempotente que devolve o existente), com a lista de vencedoras filtrando as já contratadas; aviso de "PDF desatualizado" ao editar cláusula. Contagem de páginas fica como aproximação (heurística sobre os bytes do PDF).
 - 30/10/2026 (auto — M6) — **Contrato derivado da vencedora**: tabelas `contratos` + `contrato_clausulas`; RPC `criar_contrato(proposta, clausulas)` atômico exige certame **adjudicado** e a proposta ser a **vencedora**, fixa `valor` do contrato a partir da proposta (autoritativo), insere as cláusulas e grava evento. As **cláusulas** (objeto/preço/prazo/garantia + padrão) são geradas no `core` (`gerarClausulas`, testado — regra #1); editar o contrato não altera a proposta (regra #8).
 - 30/10/2026 (auto — M6) — **HTML→PDF no servidor com `@react-pdf/renderer`** (JS puro, serverless-friendly, sem Chromium) em `/api/contracts/pdf`; upload ao bucket privado `contratos` com **cliente user-scoped** (nova policy de INSERT por pasta do usuário), **sem `service_role`** (mesmo padrão do M2). Grava `pdf_path` e `paginas`; download por URL assinada.

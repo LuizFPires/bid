@@ -582,6 +582,35 @@ export async function fetchVencedoras(): Promise<VencedoraResumo[]> {
     });
 }
 
+import type { ParteAssinatura, ViaAssinatura } from '@bid/core';
+
+export interface AssinaturaLinha {
+  parte: ParteAssinatura;
+  assinadoEm: string | null;
+  via: ViaAssinatura | null;
+  signatarioNome: string | null;
+}
+
+/** Assinaturas de um contrato (para mostrar o status das partes). */
+export async function fetchAssinaturas(contratoId: string): Promise<AssinaturaLinha[]> {
+  const { data, error } = await db()
+    .from('assinaturas')
+    .select('parte, assinado_em, via, signatario_nome')
+    .eq('contrato_id', contratoId);
+  if (error) throw error;
+  return ((data ?? []) as {
+    parte: ParteAssinatura;
+    assinado_em: string | null;
+    via: ViaAssinatura | null;
+    signatario_nome: string | null;
+  }[]).map((r) => ({
+    parte: r.parte,
+    assinadoEm: r.assinado_em,
+    via: r.via,
+    signatarioNome: r.signatario_nome,
+  }));
+}
+
 /** URL assinada (curta) para baixar o PDF do contrato (bucket privado). */
 export async function urlContratoPdf(path: string): Promise<string> {
   const { data, error } = await db().storage.from('contratos').createSignedUrl(path, 120);
