@@ -33,6 +33,12 @@
   --brand-badge: #1c2150;
   --brand-wordmark: #191a22;
   --brand-paper: #ffffff;
+  /* ação principal do topo ("+ Proposta"): claro = marinho da marca com texto
+     branco; escuro = fundo do app com contorno e texto branco (escolha do usuário, 30/10) */
+  --cta-bg: var(--brand-badge);
+  --cta-fg: #ffffff;
+  --cta-line: var(--brand-badge);
+  --cta-shadow: 0 6px 16px rgba(28, 33, 80, 0.28);
 }
 
 /* modo escuro automático, salvo quando o usuário fixa o tema claro */
@@ -60,6 +66,10 @@
     /* marca: badge com a mesma cor do botão "+" (.ticon usa --accent-soft) */
     --brand-badge: var(--accent-soft);
     --brand-wordmark: #ffffff;
+    --cta-bg: var(--bg);
+    --cta-fg: #ffffff;
+    --cta-line: #2f3780;
+    --cta-shadow: none;
   }
 }
 
@@ -87,4 +97,8 @@
   /* marca: badge com a mesma cor do botão "+" (.ticon usa --accent-soft) */
   --brand-badge: var(--accent-soft);
   --brand-wordmark: #ffffff;
+  --cta-bg: var(--bg);
+  --cta-fg: #ffffff;
+  --cta-line: #2f3780;
+  --cta-shadow: none;
 }

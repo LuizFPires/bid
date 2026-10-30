@@ -6,6 +6,13 @@ import { useAuth } from '../auth/AuthProvider';
 import { Olho } from '../auth/Olho';
 import { useMeusConvites } from '../data/hooks';
 import { useToast } from './Toast';
+import { lerTema, salvarTema, type Tema } from './theme';
+
+const TEMAS: { v: Tema; label: string }[] = [
+  { v: 'auto', label: 'Auto' },
+  { v: 'claro', label: 'Claro' },
+  { v: 'escuro', label: 'Escuro' },
+];
 
 /**
  * Menu de perfil no topo: conta, convites de obra (com notificação no ícone),
@@ -17,6 +24,12 @@ export function ProfileMenu() {
   const toast = useToast();
   const convites = useMeusConvites();
   const pendentes = convites.data?.length ?? 0;
+  const [tema, setTema] = useState<Tema>(() => lerTema());
+
+  function escolherTema(t: Tema) {
+    setTema(t);
+    salvarTema(t);
+  }
   const ref = useRef<HTMLDivElement>(null);
   const [aberto, setAberto] = useState(false);
   const [trocando, setTrocando] = useState(false);
@@ -121,6 +134,22 @@ export function ProfileMenu() {
                 Convites
                 {pendentes > 0 && <span className="count">{pendentes}</span>}
               </button>
+              <div className="pm-tema" role="group" aria-label="Tema do aplicativo">
+                <span className="pm-tema-k">Tema</span>
+                <div className="pm-seg">
+                  {TEMAS.map((t) => (
+                    <button
+                      key={t.v}
+                      type="button"
+                      className={tema === t.v ? 'on' : undefined}
+                      aria-pressed={tema === t.v}
+                      onClick={() => escolherTema(t.v)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button className="pm-item" type="button" onClick={() => setTrocando(true)}>
                 <Icon name="link" />
                 Trocar senha

@@ -17,6 +17,14 @@
       href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800;0,6..12,900&display=swap"
     />
     <title>bid</title>
+    <script>
+      // Tema escolhido no perfil (bid.tema = claro|escuro) antes do primeiro paint.
+      try {
+        var t = localStorage.getItem('bid.tema');
+        if (t === 'claro' || t === 'escuro')
+          document.documentElement.dataset.theme = t === 'escuro' ? 'dark' : 'light';
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
