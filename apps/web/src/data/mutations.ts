@@ -260,6 +260,44 @@ export async function atualizarClausula(clausulaId: string, texto: string): Prom
   if (error) throw error;
 }
 
+export interface AssinarAppInput {
+  contratoId: string;
+  parte: 'contratante' | 'contratada';
+  signatarioNome: string;
+  pngBase64: string;
+}
+
+/** Assina o contrato no app (envia a imagem; o servidor aplica ao PDF). */
+export async function assinarApp(input: AssinarAppInput): Promise<void> {
+  const { data: sessionData } = await db().auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Sessão inválida.');
+  const resp = await fetch('/api/contracts/sign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(input),
+  });
+  if (!resp.ok) {
+    const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
+    throw new Error(corpo?.erro ?? 'Falha ao assinar.');
+  }
+}
+
+/** Gera o token de assinatura por link de uma parte e devolve o token em claro. */
+export async function gerarTokenAssinatura(input: {
+  contratoId: string;
+  parte: 'contratante' | 'contratada';
+  signatario: string;
+}): Promise<string> {
+  const { data, error } = await db().rpc('gerar_token_assinatura', {
+    p_contrato: input.contratoId,
+    p_parte: input.parte,
+    p_signatario: input.signatario,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 /** Pede ao servidor para renderizar o PDF do contrato e gravá-lo no Storage. */
 export async function gerarPdfContrato(contratoId: string): Promise<void> {
   const { data: sessionData } = await db().auth.getSession();

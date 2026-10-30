@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
@@ -18,10 +19,11 @@ import {
   NovoContratoScreen,
   ContratoScreen,
 } from './screens';
+import { SignScreen } from './screens/Sign';
 
-function Gate() {
+/** Exige sessão para o app; a página pública de assinatura fica fora disto. */
+function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading, configured } = useAuth();
-
   if (loading) {
     return (
       <div className="stage">
@@ -37,30 +39,8 @@ function Gate() {
       </div>
     );
   }
-
-  // Sem Supabase (ou sem sessão), a porta de entrada é o login.
   if (!configured || !session) return <LoginScreen />;
-
-  return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route index element={<Navigate to="/propostas" replace />} />
-        <Route path="propostas" element={<PropostasScreen />} />
-        <Route path="propostas/nova" element={<NovaPropostaScreen />} />
-        <Route path="propostas/:id" element={<PropostaScreen />} />
-        <Route path="equalizacoes" element={<EqualizacoesScreen />} />
-        <Route path="equalizacoes/nova" element={<IniciarEqualizacaoScreen />} />
-        <Route path="equalizacoes/:id" element={<EqualizacaoScreen />} />
-        <Route path="contratos" element={<ContratosScreen />} />
-        <Route path="contratos/nova" element={<NovoContratoScreen />} />
-        <Route path="contratos/:id" element={<ContratoScreen />} />
-        <Route path="obras" element={<ObrasScreen />} />
-        <Route path="obras/nova" element={<NovaObraScreen />} />
-        <Route path="obras/:id" element={<ObraScreen />} />
-        <Route path="*" element={<Navigate to="/propostas" replace />} />
-      </Route>
-    </Routes>
-  );
+  return <>{children}</>;
 }
 
 export function App() {
@@ -68,7 +48,33 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
-          <Gate />
+          <Routes>
+            {/* Pública: assinatura por link (sem login). */}
+            <Route path="/sign/:token" element={<SignScreen />} />
+
+            <Route
+              element={
+                <RequireAuth>
+                  <AppShell />
+                </RequireAuth>
+              }
+            >
+              <Route index element={<Navigate to="/propostas" replace />} />
+              <Route path="propostas" element={<PropostasScreen />} />
+              <Route path="propostas/nova" element={<NovaPropostaScreen />} />
+              <Route path="propostas/:id" element={<PropostaScreen />} />
+              <Route path="equalizacoes" element={<EqualizacoesScreen />} />
+              <Route path="equalizacoes/nova" element={<IniciarEqualizacaoScreen />} />
+              <Route path="equalizacoes/:id" element={<EqualizacaoScreen />} />
+              <Route path="contratos" element={<ContratosScreen />} />
+              <Route path="contratos/nova" element={<NovoContratoScreen />} />
+              <Route path="contratos/:id" element={<ContratoScreen />} />
+              <Route path="obras" element={<ObrasScreen />} />
+              <Route path="obras/nova" element={<NovaObraScreen />} />
+              <Route path="obras/:id" element={<ObraScreen />} />
+              <Route path="*" element={<Navigate to="/propostas" replace />} />
+            </Route>
+          </Routes>
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>

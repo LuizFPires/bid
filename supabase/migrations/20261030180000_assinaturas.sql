@@ -86,6 +86,12 @@ begin
         signatario_nome = coalesce(excluded.signatario_nome, public.assinaturas.signatario_nome),
         via = 'link';
 
+  -- Auditoria: registra QUEM gerou o link (autor = auth.uid(), via trigger).
+  -- (Assinatura eletrônica SIMPLES — regra #9: vincular o token à identidade do
+  -- fornecedor/e-mail é modelo mais forte, fora de escopo nesta fase.)
+  insert into public.eventos (org_id, entidade, entidade_id, tipo, payload)
+    values (v_org, 'contrato', p_contrato, 'token_assinatura_gerado', jsonb_build_object('parte', p_parte));
+
   return v_token;
 end;
 $$;

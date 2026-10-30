@@ -55,11 +55,14 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** gerar um contrato de uma vencedora, com dados corretos e PDF baixável. _(A geração do PDF exige as env de servidor `SUPABASE_URL`/`SUPABASE_ANON_KEY` na Vercel; a criação do contrato e a edição de cláusulas funcionam sem elas.)_
 
 ## M7 · Assinatura digital (prioridade 4c)
-- [ ] Assinatura **no app**: canvas (a dedo), aplicada em todas as páginas do PDF.
-- [ ] **Enviar para assinatura**: link tokenizado + compartilhar por WhatsApp.
-- [ ] Página de assinatura externa (`/sign/:token`): resumo + assinatura + confirmação.
-- [ ] Trilha de auditoria (data/hora, IP, user agent, hash); contrato vira **Assinado** quando as duas partes assinam.
-- **Aceite:** assinar pelos dois caminhos; documento aparece assinado no app; auditoria registrada; token expira/uso único.
+- [x] Assinatura **no app**: canvas (a dedo), aplicada em todas as páginas do PDF (`pdf-lib`).
+- [x] **Enviar para assinatura**: link tokenizado + compartilhar por WhatsApp.
+- [x] Página de assinatura externa (`/sign/:token`, pública): resumo + assinatura + confirmação.
+- [x] Trilha de auditoria (data/hora, IP, user agent, doc_hash) **server-authoritative**; contrato vira **Assinado** quando as duas partes assinam.
+- **Aceite:** assinar pelos dois caminhos; documento assinado no app; auditoria registrada; token uso único/expira. _(O link externo exige `SUPABASE_SERVICE_ROLE_KEY` no servidor — code-complete, inativo até provisionar; a assinatura no app também grava a trilha via service_role.)_
+
+### Decisões de revisão (M7)
+Revisão de commit endureceu a trilha (achados HIGH): escrita de `assinaturas` é **só do servidor** (sem INSERT/UPDATE de cliente); token guardado como **hash** (claro sai 1x do RPC); no app só se assina como **contratante** (fornecedor via link); caminho do PDF **derivado no servidor**; token reivindicado **atomicamente** (uso único sem corrida); `status`/`pdf_path`/`valor` do contrato são **server-only** (trigger); cláusulas não editam após haver assinatura; auditoria de quem gerou o token. Modelo é **assinatura eletrônica simples** (regra #9; ICP/vínculo de identidade fora de escopo).
 
 ## M8 · Polimento e offline (desejável)
 - [ ] Ações otimistas + fila offline (upload em segundo plano).
