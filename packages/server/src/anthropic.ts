@@ -24,6 +24,9 @@ export async function extrairPropostaDePdf(pdfBase64: string): Promise<PropostaE
   const msg = await client.messages.create({
     model: env.modelExtract(),
     max_tokens: 2048,
+    // Extração é tarefa estruturada e direta: esforço baixo = bem mais rápido
+    // (e mais barato), sem perda de qualidade aqui.
+    output_config: { effort: 'low' },
     tools: [
       {
         name: EXTRACAO_TOOL_NAME,

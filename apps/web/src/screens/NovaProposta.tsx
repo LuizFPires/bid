@@ -92,8 +92,10 @@ export function NovaPropostaScreen() {
     e.preventDefault();
     if (!file || !obraId || !categoria.trim()) return;
     setErro(null);
+    // Feedback IMEDIATO ao tocar (o upload + leitura levam alguns segundos).
+    setFase('lendo');
 
-    // 1) Upload: se falhar, NÃO avança (senão gravaria proposta sem o arquivo).
+    // 1) Upload: se falhar, volta ao formulário (não grava proposta sem arquivo).
     let enviado: { file: File; path: string; ehPdf: boolean };
     try {
       enviado =
@@ -104,6 +106,7 @@ export function NovaPropostaScreen() {
       setArquivoPath(enviado.path);
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível enviar o arquivo.');
+      setFase('form');
       return;
     }
 
@@ -114,7 +117,6 @@ export function NovaPropostaScreen() {
       setFase('conferir');
       return;
     }
-    setFase('lendo');
     try {
       preencher(await extrairProposta(enviado.path));
     } catch (err) {
@@ -258,6 +260,9 @@ export function NovaPropostaScreen() {
           </div>
           <p className="lead" style={{ margin: 0 }}>
             Lendo a proposta e extraindo os dados…
+          </p>
+          <p className="sub" style={{ margin: '6px 0 0', fontSize: 12 }}>
+            Pode levar alguns segundos.
           </p>
         </div>
       )}
