@@ -117,8 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(503).json({ erro: 'Análise por IA não configurada no servidor.' });
       return;
     }
-    const motivo = e instanceof Error ? e.message : String(e);
-    console.error('equalize falhou:', motivo);
-    res.status(502).json({ erro: `Falha na análise: ${motivo}` });
+    console.error('equalize falhou:', e);
+    res.status(502).json({ erro: 'Não foi possível gerar a análise.' });
   }
 }

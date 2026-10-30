@@ -101,8 +101,16 @@ export async function extrairProposta(path: string): Promise<PropostaExtraida> {
     body: JSON.stringify({ path }),
   });
   if (!resp.ok) {
-    const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
-    throw new Error(corpo?.erro ?? 'Falha na extração.');
+    // Lê o corpo cru UMA vez: se for o JSON esperado, usa `erro`; se a função
+    // quebrou (resposta não-JSON), mostra o HTTP + um trecho — autoexplicativo.
+    const raw = await resp.text().catch(() => '');
+    let erro = '';
+    try {
+      erro = (JSON.parse(raw) as { erro?: string })?.erro ?? '';
+    } catch {
+      /* corpo não é JSON (provável crash da função) */
+    }
+    throw new Error(erro || `Extração falhou (HTTP ${resp.status}): ${raw.slice(0, 180) || 'sem corpo'}`);
   }
   const corpo = (await resp.json()) as { dados: PropostaExtraida };
   return corpo.dados;
@@ -192,8 +200,14 @@ export async function equalizarIA(equalizacaoId: string): Promise<void> {
     body: JSON.stringify({ id: equalizacaoId }),
   });
   if (!resp.ok) {
-    const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
-    throw new Error(corpo?.erro ?? 'Falha na análise por IA.');
+    const raw = await resp.text().catch(() => '');
+    let erro = '';
+    try {
+      erro = (JSON.parse(raw) as { erro?: string })?.erro ?? '';
+    } catch {
+      /* corpo não é JSON (provável crash da função) */
+    }
+    throw new Error(erro || `Análise falhou (HTTP ${resp.status}): ${raw.slice(0, 180) || 'sem corpo'}`);
   }
 }
 
