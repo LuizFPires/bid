@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { MissingEnvError } from '../_lib/env';
-import { serviceClient } from '../_lib/supabase';
-import { registrarAssinatura } from '../_lib/assinar';
-import type { Parte } from '../_lib/assinatura-pdf';
+import { MissingEnvError } from '@bid/server';
+import { serviceClient } from '@bid/server';
+import { registrarAssinatura } from '@bid/server';
+import type { Parte } from '@bid/server';
 
 /**
  * /api/sign/:token  (assinatura por LINK externo — signatário SEM login)

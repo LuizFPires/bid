@@ -1,34 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { BrandLogo, Button } from '@bid/ui';
 import { supabase, supabaseConfigured } from '../lib/supabase';
+import { Olho } from './Olho';
 
-type Modo = 'entrar' | 'criar';
-
-/** Ícone de olho (mostrar/ocultar senha), inline. */
-function Olho({ aberto }: { aberto: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="20"
-      height="20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {aberto ? (
-        <>
-          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-          <circle cx="12" cy="12" r="3" />
-        </>
-      ) : (
-        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22M6.61 6.61A18.52 18.52 0 0 0 1 12s4 8 11 8a9.12 9.12 0 0 0 5.39-1.61" />
-      )}
-    </svg>
-  );
-}
+type Modo = 'entrar' | 'criar' | 'recuperar';
 
 /** Traduz os erros do Supabase para mensagens amigáveis. */
 function traduzErro(msg: string): string {
@@ -38,8 +13,7 @@ function traduzErro(msg: string): string {
     return 'Esse e-mail já tem conta. Entre com sua senha.';
   if (m.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
   if (m.includes('password should be')) return 'A senha precisa ter ao menos 6 caracteres.';
-  if (m.includes('unable to validate email') || m.includes('invalid email'))
-    return 'E-mail inválido.';
+  if (m.includes('unable to validate email') || m.includes('invalid email')) return 'E-mail inválido.';
   if (m.includes('rate limit')) return 'Muitas tentativas. Aguarde um instante.';
   return msg;
 }
@@ -53,26 +27,34 @@ export function LoginScreen() {
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [checarEmail, setChecarEmail] = useState(false);
+  const [resetEnviado, setResetEnviado] = useState(false);
 
-  function limpar() {
+  function ir(m: Modo) {
+    setModo(m);
     setErro(null);
     setChecarEmail(false);
+    setResetEnviado(false);
   }
 
   async function submeter(e: FormEvent) {
     e.preventDefault();
     if (!supabase) return;
-    limpar();
+    setErro(null);
+
+    if (modo === 'recuperar') {
+      setEnviando(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      setEnviando(false);
+      if (error) setErro(traduzErro(error.message));
+      else setResetEnviado(true);
+      return;
+    }
 
     if (modo === 'criar') {
-      if (senha.length < 6) {
-        setErro('A senha precisa ter ao menos 6 caracteres.');
-        return;
-      }
-      if (senha !== confirmar) {
-        setErro('As senhas não coincidem.');
-        return;
-      }
+      if (senha.length < 6) return setErro('A senha precisa ter ao menos 6 caracteres.');
+      if (senha !== confirmar) return setErro('As senhas não coincidem.');
     }
 
     setEnviando(true);
@@ -80,27 +62,22 @@ export function LoginScreen() {
       if (modo === 'entrar') {
         const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
         if (error) setErro(traduzErro(error.message));
-        // sucesso: o AuthProvider detecta a sessão e entra.
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
           password: senha,
           options: { emailRedirectTo: window.location.origin },
         });
-        if (error) {
-          setErro(traduzErro(error.message));
-        } else if (!data.session) {
-          // Confirmação de e-mail está ligada no Supabase.
-          setChecarEmail(true);
-        }
-        // com sessão: entra direto (confirmação de e-mail desligada).
+        if (error) setErro(traduzErro(error.message));
+        else if (!data.session) setCheck();
       }
     } finally {
       setEnviando(false);
     }
   }
+  const setCheck = () => setChecarEmail(true);
 
-  const titulo = modo === 'entrar' ? 'Entrar' : 'Criar conta';
+  const titulo = modo === 'entrar' ? 'Entrar' : modo === 'criar' ? 'Criar conta' : 'Recuperar senha';
 
   return (
     <div className="stage">
@@ -131,18 +108,52 @@ export function LoginScreen() {
                 e volte para entrar.
               </span>
             </div>
+          ) : resetEnviado ? (
+            <>
+              <div className="banner ok" role="status">
+                <span>
+                  Enviamos um link de redefinição para <strong>{email}</strong>. Abra o e-mail para
+                  criar uma nova senha.
+                </span>
+              </div>
+              <Button type="button" variant="ghost" block onClick={() => ir('entrar')}>
+                Voltar
+              </Button>
+            </>
+          ) : modo === 'recuperar' ? (
+            <form onSubmit={submeter}>
+              <div className="field">
+                <label htmlFor="email">E-mail da conta</label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="voce@empresa.com.br"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              {erro && (
+                <div className="banner warn" role="alert" style={{ marginBottom: 14 }}>
+                  <span>{erro}</span>
+                </div>
+              )}
+              <Button type="submit" block disabled={enviando || !email}>
+                {enviando ? 'Enviando…' : 'Enviar link de redefinição'}
+              </Button>
+              <Button type="button" variant="ghost" block style={{ marginTop: 8 }} onClick={() => ir('entrar')}>
+                Voltar
+              </Button>
+            </form>
           ) : (
             <>
-              {/* Alternância Entrar / Criar conta */}
               <div className="seg" role="group" aria-label="Modo de acesso">
                 <button
                   type="button"
                   className={modo === 'entrar' ? 'on' : ''}
                   aria-pressed={modo === 'entrar'}
-                  onClick={() => {
-                    setModo('entrar');
-                    limpar();
-                  }}
+                  onClick={() => ir('entrar')}
                 >
                   Entrar
                 </button>
@@ -150,10 +161,7 @@ export function LoginScreen() {
                   type="button"
                   className={modo === 'criar' ? 'on' : ''}
                   aria-pressed={modo === 'criar'}
-                  onClick={() => {
-                    setModo('criar');
-                    limpar();
-                  }}
+                  onClick={() => ir('criar')}
                 >
                   Criar conta
                 </button>
@@ -240,6 +248,25 @@ export function LoginScreen() {
                       ? 'Entrar'
                       : 'Criar conta'}
                 </Button>
+
+                {modo === 'entrar' && (
+                  <button
+                    type="button"
+                    onClick={() => ir('recuperar')}
+                    style={{
+                      display: 'block',
+                      margin: '12px auto 0',
+                      border: 0,
+                      background: 'none',
+                      color: 'var(--accent-ink)',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Esqueci minha senha
+                  </button>
+                )}
               </form>
             </>
           )}

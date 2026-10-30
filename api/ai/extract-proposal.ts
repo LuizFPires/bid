@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { extrairPropostaDePdf } from '../_lib/anthropic';
-import { MissingEnvError } from '../_lib/env';
-import { bearer, requireMethod } from '../_lib/respond';
-import { userClient } from '../_lib/supabase';
+import { extrairPropostaDePdf } from '@bid/server';
+import { MissingEnvError } from '@bid/server';
+import { bearer, requireMethod } from '@bid/server';
+import { userClient } from '@bid/server';
 
 /**
  * POST /api/ai/extract-proposal

@@ -6,17 +6,23 @@ interface AuthState {
   session: Session | null;
   loading: boolean;
   configured: boolean;
+  /** true quando o usuário chegou por um link de redefinição de senha. */
+  recovering: boolean;
+  clearRecovering: () => void;
 }
 
 const AuthContext = createContext<AuthState>({
   session: null,
   loading: true,
   configured: supabaseConfigured,
+  recovering: false,
+  clearRecovering: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -29,8 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
     });
     return () => {
       active = false;
@@ -39,7 +46,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, loading, configured: supabaseConfigured }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        loading,
+        configured: supabaseConfigured,
+        recovering,
+        clearRecovering: () => setRecovering(false),
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

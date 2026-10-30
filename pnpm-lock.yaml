@@ -14,6 +14,9 @@ importers:
       '@bid/core':
         specifier: workspace:*
         version: link:packages/core
+      '@bid/server':
+        specifier: workspace:*
+        version: link:packages/server
       '@react-pdf/renderer':
         specifier: ^4.9.0
         version: 4.9.0(react@18.3.1)
@@ -109,6 +112,40 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@edge-runtime/vm@3.2.0)(@types/node@22.20.5)(supports-color@7.2.0)(terser@5.51.2)
+
+  packages/server:
+    dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^1.3.0
+        version: 1.3.0
+      '@bid/core':
+        specifier: workspace:*
+        version: link:../core
+      '@react-pdf/renderer':
+        specifier: ^4.9.0
+        version: 4.9.0(react@18.3.1)
+      '@supabase/supabase-js':
+        specifier: ^2.118.0
+        version: 2.118.0(@opentelemetry/api@1.10.0)
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.31
+        version: 18.3.31
+      '@vercel/node':
+        specifier: ^28.0.0
+        version: 28.0.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@vercel/build-utils@15.1.0)(rollup@4.66.0)(supports-color@7.2.0)
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/ui:
     devDependencies:

@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { MissingEnvError } from '../_lib/env';
-import { bearer, requireMethod } from '../_lib/respond';
-import { serviceClient, userClient } from '../_lib/supabase';
-import { registrarAssinatura } from '../_lib/assinar';
-import type { Parte } from '../_lib/assinatura-pdf';
+import { MissingEnvError } from '@bid/server';
+import { bearer, requireMethod } from '@bid/server';
+import { serviceClient, userClient } from '@bid/server';
+import { registrarAssinatura } from '@bid/server';
+import type { Parte } from '@bid/server';
 
 /**
  * POST /api/contracts/sign  (assinatura NO APP)

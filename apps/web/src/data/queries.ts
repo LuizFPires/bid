@@ -108,17 +108,16 @@ export interface CertameResumo {
   totalPropostas: number;
 }
 
+interface RawCertameDetalhe {
+  id: string;
+  categoria: string;
+  titulo: string;
+  status: string;
+  vencedora_proposta_id: string | null;
+}
+
 interface RawObraDetalhe extends Obra {
-  certames:
-    | {
-        id: string;
-        categoria: string;
-        titulo: string;
-        status: string;
-        vencedora_proposta_id: string | null;
-        propostas: { id: string; fornecedor: string; status: string }[] | null;
-      }[]
-    | null;
+  certames: RawCertameDetalhe[] | null;
 }
 
 export interface ObraDetalhe {
@@ -126,24 +125,49 @@ export interface ObraDetalhe {
   certames: CertameResumo[];
 }
 
+/**
+ * Detalhe da obra. NÃO embute `certames(propostas(...))`: há duas relações entre
+ * certame e proposta (propostas.certame_id e certames.vencedora_proposta_id), o
+ * que torna o embed ambíguo no PostgREST (erro). As propostas vêm numa segunda
+ * consulta e são agregadas no cliente.
+ */
 export async function fetchObra(id: string): Promise<ObraDetalhe | null> {
   const { data, error } = await db()
     .from('obras')
     .select(
       `id, org_id, nome, cidade, fase, fase_pill, created_at, updated_at, deleted_at,
-       certames ( id, categoria, titulo, status, vencedora_proposta_id,
-                  propostas ( id, fornecedor, status ) )`,
+       certames ( id, categoria, titulo, status, vencedora_proposta_id )`,
     )
     .eq('id', id)
     .is('deleted_at', null)
+    .is('certames.deleted_at', null)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
 
   const row = data as unknown as RawObraDetalhe;
   const { certames, ...obra } = row;
-  const resumos: CertameResumo[] = (certames ?? []).map((c) => {
-    const props = c.propostas ?? [];
+  const certs = certames ?? [];
+
+  // Propostas dos certames desta obra (uma consulta só).
+  const porCertame = new Map<string, { id: string; fornecedor: string }[]>();
+  const ids = certs.map((c) => c.id);
+  if (ids.length > 0) {
+    const { data: pdata, error: pErr } = await db()
+      .from('propostas')
+      .select('id, fornecedor, certame_id')
+      .in('certame_id', ids)
+      .is('deleted_at', null);
+    if (pErr) throw pErr;
+    for (const p of (pdata ?? []) as { id: string; fornecedor: string; certame_id: string }[]) {
+      const arr = porCertame.get(p.certame_id) ?? [];
+      arr.push({ id: p.id, fornecedor: p.fornecedor });
+      porCertame.set(p.certame_id, arr);
+    }
+  }
+
+  const resumos: CertameResumo[] = certs.map((c) => {
+    const props = porCertame.get(c.id) ?? [];
     const venc = props.find((p) => p.id === c.vencedora_proposta_id);
     return {
       id: c.id,
