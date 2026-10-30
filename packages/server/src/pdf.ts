@@ -1,6 +1,3 @@
-import { createElement as h } from 'react';
-import { Document, Page, StyleSheet, Text, View, renderToBuffer } from '@react-pdf/renderer';
-
 export interface ContratoPdfDados {
   obra: string;
   categoria: string;
@@ -9,19 +6,30 @@ export interface ContratoPdfDados {
   clausulas: { numero: number; titulo: string; texto: string }[];
 }
 
-const s = StyleSheet.create({
-  page: { paddingTop: 54, paddingBottom: 54, paddingHorizontal: 48, fontSize: 11, lineHeight: 1.5, color: '#1a1a2e' },
-  h1: { fontSize: 15, fontWeight: 700, textAlign: 'center', marginBottom: 4 },
-  meta: { fontSize: 10, textAlign: 'center', color: '#555', marginBottom: 18 },
-  cl: { marginBottom: 12 },
-  clTitulo: { fontSize: 11, fontWeight: 700, marginBottom: 2 },
-  clTexto: { textAlign: 'justify' },
-  assinatura: { marginTop: 40, fontSize: 10 },
-  linha: { marginTop: 28, borderTopWidth: 1, borderTopColor: '#1a1a2e', width: 240, paddingTop: 4 },
-});
-
-/** Renderiza o PDF do contrato (A4, paginação automática). Devolve bytes + nº de páginas. */
+/**
+ * Renderiza o PDF do contrato (A4, paginação automática). Devolve bytes + nº de
+ * páginas.
+ *
+ * react e @react-pdf/renderer são carregados SOB DEMANDA (import dinâmico) e
+ * ficam EXTERNOS ao bundle: o react-pdf usa subpaths `#standard-fonts/*` do
+ * pdfkit que não sobrevivem ao empacotamento. Assim, importar `@bid/server`
+ * (extração/IA/assinatura) não carrega o react-pdf — só esta função o faz.
+ */
 export async function renderContratoPdf(d: ContratoPdfDados): Promise<{ buffer: Buffer; paginas: number }> {
+  const { createElement: h } = await import('react');
+  const { Document, Page, StyleSheet, Text, View, renderToBuffer } = await import('@react-pdf/renderer');
+
+  const s = StyleSheet.create({
+    page: { paddingTop: 54, paddingBottom: 54, paddingHorizontal: 48, fontSize: 11, lineHeight: 1.5, color: '#1a1a2e' },
+    h1: { fontSize: 15, fontWeight: 700, textAlign: 'center', marginBottom: 4 },
+    meta: { fontSize: 10, textAlign: 'center', color: '#555', marginBottom: 18 },
+    cl: { marginBottom: 12 },
+    clTitulo: { fontSize: 11, fontWeight: 700, marginBottom: 2 },
+    clTexto: { textAlign: 'justify' },
+    assinatura: { marginTop: 40, fontSize: 10 },
+    linha: { marginTop: 28, borderTopWidth: 1, borderTopColor: '#1a1a2e', width: 240, paddingTop: 4 },
+  });
+
   const doc = h(
     Document,
     null,
