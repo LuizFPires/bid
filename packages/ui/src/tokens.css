@@ -68,7 +68,7 @@
     --brand-wordmark: #ffffff;
     --cta-bg: var(--bg);
     --cta-fg: #ffffff;
-    --cta-line: #2f3780;
+    --cta-line: #ffffff;
     --cta-shadow: none;
   }
 }
@@ -99,6 +99,6 @@
   --brand-wordmark: #ffffff;
   --cta-bg: var(--bg);
   --cta-fg: #ffffff;
-  --cta-line: #2f3780;
+  --cta-line: #ffffff;
   --cta-shadow: none;
 }
