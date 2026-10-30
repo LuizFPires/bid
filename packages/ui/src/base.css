@@ -1500,6 +1500,7 @@ table.eq .high {
 /* Conferência: documento com mais de uma opção de preço. */
 .card.opcoes {
   margin-bottom: 14px;
+  padding: 16px 14px 8px;
   border-color: var(--warn);
 }
 .opcoes-head {
@@ -1527,7 +1528,7 @@ table.eq .high {
 }
 .opcoes-lista {
   list-style: none;
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   padding: 0;
   display: grid;
   gap: 6px;
@@ -1576,7 +1577,7 @@ table.eq .high {
 }
 .card.opcoes .link {
   display: block;
-  margin: 10px auto 0;
+  margin: 6px auto 0;
   min-height: 44px;
   padding: 0 12px;
   background: none;

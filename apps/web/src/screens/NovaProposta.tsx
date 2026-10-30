@@ -171,22 +171,29 @@ export function NovaPropostaScreen() {
     const escolhidas = opcoes.filter((_, i) => opcoesMarcadas[i]);
     try {
       if (escolhidas.length === 0) {
-        await criar.mutateAsync({ obraId, categoria: categoria.trim(), arquivoPath, dados: base });
+        const id = await criar.mutateAsync({ obraId, categoria: categoria.trim(), arquivoPath, dados: base });
+        // Vai direto para a proposta recém-arquivada.
+        navigate(`/propostas/${id}`, { replace: true });
       } else {
         // Uma proposta por alternativa: só valor e rótulo mudam; o que a opção
         // altera no escopo vai para as observações daquela proposta.
+        let primeira: string | null = null;
         for (const op of escolhidas) {
           const obsOp = [op.descricao, base.observacoes].filter(Boolean).join('\n\n') || null;
-          await criar.mutateAsync({
+          const id = await criar.mutateAsync({
             obraId,
             categoria: categoria.trim(),
             arquivoPath,
             opcao: op.rotulo,
             dados: { ...base, valor: op.valor, observacoes: obsOp },
           });
+          primeira ??= id;
         }
+        // Com várias opções, o acervo mostra as propostas lado a lado; com uma só, abre ela.
+        navigate(escolhidas.length === 1 && primeira ? `/propostas/${primeira}` : '/propostas', {
+          replace: true,
+        });
       }
-      navigate(`/obras/${obraId}`);
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível arquivar a proposta.');
     }
