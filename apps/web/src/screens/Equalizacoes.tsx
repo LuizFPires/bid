@@ -489,53 +489,67 @@ export function EqualizacaoScreen() {
       </div>
 
       {/* Análise por IA (apoio) */}
-      <div className="section-title">
-        <h2>Análise com IA</h2>
-      </div>
       {ia ? (
-        <div className="card">
-          {ia.veredito && <p style={{ margin: '0 0 10px', fontWeight: 700 }}>{ia.veredito}</p>}
-          {(() => {
-            // Só mostra a recomendação quando aponta uma proposta COMPARADA
-            // (o id é validado no core); o fornecedor vem da proposta resolvida.
-            const rec = data.propostas.find((p) => p.id === ia.recomendacao?.proposta_id);
-            if (!rec) return null;
-            return (
-              <div className="banner ok" style={{ marginBottom: 10 }}>
-                <Icon name="trophy" />
-                <span>
-                  <strong>Recomenda: {rec.fornecedor}.</strong> {ia.recomendacao?.justificativa ?? ''}
-                </span>
-              </div>
-            );
-          })()}
-          {(ia.achados ?? []).map((a, i) => (
-            <div key={i} style={{ marginBottom: 8 }}>
-              <div style={{ fontWeight: 800, fontSize: 13 }}>{a.fornecedor}</div>
-              <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13, fontWeight: 600 }}>
-                {(a.pontos ?? []).map((pt, j) => (
-                  <li key={j}>{pt}</li>
-                ))}
-              </ul>
+        <div className="ai" style={{ marginTop: 4 }}>
+          <div className="ai-h">
+            <span className="sp">
+              <Icon name="spark" />
+            </span>
+            <div>
+              <h3>{data.propostas.length} propostas equalizadas</h3>
+              <small>Claude</small>
             </div>
-          ))}
-          <p className="lead" style={{ margin: '8px 0 0', fontSize: 12 }}>
-            A recomendação é apoio — a escolha da vencedora é sua.
-          </p>
-          <div style={{ marginTop: 10 }}>
-            <Button variant="ghost" size="sm" icon="spark" disabled={rodarIA.isPending} onClick={analisar}>
-              {rodarIA.isPending ? 'Analisando…' : 'Refazer análise'}
-            </Button>
+          </div>
+          <div className="ai-b">
+            {ia.veredito && (
+              <div className="verdict">
+                <div className="tag">Resumo</div>
+                <div style={{ marginTop: 4 }}>{ia.veredito}</div>
+              </div>
+            )}
+            {(() => {
+              // Só mostra a recomendação quando aponta uma proposta COMPARADA
+              // (o id é validado no core); o fornecedor vem da proposta resolvida.
+              const rec = data.propostas.find((p) => p.id === ia.recomendacao?.proposta_id);
+              if (!rec) return null;
+              return (
+                <div className="verdict">
+                  <div className="tag">Recomendação</div>
+                  <div style={{ marginTop: 4 }}>
+                    <b>{rec.fornecedor}.</b> {ia.recomendacao?.justificativa ?? ''}
+                  </div>
+                </div>
+              );
+            })()}
+            {(ia.achados ?? []).map((a, i) => (
+              <div key={i} className="finding">
+                <span className="d w" />
+                <div>
+                  <b>{a.fornecedor}:</b> {(a.pontos ?? []).join(' · ')}
+                </div>
+              </div>
+            ))}
+            <p className="lead" style={{ margin: 0, fontSize: 12 }}>
+              A recomendação é apoio — a escolha da vencedora é sua.
+            </p>
+            <div>
+              <Button variant="ghost" size="sm" icon="spark" disabled={rodarIA.isPending} onClick={analisar}>
+                {rodarIA.isPending ? 'Analisando…' : 'Refazer análise'}
+              </Button>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="card">
-          <p className="lead" style={{ marginTop: 0 }}>
-            A IA lê os dados das propostas, normaliza escopos e recomenda a melhor por custo-benefício.
-          </p>
-          <Button icon="spark" block disabled={rodarIA.isPending} onClick={analisar}>
-            {rodarIA.isPending ? 'Analisando…' : 'Rodar análise com IA'}
-          </Button>
+        <div className="ai" style={{ marginTop: 4 }}>
+          <div className="ai-empty">
+            <span className="sp">
+              <Icon name="spark" />
+            </span>
+            <p>A IA lê planilhas e PDFs e aponta escopo faltando, risco e melhor custo-benefício.</p>
+            <Button icon="spark" disabled={rodarIA.isPending} onClick={analisar}>
+              {rodarIA.isPending ? 'Analisando…' : 'Analisar com IA'}
+            </Button>
+          </div>
         </div>
       )}
 

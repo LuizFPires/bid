@@ -283,49 +283,71 @@ export function ContratoScreen() {
       </div>
 
       <div className="section-title">
-        <h2>Cláusulas</h2>
-        <span className="c">{data.clausulas.length}</span>
+        <h2>Vínculo</h2>
       </div>
-      <div className="card" style={{ display: 'grid', gap: 14 }}>
-        {data.clausulas.map((cl) => (
-          <div key={cl.id}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-              <strong style={{ fontSize: 13 }}>
-                Cláusula {cl.numero}ª — {cl.titulo}
-              </strong>
-              {editando !== cl.id && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditando(cl.id);
-                    setRascunho(cl.texto);
-                  }}
-                  style={{ border: 0, background: 'none', color: 'var(--accent-ink)', fontWeight: 800, cursor: 'pointer', fontSize: 12 }}
-                >
-                  Editar
-                </button>
-              )}
-            </div>
-            {editando === cl.id ? (
-              <div className="field" style={{ margin: '6px 0 0' }}>
-                <textarea value={rascunho} onChange={(e) => setRascunho(e.target.value)} style={{ minHeight: 96 }} />
-                <div className="pair" style={{ marginTop: 8 }}>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setEditando(null)}>
-                    Cancelar
-                  </Button>
-                  <Button type="button" size="sm" icon="check" disabled={atualizar.isPending} onClick={() => salvarClausula(cl.id)}>
-                    Salvar
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p style={{ margin: '4px 0 0', fontSize: 13, fontWeight: 500, lineHeight: 1.5, textAlign: 'justify' }}>
-                {cl.texto}
-              </p>
+      <div className="card" style={{ overflow: 'hidden', marginBottom: 16 }}>
+        <div className="annex">
+          <span className="okic">
+            <Icon name="check" />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 13 }}>Anexo I — Proposta vencedora</div>
+            <small className="sub" style={{ fontSize: 11 }}>
+              Fonte das cláusulas deste contrato
+            </small>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => navigate(`/propostas/${data.propostaId}`)}>
+            Ver
+          </Button>
+        </div>
+      </div>
+
+      <div className="section-title">
+        <h2>Minuta</h2>
+        <span className="c">
+          {data.clausulas.length} cláusula{data.clausulas.length === 1 ? '' : 's'} · da proposta
+        </span>
+      </div>
+      {data.clausulas.map((cl) => (
+        <div key={cl.id} className="clause">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+            <div className="cnum">Cláusula {cl.numero}ª</div>
+            {editando !== cl.id && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditando(cl.id);
+                  setRascunho(cl.texto);
+                }}
+                style={{ border: 0, background: 'none', color: 'var(--accent-deep)', fontWeight: 800, cursor: 'pointer', fontSize: 12 }}
+              >
+                Editar
+              </button>
             )}
           </div>
-        ))}
-      </div>
+          <h4>{cl.titulo}</h4>
+          {editando === cl.id ? (
+            <div className="field" style={{ margin: '6px 0 0' }}>
+              <textarea value={rascunho} onChange={(e) => setRascunho(e.target.value)} style={{ minHeight: 96 }} />
+              <div className="pair" style={{ marginTop: 8 }}>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setEditando(null)}>
+                  Cancelar
+                </Button>
+                <Button type="button" size="sm" icon="check" disabled={atualizar.isPending} onClick={() => salvarClausula(cl.id)}>
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p style={{ textAlign: 'justify' }}>{cl.texto}</p>
+              <span className="src">
+                <Icon name="link" /> da proposta
+              </span>
+            </>
+          )}
+        </div>
+      ))}
 
       {data.pdfPath && <Assinaturas contratoId={data.id} />}
     </>
@@ -379,28 +401,32 @@ function Assinaturas({ contratoId }: { contratoId: string }) {
       <div className="section-title">
         <h2>Assinaturas</h2>
       </div>
-      <div className="card" style={{ display: 'grid', gap: 12 }}>
+      <div className="card" style={{ overflow: 'hidden' }}>
         {PARTES.map((parte) => {
           const a = estado(parte);
           const assinado = Boolean(a?.assinadoEm);
+          const nomeParte = PARTE_LABEL[parte];
           return (
-            <div key={parte} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-              <span>
-                <strong style={{ fontSize: 13 }}>{PARTE_LABEL[parte]}</strong>
-                <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>
-                  {assinado
-                    ? `Assinou em ${formatNumeric((a?.assinadoEm ?? '').slice(0, 10))}${a?.via === 'link' ? ' (link)' : ''}`
-                    : 'Pendente'}
-                </span>
+            <div key={parte} className="party">
+              <span className="pic">
+                {assinado ? <Icon name="check" /> : (nomeParte[0] ?? '?')}
               </span>
+              <div className="pn">
+                <div className="r">{nomeParte}</div>
+                <div className="s">
+                  {assinado
+                    ? `Assinou em ${formatNumeric((a?.assinadoEm ?? '').slice(0, 10))}${a?.via === 'link' ? ' · link' : ''}`
+                    : 'Pendente'}
+                </div>
+              </div>
               {assinado ? (
                 <span className="pill adjudicada">
                   <Icon name="check" style={{ width: 13, height: 13 }} />
                   Assinado
                 </span>
               ) : parte === 'contratante' ? (
-                <Button size="sm" icon="link" onClick={() => setAssinandoApp((v) => !v)}>
-                  Assinar no app
+                <Button size="sm" icon="check" onClick={() => setAssinandoApp((v) => !v)}>
+                  Assinar
                 </Button>
               ) : (
                 <Button size="sm" variant="soft" icon="link" onClick={enviarLink}>
@@ -412,7 +438,7 @@ function Assinaturas({ contratoId }: { contratoId: string }) {
         })}
 
         {assinandoApp && (
-          <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+          <div style={{ borderTop: '1px solid var(--line)', padding: '12px 14px 2px' }}>
             <div className="field">
               <label>Seu nome (contratante)</label>
               <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Quem assina pela contratante" />
