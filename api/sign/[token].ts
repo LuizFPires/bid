@@ -21,7 +21,7 @@ function ipDe(req: VercelRequest): string | null {
   return null;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function processar(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     res.status(405).json({ erro: 'Método não permitido.' });
     return;
@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     sb = serviceClient();
   } catch (e) {
-    if (e instanceof MissingEnvError) {
+    if (e instanceof MissingEnvError || (e instanceof Error && e.name === 'MissingEnvError')) {
       res.status(503).json({ erro: 'Assinatura por link ainda não configurada no servidor.' });
       return;
     }
@@ -156,5 +156,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('id', (claim as { id: string }).id)
       .is('assinado_em', null);
     res.status(502).json({ erro: e instanceof Error ? e.message : 'Falha ao assinar.' });
+  }
+}
+
+/**
+ * Blindagem: qualquer exceção não prevista (rede, Supabase, etc.) vira um erro
+ * limpo em JSON — nunca um FUNCTION_INVOCATION_FAILED. Não vaza stack ao cliente;
+ * registra no servidor para diagnóstico.
+ */
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    await processar(req, res);
+  } catch (e) {
+    console.error('sign/[token] erro não tratado:', e);
+    if (!res.headersSent) {
+      res.status(500).json({ erro: 'Não foi possível processar o link de assinatura.' });
+    }
   }
 }
