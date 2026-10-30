@@ -1,6 +1,12 @@
 -- Teste (pgTAP) do acesso por obra: dono, convites e RLS. `supabase test db`.
 begin;
-select plan(16);
+select plan(18);
+
+-- Endurecimento (20261030280000): certame não muda de obra; guard mantém a trava de propostas.
+select isnt((select count(*) from pg_trigger where tgname = 'trg_certames_obra_immutable'),
+  0::bigint, 'certames.obra_id imutável pelo cliente');
+select ok((select prosrc like '%Esta obra tem propostas%' from pg_proc where proname = 'guard_obra_soft_delete'),
+  'guard_obra_soft_delete mantém a trava de obra com propostas');
 
 select has_table('public', 'obra_convites', 'tabela obra_convites existe');
 select has_index('public', 'obra_convites', 'uq_obra_convite_vivo', 'um convite vivo por obra+e-mail');
