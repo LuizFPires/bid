@@ -27,6 +27,7 @@ A UX e a navegação seguem esta ordem (é a espinha dorsal do app):
 - Filtro por **categoria de serviço** (campo livre, ver regra 2) e por **escopo**: *todo o sistema* ou *uma obra*.
 - **Nova proposta** (ação discreta no topo à direita): o usuário informa **apenas obra + categoria** e **anexa o arquivo** (PDF/planilha). A **IA lê o arquivo** e extrai fornecedor, valor, prazo, condição de pagamento, garantia e itens; o usuário confere e arquiva.
 - Cada proposta pertence a um **certame** (tomada de preços) daquela obra + categoria.
+- No detalhe da proposta é possível **editar** os dados (fornecedor, valor, prazo, pagamento, garantia) — é correção da versão atual, não gera revisão — e **apagar** a proposta. Apagar é **exclusão lógica** com **Desfazer** (regra 10/11); só **gestor** apaga. Apagar a vencedora desadjudica o certame; não se apaga proposta que já virou contrato.
 
 ### 2. Controle de versões
 - Uma proposta pode receber **novas versões/revisões** a qualquer momento.

@@ -27,6 +27,8 @@ import {
   atualizarClausula,
   gerarPdfContrato,
   assinarApp,
+  editarProposta,
+  apagarProposta,
 } from './mutations';
 
 export function useAcervo() {
@@ -183,6 +185,30 @@ export function useCriarVersao() {
       qc.invalidateQueries({ queryKey: ['proposta', vars.propostaId] });
       qc.invalidateQueries({ queryKey: ['acervo'] });
     },
+  });
+}
+
+export function useEditarProposta(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: editarProposta,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['proposta', id] });
+      qc.invalidateQueries({ queryKey: ['acervo'] });
+      qc.invalidateQueries({ queryKey: ['obra'] });
+      qc.invalidateQueries({ queryKey: ['equalizacoes'] });
+      qc.invalidateQueries({ queryKey: ['equalizacao'] });
+      qc.invalidateQueries({ queryKey: ['sugestoes'] });
+    },
+  });
+}
+
+export function useApagarProposta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: apagarProposta,
+    // Apagar pode desadjudicar um certame: invalida o mesmo conjunto da vencedora.
+    onSuccess: () => invalidarVencedora(qc),
   });
 }
 

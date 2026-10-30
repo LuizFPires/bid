@@ -14,13 +14,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, Icon } from '@bid/ui';
 import {
   invalidarVencedora,
+  useApagarProposta,
   useCriarContrato,
   useCriarVersao,
   useDefinirVencedora,
+  useEditarProposta,
   useProposta,
 } from '../data/hooks';
-import { desfazerVencedora, extrairProposta, uploadPropostaArquivo } from '../data/mutations';
-import { urlArquivoProposta, type VersaoDetalhe } from '../data/queries';
+import { desfazerVencedora, extrairProposta, restaurarProposta, uploadPropostaArquivo } from '../data/mutations';
+import { urlArquivoProposta, type PropostaDetalhe, type VersaoDetalhe } from '../data/queries';
 import { useToast } from '../app/Toast';
 
 /** Mostra a variação de um valor entre versões, com seta e sinal (não só cor). */
@@ -51,9 +53,10 @@ export function PropostaScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useProposta(id);
-  const [modo, setModo] = useState<'ver' | 'nova'>('ver');
+  const [modo, setModo] = useState<'ver' | 'nova' | 'editar'>('ver');
   const definir = useDefinirVencedora();
   const criarContrato = useCriarContrato();
+  const apagar = useApagarProposta();
   const toast = useToast();
   const qc = useQueryClient();
 
@@ -117,6 +120,30 @@ export function PropostaScreen() {
     }
   }
 
+  async function apagarEsta() {
+    if (!data) return;
+    const propostaId = data.id;
+    const nome = data.fornecedor;
+    try {
+      await apagar.mutateAsync(propostaId);
+      navigate('/propostas');
+      // Desfazer sobrevive à navegação (chamada crua + invalidação global).
+      toast(`Proposta de ${nome} excluída.`, {
+        actionLabel: 'Desfazer',
+        onAction: async () => {
+          try {
+            await restaurarProposta(propostaId);
+            invalidarVencedora(qc);
+          } catch {
+            toast('Não foi possível restaurar a proposta.');
+          }
+        },
+      });
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Não foi possível apagar a proposta.');
+    }
+  }
+
   return (
     <>
       <div className="crumb">
@@ -176,9 +203,23 @@ export function PropostaScreen() {
               </Button>
             )}
           </div>
+          <div className="acoes-sec">
+            <button type="button" className="linklike" onClick={() => setModo('editar')}>
+              <Icon name="pencil" /> Editar dados
+            </button>
+            <button type="button" className="linklike danger" disabled={apagar.isPending} onClick={apagarEsta}>
+              <Icon name="trash" /> {apagar.isPending ? 'Apagando…' : 'Apagar proposta'}
+            </button>
+          </div>
           <Timeline versoes={data.versoes} />
           {data.versoes.length >= 2 && <Comparar versoes={data.versoes} />}
         </>
+      ) : modo === 'editar' ? (
+        <EditarProposta
+          proposta={data}
+          onPronto={() => setModo('ver')}
+          onCancelar={() => setModo('ver')}
+        />
       ) : (
         <NovaVersao
           propostaId={data.id}
@@ -351,6 +392,117 @@ function LinhaDiff({
 }
 
 /* ---------- Nova versão (upload → extração → conferência) ---------- */
+
+/* ---------- Editar proposta (correção dos dados — não gera versão) ---------- */
+
+function EditarProposta({
+  proposta,
+  onPronto,
+  onCancelar,
+}: {
+  proposta: PropostaDetalhe;
+  onPronto: () => void;
+  onCancelar: () => void;
+}) {
+  const editar = useEditarProposta(proposta.id);
+  const toast = useToast();
+  const [fornecedor, setFornecedor] = useState(proposta.fornecedor);
+  const [valor, setValor] = useState(
+    proposta.valorAtual != null ? formatBRL(proposta.valorAtual).replace('R$', '').trim() : '',
+  );
+  const [prazo, setPrazo] = useState(proposta.prazoAtual != null ? String(proposta.prazoAtual) : '');
+  const [pagamento, setPagamento] = useState(proposta.condicaoPagamento ?? '');
+  const [garantia, setGarantia] = useState(proposta.garantia ?? '');
+  const [obs, setObs] = useState(proposta.versoes[0]?.obs ?? '');
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function salvar(e: FormEvent) {
+    e.preventDefault();
+    setErro(null);
+    const nome = fornecedor.trim();
+    if (!nome) {
+      setErro('Informe o fornecedor.');
+      return;
+    }
+    // Reaproveita a normalização do core (valor/prazo/texto) — regra #1.
+    const limpos = normalizarExtracao({
+      valor,
+      prazo_dias: prazo,
+      condicao_pagamento: pagamento,
+      garantia,
+      observacoes: obs,
+      itens: [],
+    });
+    try {
+      await editar.mutateAsync({
+        propostaId: proposta.id,
+        fornecedor: nome,
+        valor: limpos.valor,
+        prazo: limpos.prazo_dias,
+        condicaoPagamento: limpos.condicao_pagamento,
+        garantia: limpos.garantia,
+        obs: limpos.observacoes,
+      });
+      toast('Proposta atualizada.');
+      onPronto();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível salvar.');
+    }
+  }
+
+  return (
+    <form onSubmit={salvar}>
+      <div className="section-title">
+        <h2>Editar proposta</h2>
+      </div>
+      <p className="lead" style={{ marginTop: 0 }}>
+        Corrija os dados da versão atual. Para registrar uma revisão com novo arquivo, use “Nova versão”.
+      </p>
+      <div className="field">
+        <label htmlFor="ed-forn">Fornecedor</label>
+        <input id="ed-forn" value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} placeholder="Nome do fornecedor" />
+      </div>
+      <div className="pair">
+        <div className="field">
+          <label>Valor (R$)</label>
+          <input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="1.284.500,00" />
+        </div>
+        <div className="field">
+          <label>Prazo (dias)</label>
+          <input inputMode="numeric" value={prazo} onChange={(e) => setPrazo(e.target.value)} placeholder="95" />
+        </div>
+      </div>
+      <div className="field">
+        <label>Condição de pagamento</label>
+        <input value={pagamento} onChange={(e) => setPagamento(e.target.value)} placeholder="30/40/30%" />
+      </div>
+      <div className="field">
+        <label>Garantia</label>
+        <input value={garantia} onChange={(e) => setGarantia(e.target.value)} placeholder="5 anos" />
+      </div>
+      <div className="field">
+        <label>Observação</label>
+        <textarea value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Observação da versão atual…" />
+      </div>
+
+      {erro && (
+        <div className="banner warn" role="alert" style={{ marginBottom: 14 }}>
+          <Icon name="alert" />
+          <span>{erro}</span>
+        </div>
+      )}
+
+      <div className="pair">
+        <Button type="button" variant="ghost" onClick={onCancelar}>
+          Cancelar
+        </Button>
+        <Button type="submit" icon="check" disabled={editar.isPending || !fornecedor.trim()}>
+          {editar.isPending ? 'Salvando…' : 'Salvar alterações'}
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 function NovaVersao({
   propostaId,

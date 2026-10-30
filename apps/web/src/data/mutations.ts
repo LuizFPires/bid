@@ -341,3 +341,55 @@ export async function criarVersao(input: NovaVersaoInput): Promise<number> {
   if (error) throw error;
   return data as number;
 }
+
+/* ---------- Editar / apagar proposta ---------- */
+
+export interface EditarPropostaInput {
+  propostaId: string;
+  fornecedor: string;
+  valor: number | null;
+  prazo: number | null;
+  condicaoPagamento: string | null;
+  garantia: string | null;
+  obs: string | null;
+}
+
+/**
+ * Corrige os dados da proposta (fornecedor + valor/prazo/pagamento/garantia) via
+ * RPC `editar_proposta`. É CORREÇÃO, não revisão: atualiza os campos "atuais" e a
+ * versão atual em sincronia, sem gerar nova versão (regra #5 vale p/ revisões).
+ */
+export async function editarProposta(input: EditarPropostaInput): Promise<void> {
+  const fornecedor = input.fornecedor.trim();
+  if (!fornecedor) throw new Error('Informe o fornecedor.');
+  const { error } = await db().rpc('editar_proposta', {
+    p_proposta: input.propostaId,
+    p_fornecedor: fornecedor,
+    p_valor: input.valor,
+    p_prazo: input.prazo,
+    p_pagamento: input.condicaoPagamento,
+    p_garantia: input.garantia,
+    p_obs: input.obs,
+  });
+  if (error) throw error;
+
+  // Sugestão de fornecedor é best-effort (não derruba a edição).
+  try {
+    const org = await fetchMinhaOrg();
+    if (org) await registrarSugestao(org.id, 'fornecedor', fornecedor);
+  } catch {
+    // ignora — a edição já foi gravada.
+  }
+}
+
+/** Apaga a proposta (exclusão LÓGICA via RPC `apagar_proposta`, só gestor). */
+export async function apagarProposta(propostaId: string): Promise<void> {
+  const { error } = await db().rpc('apagar_proposta', { p_proposta: propostaId });
+  if (error) throw error;
+}
+
+/** Restaura uma proposta apagada (Desfazer do apagar). */
+export async function restaurarProposta(propostaId: string): Promise<void> {
+  const { error } = await db().rpc('restaurar_proposta', { p_proposta: propostaId });
+  if (error) throw error;
+}
