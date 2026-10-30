@@ -12,7 +12,13 @@ import {
 } from '@bid/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Icon } from '@bid/ui';
-import { invalidarVencedora, useCriarVersao, useDefinirVencedora, useProposta } from '../data/hooks';
+import {
+  invalidarVencedora,
+  useCriarContrato,
+  useCriarVersao,
+  useDefinirVencedora,
+  useProposta,
+} from '../data/hooks';
 import { desfazerVencedora, extrairProposta, uploadPropostaArquivo } from '../data/mutations';
 import { urlArquivoProposta, type VersaoDetalhe } from '../data/queries';
 import { useToast } from '../app/Toast';
@@ -47,6 +53,7 @@ export function PropostaScreen() {
   const { data, isLoading, isError } = useProposta(id);
   const [modo, setModo] = useState<'ver' | 'nova'>('ver');
   const definir = useDefinirVencedora();
+  const criarContrato = useCriarContrato();
   const toast = useToast();
   const qc = useQueryClient();
 
@@ -100,6 +107,16 @@ export function PropostaScreen() {
     }
   }
 
+  async function gerarContrato() {
+    if (!data) return;
+    try {
+      const contratoId = await criarContrato.mutateAsync(data.id);
+      navigate(`/contratos/${contratoId}`);
+    } catch {
+      toast('Não foi possível gerar o contrato.');
+    }
+  }
+
   return (
     <>
       <div className="crumb">
@@ -142,6 +159,11 @@ export function PropostaScreen() {
             {data.status !== 'vencedora' && (
               <Button icon="trophy" disabled={definir.isPending} onClick={marcarVencedora}>
                 {definir.isPending ? 'Definindo…' : 'Definir como vencedora'}
+              </Button>
+            )}
+            {data.status === 'vencedora' && (
+              <Button icon="tab-contratos" disabled={criarContrato.isPending} onClick={gerarContrato}>
+                {criarContrato.isPending ? 'Gerando…' : 'Gerar contrato'}
               </Button>
             )}
           </div>

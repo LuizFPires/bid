@@ -48,11 +48,11 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 - **Aceite:** marcar vencedora pelos dois caminhos; status e certame atualizam; disponível para contrato (M6).
 
 ## M6 · Contrato a partir da vencedora (prioridade 4b)
-- [ ] Gerar contrato vinculando a proposta (Anexo I) e a equalização (anexo).
-- [ ] Cláusulas pré-preenchidas (objeto, preço, prazo, garantia) + cláusulas padrão editáveis.
-- [ ] Render HTML→PDF no servidor, gravar em Storage.
-- [ ] Criar contrato a partir de: proposta vencedora, certame adjudicado e "+" em Contratos.
-- **Aceite:** gerar um contrato de uma vencedora, com dados corretos e PDF baixável.
+- [x] Gerar contrato vinculando a proposta vencedora (certame/obra/valor).
+- [x] Cláusulas pré-preenchidas (objeto, preço, prazo, garantia) + cláusulas padrão editáveis.
+- [x] Render HTML→PDF no servidor (`@react-pdf/renderer`), gravar em Storage (pdf_path/paginas).
+- [x] Criar contrato a partir de: proposta vencedora (botão) e "+" em Contratos (escolher vencedora).
+- **Aceite:** gerar um contrato de uma vencedora, com dados corretos e PDF baixável. _(A geração do PDF exige as env de servidor `SUPABASE_URL`/`SUPABASE_ANON_KEY` na Vercel; a criação do contrato e a edição de cláusulas funcionam sem elas.)_
 
 ## M7 · Assinatura digital (prioridade 4c)
 - [ ] Assinatura **no app**: canvas (a dedo), aplicada em todas as páginas do PDF.
@@ -70,6 +70,9 @@ Regra geral: um item por commit (mensagem em pt-BR no imperativo); migration sem
 ---
 
 ## Decisões
+- 30/10/2026 (revisão — M6) — Correções da revisão independente (2 médio, 3 baixo): o PDF do contrato passou a **org-scoped e determinístico** (`{org}/contrato-{id}.pdf`), com policies de storage por `is_member` (membro da org baixa o PDF do colega; substitui o SELECT owner-scoped do M0 e elimina órfãos ao regerar); **um contrato por proposta** (índice único parcial + RPC idempotente que devolve o existente), com a lista de vencedoras filtrando as já contratadas; aviso de "PDF desatualizado" ao editar cláusula. Contagem de páginas fica como aproximação (heurística sobre os bytes do PDF).
+- 30/10/2026 (auto — M6) — **Contrato derivado da vencedora**: tabelas `contratos` + `contrato_clausulas`; RPC `criar_contrato(proposta, clausulas)` atômico exige certame **adjudicado** e a proposta ser a **vencedora**, fixa `valor` do contrato a partir da proposta (autoritativo), insere as cláusulas e grava evento. As **cláusulas** (objeto/preço/prazo/garantia + padrão) são geradas no `core` (`gerarClausulas`, testado — regra #1); editar o contrato não altera a proposta (regra #8).
+- 30/10/2026 (auto — M6) — **HTML→PDF no servidor com `@react-pdf/renderer`** (JS puro, serverless-friendly, sem Chromium) em `/api/contracts/pdf`; upload ao bucket privado `contratos` com **cliente user-scoped** (nova policy de INSERT por pasta do usuário), **sem `service_role`** (mesmo padrão do M2). Grava `pdf_path` e `paginas`; download por URL assinada.
 - 30/10/2026 (revisão — M5) — Correções da revisão independente (1 alto, 3 médio, 2 baixo; recomendação era BLOCK): `definir_vencedora` **rebaixa a vencedora anterior** ao trocar (vencedora única por certame — fecha o furo de dupla vencedora); `desfazer_vencedora` só reverte quando a proposta **é a vencedora corrente** (guarda por `row_count`, não só pelo enum do cliente), trata `unique_violation` (colisão com certame ativo) com mensagem clara e só grava evento se mudou; o Desfazer no cliente usa chamada crua + invalidação pelo queryClient global (**sobrevive à navegação**) e **toast de falha**; timer do toast com cleanup no unmount; a UI mostra "Vencedora" e esconde o botão na proposta já vencedora; teste pgTAP agora é **comportamental** (definir → trocar → desfazer, com asserts de estado/evento).
 - 30/10/2026 (auto — M5) — **Vencedora por RPC atômico** `definir_vencedora(proposta)`: marca a proposta `vencedora`, o certame `adjudicada` + `vencedora_proposta_id` e grava evento; devolve os estados anteriores para o **Desfazer** (`desfazer_vencedora`, toast de 5s — regra #11). As demais propostas do certame **não** mudam de status (reversível, não destrutivo). Dois caminhos de UI: direto no detalhe da proposta (inclui proposta única) e no card da equalização.
 - 30/10/2026 (revisão — M4) — Correções da revisão independente (0 crítico/alto, 2 médio, 4 baixo): o RPC `criar_equalizacao` passa a **amarrar as propostas ao escopo** (escopo obra → todas do certame; entre_obras → todas da categoria), fechando o furo intra-org; o banner de recomendação da IA só aparece quando aponta uma **proposta comparada** (id validado no core), com o fornecedor resolvido da proposta; `/ai/equalize` valida **≥2 propostas acessíveis** após o fetch e grava **evento `equalizacao_analisada`** (regra #10); empate TOTAL de valor/prazo não marca menor/maior (evita ruído); o comparativo preserva a **ordem de seleção** (`proposta_ids`). Sem vazamento entre orgs nem exposição de segredo.

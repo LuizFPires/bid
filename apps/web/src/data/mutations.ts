@@ -1,6 +1,6 @@
-import type { PropostaExtraida } from '@bid/core';
+import { gerarClausulas, type PropostaExtraida } from '@bid/core';
 import { supabase } from '../lib/supabase';
-import { fetchMinhaOrg } from './queries';
+import { fetchMinhaOrg, fetchProposta } from './queries';
 import type { Obra } from './types';
 
 function db() {
@@ -227,6 +227,53 @@ export async function desfazerVencedora(input: DesfazerVencedoraInput): Promise<
     p_certame_status: input.anterior.certame_status_anterior,
   });
   if (error) throw error;
+}
+
+/* ---------- Contrato ---------- */
+
+/**
+ * Cria o contrato a partir de uma proposta vencedora: monta as cláusulas no core
+ * e grava tudo via RPC atômico `criar_contrato`. Devolve o id do contrato.
+ */
+export async function criarContrato(propostaId: string): Promise<string> {
+  const prop = await fetchProposta(propostaId);
+  if (!prop) throw new Error('Proposta não encontrada.');
+  const clausulas = gerarClausulas({
+    objeto: prop.categoria,
+    contratada: prop.fornecedor,
+    obra: prop.obraNome,
+    valor: prop.valorAtual,
+    prazoDias: prop.prazoAtual,
+    condicaoPagamento: prop.condicaoPagamento,
+    garantia: prop.garantia,
+  });
+  const { data, error } = await db().rpc('criar_contrato', {
+    p_proposta: propostaId,
+    p_clausulas: clausulas,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function atualizarClausula(clausulaId: string, texto: string): Promise<void> {
+  const { error } = await db().from('contrato_clausulas').update({ texto }).eq('id', clausulaId);
+  if (error) throw error;
+}
+
+/** Pede ao servidor para renderizar o PDF do contrato e gravá-lo no Storage. */
+export async function gerarPdfContrato(contratoId: string): Promise<void> {
+  const { data: sessionData } = await db().auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Sessão inválida.');
+  const resp = await fetch('/api/contracts/pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ id: contratoId }),
+  });
+  if (!resp.ok) {
+    const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
+    throw new Error(corpo?.erro ?? 'Falha ao gerar o PDF.');
+  }
 }
 
 export interface NovaVersaoInput {
