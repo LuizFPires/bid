@@ -186,6 +186,9 @@ export const EQUALIZE_PROMPT = [
   '- Em escopo.propostas, para CADA proposta informada, marque cada item como',
   '  "incluido", "ausente" ou "parcial". Use os MESMOS nomes de escopo.itens.',
   '- Se não houver itens comparáveis, devolva escopo.itens vazio.',
+  '',
+  'Responda SOMENTE chamando a ferramenta registrar_analise com os dados. Não',
+  'escreva texto fora da ferramenta.',
 ].join('\n');
 
 const MAX = 2000;

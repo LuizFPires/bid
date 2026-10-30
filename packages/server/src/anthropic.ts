@@ -31,7 +31,9 @@ export async function extrairPropostaDePdf(pdfBase64: string): Promise<PropostaE
         input_schema: EXTRACAO_INPUT_SCHEMA as unknown as Anthropic.Tool.InputSchema,
       },
     ],
-    tool_choice: { type: 'tool', name: EXTRACAO_TOOL_NAME },
+    // `auto` + instrução (o prompt manda chamar a ferramenta). O tool_choice
+    // FORÇADO ('tool'/'any') é rejeitado (400) nos modelos da geração 5.x.
+    tool_choice: { type: 'auto' },
     messages: [
       {
         role: 'user',
@@ -88,7 +90,9 @@ export async function analisarEqualizacao(propostas: PropostaParaIA[]): Promise<
         input_schema: EQUALIZE_INPUT_SCHEMA as unknown as Anthropic.Tool.InputSchema,
       },
     ],
-    tool_choice: { type: 'tool', name: EQUALIZE_TOOL_NAME },
+    // `auto` + instrução no prompt. tool_choice FORÇADO é rejeitado (400) no
+    // Sonnet 5.5 (e demais modelos 5.x).
+    tool_choice: { type: 'auto' },
     messages: [
       {
         role: 'user',

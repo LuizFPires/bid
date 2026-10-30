@@ -75,6 +75,9 @@ export const EXTRACAO_PROMPT = [
   '- Prazo sempre em DIAS corridos.',
   '- Se um campo não existir no documento, use null — não invente.',
   '- itens: só quando o documento traz planilha/quantitativo; senão, lista vazia.',
+  '',
+  'Responda SOMENTE chamando a ferramenta registrar_proposta com os dados. Não',
+  'escreva texto fora da ferramenta.',
 ].join('\n');
 
 const MAX_TEXTO = 2000;
