@@ -106,8 +106,8 @@ async function processar(req: VercelRequest, res: VercelResponse) {
 
 /**
  * Blindagem: captura QUALQUER erro do processamento (upload, stream, IA) para não
- * virar FUNCTION_INVOCATION_FAILED. TEMPORÁRIO: devolve o motivo ao cliente para
- * diagnosticar a extração (sem os logs do Vercel). Reverter para genérico depois.
+ * virar FUNCTION_INVOCATION_FAILED. O detalhe fica só no log do servidor; ao
+ * cliente vai uma mensagem genérica (sem vazar internals).
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -115,8 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (e) {
     console.error('extract-proposal crash:', e);
     if (!res.headersSent) {
-      const motivo = e instanceof Error ? e.message : String(e);
-      res.status(502).json({ erro: `Extração (diag): ${motivo}` });
+      res.status(502).json({ erro: 'Não foi possível extrair os dados da proposta.' });
     }
   }
 }
