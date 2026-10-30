@@ -9,9 +9,9 @@
   },
   "packageManager": "pnpm@11.25.0",
   "scripts": {
-    "dev": "pnpm --filter @bid/web dev",
-    "build": "pnpm -r --filter=./packages/* --filter=./apps/web build",
-    "typecheck": "pnpm -r typecheck && tsc --noEmit -p tsconfig.api.json",
+    "dev": "pnpm --filter @bid/core build && pnpm --filter @bid/web dev",
+    "build": "pnpm --filter @bid/core build && pnpm -r --filter=./packages/* --filter=./apps/web build",
+    "typecheck": "pnpm --filter @bid/core build && pnpm -r typecheck && tsc --noEmit -p tsconfig.api.json",
     "test": "pnpm -r test",
     "lint": "eslint .",
     "format": "prettier --write .",
