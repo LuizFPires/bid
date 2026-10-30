@@ -214,62 +214,62 @@ export interface PropostaDetalhe {
   versoes: VersaoDetalhe[];
 }
 
-interface RawPropostaDetalhe {
-  id: string;
-  fornecedor: string;
-  status: PropostaStatus;
-  valor_atual: number | null;
-  prazo_atual: number | null;
-  condicao_pagamento: string | null;
-  garantia: string | null;
-  versao_atual: number;
-  certame_id: string;
-  certames:
-    | {
-        id: string;
-        titulo: string;
-        categoria: string;
-        status: CertameStatus;
-        obra_id: string;
-        obras: { id: string; nome: string } | { id: string; nome: string }[] | null;
-      }
-    | null;
-  proposta_versoes: VersaoDetalhe[] | null;
-}
-
+/**
+ * Detalhe da proposta — à prova de falhas: a proposta SEMPRE abre.
+ * Sem `!inner` nem filtros aninhados, para que um certame/obra com dado
+ * estranho (ou excluído) nunca esconda a linha. Busca a proposta primeiro e,
+ * em paralelo, o certame (com o nome da obra) e as versões. Consultas simples
+ * e separadas eliminam qualquer ambiguidade de embed.
+ */
 export async function fetchProposta(id: string): Promise<PropostaDetalhe | null> {
-  const { data, error } = await db()
+  const { data: p, error } = await db()
     .from('propostas')
     .select(
-      `id, fornecedor, status, valor_atual, prazo_atual, condicao_pagamento, garantia, versao_atual, certame_id,
-       certames!inner ( id, titulo, categoria, status, obra_id, obras!inner ( id, nome ) ),
-       proposta_versoes ( id, n, data, valor, prazo, condicao_pagamento, garantia, obs, arquivo_path )`,
+      'id, fornecedor, status, valor_atual, prazo_atual, condicao_pagamento, garantia, versao_atual, certame_id',
     )
     .eq('id', id)
     .is('deleted_at', null)
-    .is('certames.deleted_at', null)
-    .is('certames.obras.deleted_at', null)
     .maybeSingle();
   if (error) throw error;
-  if (!data) return null;
+  if (!p) return null;
 
-  const r = data as unknown as RawPropostaDetalhe;
-  const cert = one(r.certames);
+  const [certRes, versRes] = await Promise.all([
+    db()
+      .from('certames')
+      .select('id, titulo, categoria, status, obra_id, obras ( nome )')
+      .eq('id', p.certame_id)
+      .maybeSingle(),
+    db()
+      .from('proposta_versoes')
+      .select('id, n, data, valor, prazo, condicao_pagamento, garantia, obs, arquivo_path')
+      .eq('proposta_id', id)
+      .order('n', { ascending: false }),
+  ]);
+
+  const cert = certRes.data as {
+    id: string;
+    titulo: string;
+    categoria: string;
+    status: CertameStatus;
+    obra_id: string;
+    obras: { nome: string } | { nome: string }[] | null;
+  } | null;
   const obra = one(cert?.obras);
-  const versoes = [...(r.proposta_versoes ?? [])].sort((a, b) => b.n - a.n);
+  const versoes = (versRes.data ?? []) as VersaoDetalhe[];
+
   return {
-    id: r.id,
-    fornecedor: r.fornecedor,
-    status: r.status,
-    valorAtual: r.valor_atual,
-    prazoAtual: r.prazo_atual,
-    condicaoPagamento: r.condicao_pagamento,
-    garantia: r.garantia,
-    versaoAtual: r.versao_atual,
+    id: p.id,
+    fornecedor: p.fornecedor,
+    status: p.status,
+    valorAtual: p.valor_atual,
+    prazoAtual: p.prazo_atual,
+    condicaoPagamento: p.condicao_pagamento,
+    garantia: p.garantia,
+    versaoAtual: p.versao_atual,
     categoria: cert?.categoria ?? '',
     obraId: cert?.obra_id ?? '',
     obraNome: obra?.nome ?? '',
-    certameId: r.certame_id,
+    certameId: p.certame_id,
     certameTitulo: cert?.titulo ?? '',
     certameStatus: (cert?.status ?? 'aberta') as CertameStatus,
     versoes,

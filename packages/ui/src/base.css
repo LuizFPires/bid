@@ -1285,6 +1285,7 @@ table.eq .high {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  width: 100%;
   border: 1.5px dashed var(--line);
   border-radius: 14px;
   padding: 22px;
@@ -1294,6 +1295,73 @@ table.eq .high {
   font-size: 13px;
   background: var(--surface-2);
   cursor: pointer;
+}
+.dropzone:hover {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Resumo da proposta: status, valor e ficha em grade (prazo/pagamento/garantia). */
+.resumo-prop {
+  margin-bottom: 14px;
+}
+.resumo-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.vbadge {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--muted);
+  background: var(--line-2);
+  padding: 4px 10px;
+  border-radius: 30px;
+  white-space: nowrap;
+}
+.resumo-valor {
+  margin-top: 12px;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.resumo-grid {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.resumo-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.resumo-grid .rk {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.resumo-grid .rv {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Ações da proposta: botões lado a lado, largura igual. */
+.acoes-prop {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 .dropzone svg {
   width: 26px;

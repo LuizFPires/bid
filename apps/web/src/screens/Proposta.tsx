@@ -132,37 +132,46 @@ export function PropostaScreen() {
         </p>
       </div>
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+      <div className="card resumo-prop">
+        <div className="resumo-top">
           <span className={`pill ${label.tom}`}>
             <span className={`dot ${label.tom}`} />
             {label.texto}
           </span>
-          <strong style={{ fontSize: 20, fontWeight: 900 }}>
-            {data.valorAtual != null ? formatBRL(data.valorAtual) : '—'}
-          </strong>
+          <span className="vbadge">versão {data.versaoAtual}</span>
         </div>
-        <div style={{ marginTop: 10, color: 'var(--muted)', fontSize: 13, fontWeight: 700 }}>
-          {data.prazoAtual != null ? `${data.prazoAtual} dias` : 'prazo —'}
-          {data.condicaoPagamento ? ` · ${data.condicaoPagamento}` : ''}
-          {data.garantia ? ` · garantia ${data.garantia}` : ''}
-          {` · v${data.versaoAtual}`}
+        <div className="resumo-valor">
+          {data.valorAtual != null ? formatBRL(data.valorAtual) : '—'}
+        </div>
+        <div className="resumo-grid">
+          <div>
+            <span className="rk">Prazo</span>
+            <span className="rv">{data.prazoAtual != null ? `${data.prazoAtual} dias` : '—'}</span>
+          </div>
+          <div>
+            <span className="rk">Pagamento</span>
+            <span className="rv">{data.condicaoPagamento || '—'}</span>
+          </div>
+          <div>
+            <span className="rk">Garantia</span>
+            <span className="rv">{data.garantia || '—'}</span>
+          </div>
         </div>
       </div>
 
       {modo === 'ver' ? (
         <>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-            <Button variant="soft" icon="layers" onClick={() => setModo('nova')}>
-              Revisar (nova versão)
+          <div className="acoes-prop">
+            <Button block variant="soft" icon="layers" onClick={() => setModo('nova')}>
+              Revisar
             </Button>
             {data.status !== 'vencedora' && (
-              <Button icon="trophy" disabled={definir.isPending} onClick={marcarVencedora}>
-                {definir.isPending ? 'Definindo…' : 'Definir como vencedora'}
+              <Button block icon="trophy" disabled={definir.isPending} onClick={marcarVencedora}>
+                {definir.isPending ? 'Definindo…' : 'Definir vencedora'}
               </Button>
             )}
             {data.status === 'vencedora' && (
-              <Button icon="tab-contratos" disabled={criarContrato.isPending} onClick={gerarContrato}>
+              <Button block icon="tab-contratos" disabled={criarContrato.isPending} onClick={gerarContrato}>
                 {criarContrato.isPending ? 'Gerando…' : 'Gerar contrato'}
               </Button>
             )}
