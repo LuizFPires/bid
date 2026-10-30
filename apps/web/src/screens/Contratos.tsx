@@ -16,6 +16,7 @@ import {
   useContrato,
   useContratos,
   useCriarContrato,
+  useEqualizacoes,
   useGerarPdf,
   useVencedoras,
 } from '../data/hooks';
@@ -179,6 +180,7 @@ export function ContratoScreen() {
   const { data, isLoading, isError } = useContrato(id);
   const atualizar = useAtualizarClausula(id ?? '');
   const gerarPdf = useGerarPdf(id ?? '');
+  const { data: equalizacoes } = useEqualizacoes();
   const toast = useToast();
   const [editando, setEditando] = useState<string | null>(null);
   const [rascunho, setRascunho] = useState('');
@@ -211,6 +213,9 @@ export function ContratoScreen() {
   }
 
   const label = CONTRATO_LABEL[data.status];
+  const eqDoCertame = data.certameId
+    ? (equalizacoes ?? []).find((e) => e.certameId === data.certameId)
+    : undefined;
 
   async function salvarClausula(clausulaId: string) {
     try {
@@ -300,6 +305,22 @@ export function ContratoScreen() {
             Ver
           </Button>
         </div>
+        {eqDoCertame && (
+          <div className="annex">
+            <span className="okic">
+              <Icon name="check" />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 13 }}>Anexo II — Equalização</div>
+              <small className="sub" style={{ fontSize: 11 }}>
+                Comparativo do certame
+              </small>
+            </div>
+            <Button size="sm" variant="ghost" onClick={() => navigate(`/equalizacoes/${eqDoCertame.id}`)}>
+              Ver
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="section-title">

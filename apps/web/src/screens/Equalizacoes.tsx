@@ -435,57 +435,95 @@ export function EqualizacaoScreen() {
         </p>
       </div>
 
-      {/* Comparativo lado a lado (rolagem horizontal no celular) */}
-      <div style={{ overflowX: 'auto', margin: '0 -2px 16px', paddingBottom: 4 }}>
-        <div style={{ display: 'flex', gap: 10, minWidth: 'min-content' }}>
-          {data.propostas.map((p) => {
-            const m = comp.marcadores[p.id];
-            const recomendada = ia?.recomendacao?.proposta_id === p.id;
-            const ehVencedora = data.vencedoraPropostaId === p.id;
-            return (
-              <div
-                key={p.id}
-                className="card"
-                style={{
-                  minWidth: 190,
-                  flex: '0 0 auto',
-                  outline: recomendada ? '2px solid var(--ok)' : undefined,
-                }}
-              >
-                <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 2 }}>{p.fornecedor}</div>
-                {recomendada && (
-                  <span className="pill adjudicada" style={{ marginBottom: 8 }}>
-                    <Icon name="trophy" style={{ width: 13, height: 13 }} />
-                    Recomendada
-                  </span>
-                )}
-                <Linha rotulo="Valor" valor={p.valor != null ? formatBRL(p.valor) : '—'} badge={m?.menorValor ? 'menor' : m?.maiorValor ? 'maior' : null} />
-                <Linha rotulo="Prazo" valor={p.prazo != null ? `${p.prazo} dias` : '—'} badge={m?.menorPrazo ? 'menor' : m?.maiorPrazo ? 'maior' : null} />
-                <Linha rotulo="Pagamento" valor={p.condicaoPagamento ?? '—'} />
-                <Linha rotulo="Garantia" valor={p.garantia ?? '—'} />
-                <div style={{ marginTop: 10 }}>
-                  {ehVencedora ? (
-                    <span className="pill adjudicada" style={{ width: '100%', justifyContent: 'center' }}>
-                      <Icon name="trophy" style={{ width: 13, height: 13 }} />
-                      Vencedora
-                    </span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant={recomendada ? 'primary' : 'soft'}
-                      icon="trophy"
-                      block
-                      disabled={definir.isPending}
-                      onClick={() => marcarVencedora(p.id)}
-                    >
-                      Definir vencedora
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Comparativo em tabela (rolagem horizontal no celular). A matriz de
+          itens de escopo do protótipo era dado fictício — aqui comparamos os
+          campos reais: prazo, pagamento, garantia e total. */}
+      <div className="tablewrap" style={{ marginBottom: 16 }}>
+        <table className="eq">
+          <thead>
+            <tr>
+              <th>Item</th>
+              {data.propostas.map((p) => {
+                const recomendada = ia?.recomendacao?.proposta_id === p.id;
+                return (
+                  <th key={p.id} className="forn">
+                    <div className="fornhd">
+                      <span className="nm" style={recomendada ? { color: 'var(--ok)' } : undefined}>
+                        {p.fornecedor}
+                      </span>
+                      {data.escopo === 'entre_obras' && p.obraNome && (
+                        <span className="vz">{p.obraNome}</span>
+                      )}
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="itm">Prazo</td>
+              {data.propostas.map((p) => {
+                const m = comp.marcadores[p.id];
+                return (
+                  <td key={p.id} className={`val ${m?.menorPrazo ? 'best' : ''}`}>
+                    {p.prazo != null ? `${p.prazo}d` : '—'}
+                  </td>
+                );
+              })}
+            </tr>
+            <tr>
+              <td className="itm">Pagamento</td>
+              {data.propostas.map((p) => (
+                <td key={p.id}>{p.condicaoPagamento ?? '—'}</td>
+              ))}
+            </tr>
+            <tr>
+              <td className="itm">Garantia</td>
+              {data.propostas.map((p) => (
+                <td key={p.id}>{p.garantia ?? '—'}</td>
+              ))}
+            </tr>
+            <tr className="total">
+              <td>Total</td>
+              {data.propostas.map((p) => {
+                const m = comp.marcadores[p.id];
+                return (
+                  <td key={p.id} className={`val ${m?.menorValor ? 'best' : m?.maiorValor ? 'high' : ''}`}>
+                    {p.valor != null ? formatBRL(p.valor) : '—'}
+                  </td>
+                );
+              })}
+            </tr>
+            <tr>
+              <td className="itm">Vencedora</td>
+              {data.propostas.map((p) => {
+                const ehVencedora = data.vencedoraPropostaId === p.id;
+                const recomendada = ia?.recomendacao?.proposta_id === p.id;
+                return (
+                  <td key={p.id} style={{ textAlign: 'center' }}>
+                    {ehVencedora ? (
+                      <span className="pill adjudicada">
+                        <Icon name="trophy" style={{ width: 13, height: 13 }} />
+                        Vencedora
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`btn sm ${recomendada ? 'primary' : 'soft'}`}
+                        disabled={definir.isPending}
+                        onClick={() => marcarVencedora(p.id)}
+                      >
+                        <Icon name="trophy" />
+                        Definir
+                      </button>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {/* Análise por IA (apoio) */}
@@ -563,15 +601,3 @@ export function EqualizacaoScreen() {
   );
 }
 
-function Linha({ rotulo, valor, badge }: { rotulo: string; valor: string; badge?: 'menor' | 'maior' | null }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, padding: '4px 0', borderTop: '1px solid var(--line)' }}>
-      <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: 'var(--muted)' }}>{rotulo}</span>
-      <span style={{ fontWeight: 800, fontSize: 13, textAlign: 'right' }}>
-        {valor}
-        {badge === 'menor' && <span style={{ color: 'var(--ok)', fontWeight: 900 }}> ↓ menor</span>}
-        {badge === 'maior' && <span style={{ color: 'var(--danger)', fontWeight: 900 }}> ↑ maior</span>}
-      </span>
-    </div>
-  );
-}

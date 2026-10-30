@@ -495,6 +495,7 @@ export interface ContratoDetalhe {
   valor: number | null;
   status: ContratoStatus;
   propostaId: string;
+  certameId: string | null;
   pdfPath: string | null;
   paginas: number | null;
   clausulas: ClausulaRow[];
@@ -533,6 +534,7 @@ export async function fetchContrato(id: string): Promise<ContratoDetalhe | null>
     .select(
       `id, categoria, valor, status, proposta_id, pdf_path, paginas,
        obras ( nome ),
+       propostas ( certame_id ),
        contrato_clausulas ( id, numero, titulo, texto, origem )`,
     )
     .eq('id', id)
@@ -549,6 +551,7 @@ export async function fetchContrato(id: string): Promise<ContratoDetalhe | null>
     pdf_path: string | null;
     paginas: number | null;
     obras: { nome: string } | { nome: string }[] | null;
+    propostas: { certame_id: string | null } | { certame_id: string | null }[] | null;
     contrato_clausulas: ClausulaRow[] | null;
   };
   const clausulas = [...(r.contrato_clausulas ?? [])].sort((a, b) => a.numero - b.numero);
@@ -559,6 +562,7 @@ export async function fetchContrato(id: string): Promise<ContratoDetalhe | null>
     valor: r.valor,
     status: r.status,
     propostaId: r.proposta_id,
+    certameId: one(r.propostas)?.certame_id ?? null,
     pdfPath: r.pdf_path,
     paginas: r.paginas,
     clausulas,
