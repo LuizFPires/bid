@@ -223,7 +223,7 @@ export function IniciarEqualizacaoScreen() {
           </div>
           {obraId && (
             <div className="field">
-              <label htmlFor="eq-certame">Categoria (certame)</label>
+              <label htmlFor="eq-certame">Categoria (tomada de preços)</label>
               <select
                 id="eq-certame"
                 value={certameId}
@@ -232,7 +232,7 @@ export function IniciarEqualizacaoScreen() {
                   setSel(new Set());
                 }}
               >
-                <option value="">Selecione o certame…</option>
+                <option value="">Selecione a tomada de preços…</option>
                 {certames.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.categoria} · {c.totalPropostas} propostas
@@ -384,7 +384,7 @@ export function EqualizacaoScreen() {
   async function marcarVencedora(propostaId: string) {
     try {
       const anterior = await definir.mutateAsync(propostaId);
-      toast('Definida como vencedora — certame adjudicado.', {
+      toast('Definida como vencedora — tomada de preços adjudicada.', {
         actionLabel: 'Desfazer',
         onAction: async () => {
           try {

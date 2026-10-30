@@ -27,7 +27,7 @@ export function NovaObraScreen() {
       </div>
       <div className="page-head">
         <h1>Nova obra</h1>
-        <p className="lead">Organize propostas e certames por obra.</p>
+        <p className="lead">Organize propostas e tomadas de preços por obra.</p>
       </div>
 
       <form onSubmit={salvar}>

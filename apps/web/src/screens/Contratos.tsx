@@ -140,7 +140,7 @@ export function NovoContratoScreen() {
           </div>
         </div>
       ) : vencedoras.length === 0 ? (
-        <div className="card empty">Nenhuma proposta vencedora ainda. Adjudique um certame primeiro.</div>
+        <div className="card empty">Nenhuma proposta vencedora ainda. Adjudique uma tomada de preços primeiro.</div>
       ) : (
         <div className="card rowlist">
           {vencedoras.map((v) => (

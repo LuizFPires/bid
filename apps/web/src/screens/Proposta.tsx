@@ -90,7 +90,7 @@ export function PropostaScreen() {
     try {
       const anterior = await definir.mutateAsync(data.id);
       const propostaId = data.id;
-      toast('Definida como vencedora — certame adjudicado.', {
+      toast('Definida como vencedora — tomada de preços adjudicada.', {
         actionLabel: 'Desfazer',
         // Raw + invalidação pelo queryClient global: sobrevive à navegação.
         onAction: async () => {

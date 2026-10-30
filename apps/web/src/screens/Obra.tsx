@@ -46,12 +46,13 @@ export function ObraScreen() {
       <div className="page-head">
         <h1>{obra.nome}</h1>
         <p className="lead">
-          {obra.cidade ?? '—'} · {certames.length} certame{certames.length === 1 ? '' : 's'}
+          {obra.cidade ?? '—'} · {certames.length}{' '}
+          {certames.length === 1 ? 'tomada de preços' : 'tomadas de preços'}
         </p>
       </div>
 
       {certames.length === 0 ? (
-        <div className="card empty">Nenhum certame nesta obra ainda.</div>
+        <div className="card empty">Nenhuma tomada de preços nesta obra ainda.</div>
       ) : (
         <div className="card rowlist">
           {certames.map((c) => {

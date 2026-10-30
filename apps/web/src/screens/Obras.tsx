@@ -45,8 +45,8 @@ export function ObrasScreen() {
             </div>
             <div className="foot">
               <span>
-                {o.totalCertames} certame{o.totalCertames === 1 ? '' : 's'} · {o.ativos} ativo
-                {o.ativos === 1 ? '' : 's'}
+                {o.totalCertames} {o.totalCertames === 1 ? 'tomada de preços' : 'tomadas de preços'} ·{' '}
+                {o.ativos} ativo{o.ativos === 1 ? '' : 's'}
               </span>
               <span className="go">
                 Abrir <Icon name="chev" />
