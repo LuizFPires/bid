@@ -20,7 +20,9 @@ A UX e a navegação seguem esta ordem (é a espinha dorsal do app):
 - **Equipe:** tudo menos configurações sensíveis (ex.: excluir, alterar modelos de contrato). (Definir na RLS.)
 - **Signatário externo (sem conta):** acessa apenas um contrato específico por **link tokenizado** (recebido por WhatsApp), para assinar.
 
-**Equipe / organização.** Cada conta nasce com uma **organização própria** e todo o acervo é isolado por org (RLS). Para compartilhar, o **gestor** adiciona outras contas já existentes à sua org (tela **Equipe**, no menu de perfil), definindo o papel **Gestor** (acesso total, inclui apagar) ou **Equipe** (vê e edita, não apaga). A org sempre mantém ao menos um gestor. (Convite por e-mail de quem ainda não tem conta fica para depois — por ora a pessoa cria o login e o gestor a adiciona pelo e-mail.)
+**Acesso por obra (dono + convites).** Qualquer pessoa pode criar conta. Quem cria uma obra é o **dono** dela. Uma obra (e suas tomadas de preços, propostas, equalizações e contratos) só é visível para o dono e para quem **aceitou um convite** do dono. O dono convida por **e-mail** na tela da obra (seção **Pessoas**); a conta pode ainda não existir — o convite espera o cadastro com aquele e-mail. O convidado vê uma **notificação no ícone de perfil** (contagem) e, no menu **Convites**, a lista de obras para as quais foi convidado, com **Aceitar** ou **Recusar**. O dono pode remover um acesso a qualquer momento. **Apagar uma obra é exclusivo do dono.** Apagar propostas: dono da obra ou gestor da organização.
+
+**Confirmação de exclusão.** Toda ação de exclusão (proposta, obra, remover acesso) abre um **modal de confirmação** antes de ser efetivada e, depois de confirmada, ainda oferece **Desfazer** por 5 s onde a ação é reversível.
 
 ## Escopo — funcionalidades
 

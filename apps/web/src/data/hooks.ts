@@ -15,6 +15,8 @@ import {
   fetchSugestoes,
   fetchMinhaOrg,
   fetchMembros,
+  fetchMeusConvites,
+  fetchAcessoObra,
 } from './queries';
 import {
   criarObra,
@@ -34,6 +36,9 @@ import {
   adicionarMembro,
   mudarPapelMembro,
   removerMembro,
+  convidarParaObra,
+  responderConvite,
+  removerAcessoObra,
 } from './mutations';
 
 export function useAcervo() {
@@ -187,6 +192,55 @@ export function useRemoverMembro(orgId: string | undefined) {
   return useMutation({
     mutationFn: removerMembro,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['membros', orgId] }),
+  });
+}
+
+/** Convites pendentes para mim — alimenta a notificação no ícone de perfil. */
+export function useMeusConvites() {
+  return useQuery({
+    queryKey: ['convites'],
+    queryFn: fetchMeusConvites,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useAcessoObra(obraId: string | undefined) {
+  return useQuery({
+    queryKey: ['acesso-obra', obraId],
+    queryFn: () => fetchAcessoObra(obraId as string),
+    enabled: Boolean(obraId),
+  });
+}
+
+export function useConvidarParaObra(obraId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: convidarParaObra,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['acesso-obra', obraId] }),
+  });
+}
+
+export function useResponderConvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: responderConvite,
+    // Aceitar libera uma obra inteira: recarrega tudo que depende do acesso.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['convites'] });
+      qc.invalidateQueries({ queryKey: ['obras'] });
+      qc.invalidateQueries({ queryKey: ['acervo'] });
+      qc.invalidateQueries({ queryKey: ['equalizacoes'] });
+      qc.invalidateQueries({ queryKey: ['contratos'] });
+    },
+  });
+}
+
+export function useRemoverAcessoObra(obraId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: removerAcessoObra,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['acesso-obra', obraId] }),
   });
 }
 

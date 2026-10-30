@@ -425,6 +425,31 @@ export async function restaurarObra(obraId: string): Promise<void> {
   if (error) throw error;
 }
 
+/* ---------- Acesso por obra: convites ---------- */
+
+/** Dono convida alguém (por e-mail) para a obra; a conta pode ainda não existir. */
+export async function convidarParaObra(input: { obraId: string; email: string }): Promise<void> {
+  const email = input.email.trim();
+  if (!email) throw new Error('Informe o e-mail.');
+  const { error } = await db().rpc('convidar_para_obra', { p_obra: input.obraId, p_email: email });
+  if (error) throw error;
+}
+
+/** Aceita (true) ou recusa (false) um convite meu. */
+export async function responderConvite(input: { conviteId: string; aceitar: boolean }): Promise<void> {
+  const { error } = await db().rpc('responder_convite', {
+    p_convite: input.conviteId,
+    p_aceitar: input.aceitar,
+  });
+  if (error) throw error;
+}
+
+/** Dono remove um acesso (convite pendente ou aceito). */
+export async function removerAcessoObra(conviteId: string): Promise<void> {
+  const { error } = await db().rpc('remover_acesso_obra', { p_convite: conviteId });
+  if (error) throw error;
+}
+
 /* ---------- Equipe (membros da organização) ---------- */
 
 /** Adiciona uma conta já existente (por e-mail) à org como gestor ou equipe. */

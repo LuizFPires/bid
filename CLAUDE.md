@@ -42,8 +42,9 @@ React 18 + TypeScript + Vite (PWA) · TanStack Query · Supabase (Postgres, Auth
 8. **Contrato é derivado da proposta.** Editar o contrato não altera a proposta; a proposta vencedora é anexo e fonte das cláusulas.
 9. **Assinatura eletrônica simples.** Assinatura a dedo + trilha de auditoria (quem, quando, IP, hash). ICP-Brasil fora de escopo nesta fase. Link de assinatura: token forte, uso único, com expiração.
 10. **Nada se apaga de fato.** Exclusão lógica (`deleted_at`) e tabela de `eventos` para propostas, versões, contratos e assinaturas.
-11. **Ações destrutivas têm "Desfazer"** (toast de 5 s).
+11. **Ações destrutivas pedem confirmação e têm "Desfazer".** Toda exclusão abre um modal de confirmação (`ConfirmDialog`) antes de efetivar e, depois, toast de 5 s com Desfazer onde for reversível.
 12. **RLS em tudo.** Migration sempre com política e teste de política no mesmo PR. Arquivos em buckets privados (URL assinada).
+13. **Acesso é por obra.** Quem cria a obra é o dono; os demais só veem a obra após aceitar um convite do dono (`obra_convites`). Só o dono apaga a obra. Não reintroduza acesso por "membro da organização".
 
 ## Design system bid
 

@@ -26,6 +26,7 @@ import { desfazerVencedora, extrairProposta, restaurarProposta, uploadPropostaAr
 import { urlArquivoProposta, type PropostaDetalhe, type VersaoDetalhe } from '../data/queries';
 import { LeituraIA } from '../components/LeituraIA';
 import { useToast } from '../app/Toast';
+import { ConfirmDialog } from '../app/ConfirmDialog';
 
 /** Mostra a variação de um valor entre versões, com seta e sinal (não só cor). */
 function Delta({ v, money }: { v: Variacao; money?: boolean }) {
@@ -135,6 +136,8 @@ export function PropostaScreen() {
   const apagar = useApagarProposta();
   const toast = useToast();
   const qc = useQueryClient();
+  // Exclusão só depois de confirmar no modal (e ainda com Desfazer no toast).
+  const [confirmando, setConfirmando] = useState(false);
 
   if (isLoading) {
     return (
@@ -202,6 +205,7 @@ export function PropostaScreen() {
     const nome = nomeProposta(data.fornecedor, data.opcao);
     try {
       await apagar.mutateAsync(propostaId);
+      setConfirmando(false);
       navigate('/propostas');
       // Desfazer sobrevive à navegação (chamada crua + invalidação global).
       toast(`Proposta de ${nome} excluída.`, {
@@ -216,6 +220,7 @@ export function PropostaScreen() {
         },
       });
     } catch (e) {
+      setConfirmando(false);
       toast(e instanceof Error ? e.message : 'Não foi possível apagar a proposta.');
     }
   }
@@ -240,10 +245,21 @@ export function PropostaScreen() {
           <PropMenu
             apagando={apagar.isPending}
             onEditar={() => setModo('editar')}
-            onApagar={apagarEsta}
+            onApagar={() => setConfirmando(true)}
           />
         )}
       </div>
+
+      <ConfirmDialog
+        aberto={confirmando}
+        titulo={`Apagar a proposta de ${nomeProposta(data.fornecedor, data.opcao)}?`}
+        confirmarLabel="Apagar proposta"
+        ocupado={apagar.isPending}
+        onConfirmar={apagarEsta}
+        onCancelar={() => setConfirmando(false)}
+      >
+        Ela sai do acervo e da equalização. Você ainda pode desfazer por alguns segundos.
+      </ConfirmDialog>
 
       <div className="card resumo-prop">
         <div className="resumo-top">

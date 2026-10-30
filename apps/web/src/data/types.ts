@@ -24,6 +24,8 @@ export interface Obra {
   cidade: string | null;
   fase: string | null;
   fase_pill: 'aberta' | 'analise' | 'adjudicada' | 'neutro';
+  /** Dono da obra (quem criou): único que pode apagá-la e convidar pessoas. */
+  criado_por: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

@@ -1,13 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { CERTAME_LABEL, type CertameStatus } from '@bid/core';
-import { Icon, iconeCategoria } from '@bid/ui';
-import { useApagarObra, useObra } from '../data/hooks';
+import { Button, Icon, iconeCategoria } from '@bid/ui';
+import {
+  useAcessoObra,
+  useApagarObra,
+  useConvidarParaObra,
+  useObra,
+  useRemoverAcessoObra,
+} from '../data/hooks';
 import { restaurarObra } from '../data/mutations';
+import type { AcessoObra } from '../data/queries';
+import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../app/Toast';
+import { ConfirmDialog } from '../app/ConfirmDialog';
 
-/** Menu de 3 pontinhos da obra (apagar). */
+/** Menu de 3 pontinhos da obra (apagar) — só o dono vê. */
 function ObraMenu({ onApagar, apagando }: { onApagar: () => void; apagando: boolean }) {
   const [aberto, setAberto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -59,17 +68,151 @@ function ObraMenu({ onApagar, apagando }: { onApagar: () => void; apagando: bool
   );
 }
 
+const ACESSO_LABEL: Record<AcessoObra['status'], { texto: string; tom: 'neutro' | 'aberta' | 'analise' }> = {
+  dono: { texto: 'dono', tom: 'aberta' },
+  aceito: { texto: 'acesso', tom: 'neutro' },
+  pendente: { texto: 'convidado', tom: 'analise' },
+};
+
+/**
+ * Pessoas com acesso à obra. O dono convida por e-mail (a conta pode ainda não
+ * existir — o convite espera o cadastro) e remove acessos com confirmação.
+ */
+function Pessoas({ obraId, ehDono }: { obraId: string; ehDono: boolean }) {
+  const acesso = useAcessoObra(obraId);
+  const convidar = useConvidarParaObra(obraId);
+  const remover = useRemoverAcessoObra(obraId);
+  const toast = useToast();
+  const [email, setEmail] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [removendo, setRemovendo] = useState<AcessoObra | null>(null);
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    setErro(null);
+    try {
+      await convidar.mutateAsync({ obraId, email });
+      toast(`Convite enviado para ${email.trim()}.`);
+      setEmail('');
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível convidar.');
+    }
+  }
+
+  async function confirmarRemocao() {
+    if (!removendo?.conviteId) return;
+    try {
+      await remover.mutateAsync(removendo.conviteId);
+      toast(`Acesso de ${removendo.email} removido.`);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Não foi possível remover o acesso.');
+    } finally {
+      setRemovendo(null);
+    }
+  }
+
+  const lista = acesso.data ?? [];
+
+  return (
+    <section className="acesso" style={{ marginTop: 18 }}>
+      <div className="page-head" style={{ marginBottom: 10 }}>
+        <h2 style={{ fontSize: 15, margin: 0 }}>Pessoas</h2>
+        <p className="lead" style={{ marginTop: 2 }}>
+          {ehDono
+            ? 'Só quem você convidar vê esta obra e suas propostas.'
+            : 'Quem tem acesso a esta obra.'}
+        </p>
+      </div>
+
+      {ehDono && (
+        <form className="acesso-form" onSubmit={enviar}>
+          <div className="field">
+            <label htmlFor="acesso-email">Convidar por e-mail</label>
+            <input
+              id="acesso-email"
+              type="email"
+              inputMode="email"
+              autoComplete="off"
+              placeholder="pessoa@empresa.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <Button type="submit" icon="plus" disabled={convidar.isPending || !email.trim()}>
+            Convidar
+          </Button>
+        </form>
+      )}
+      {erro && (
+        <div className="banner warn" role="alert" style={{ marginBottom: 12 }}>
+          <Icon name="alert" />
+          <span>{erro}</span>
+        </div>
+      )}
+
+      {lista.length > 0 && (
+        <div className="card rowlist">
+          {lista.map((a) => {
+            const l = ACESSO_LABEL[a.status];
+            return (
+              <div key={a.conviteId ?? 'dono'} className="row">
+                <span className="ic">
+                  <Icon name="user" />
+                </span>
+                <span className="tt">
+                  <span className="t1">{a.email}</span>
+                </span>
+                <span className="rt" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span className={`pill ${l.tom}`}>
+                    <span className={`dot ${l.tom}`} />
+                    {l.texto}
+                  </span>
+                  {ehDono && a.conviteId && (
+                    <button
+                      type="button"
+                      className="remover"
+                      aria-label={`Remover acesso de ${a.email}`}
+                      disabled={remover.isPending}
+                      onClick={() => setRemovendo(a)}
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  )}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <ConfirmDialog
+        aberto={removendo !== null}
+        titulo={`Remover o acesso de ${removendo?.email ?? ''}?`}
+        confirmarLabel="Remover acesso"
+        ocupado={remover.isPending}
+        onConfirmar={confirmarRemocao}
+        onCancelar={() => setRemovendo(null)}
+      >
+        A pessoa deixa de ver esta obra e suas propostas. Você pode convidar de novo depois.
+      </ConfirmDialog>
+    </section>
+  );
+}
+
 export function ObraScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useObra(id);
+  const { session } = useAuth();
   const apagar = useApagarObra();
   const toast = useToast();
   const qc = useQueryClient();
+  const [confirmando, setConfirmando] = useState(false);
 
   async function apagarEsta(obraId: string, nome: string) {
     try {
       await apagar.mutateAsync(obraId);
+      setConfirmando(false);
       navigate('/obras');
       toast(`Obra "${nome}" excluída.`, {
         actionLabel: 'Desfazer',
@@ -84,6 +227,7 @@ export function ObraScreen() {
         },
       });
     } catch (e) {
+      setConfirmando(false);
       toast(e instanceof Error ? e.message : 'Não foi possível apagar a obra.');
     }
   }
@@ -115,6 +259,7 @@ export function ObraScreen() {
   }
 
   const { obra, certames } = data;
+  const ehDono = !!session?.user?.id && obra.criado_por === session.user.id;
 
   return (
     <>
@@ -131,8 +276,20 @@ export function ObraScreen() {
             {certames.length === 1 ? 'tomada de preços' : 'tomadas de preços'}
           </p>
         </div>
-        <ObraMenu apagando={apagar.isPending} onApagar={() => apagarEsta(obra.id, obra.nome)} />
+        {ehDono && <ObraMenu apagando={apagar.isPending} onApagar={() => setConfirmando(true)} />}
       </div>
+
+      <ConfirmDialog
+        aberto={confirmando}
+        titulo={`Apagar a obra "${obra.nome}"?`}
+        confirmarLabel="Apagar obra"
+        ocupado={apagar.isPending}
+        onConfirmar={() => apagarEsta(obra.id, obra.nome)}
+        onCancelar={() => setConfirmando(false)}
+      >
+        A obra sai da lista para todas as pessoas com acesso. Você ainda pode desfazer por alguns
+        segundos.
+      </ConfirmDialog>
 
       {certames.length === 0 ? (
         <div className="card empty">Nenhuma tomada de preços nesta obra ainda.</div>
@@ -169,6 +326,8 @@ export function ObraScreen() {
           })}
         </div>
       )}
+
+      <Pessoas obraId={obra.id} ehDono={ehDono} />
     </>
   );
 }

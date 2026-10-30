@@ -4,13 +4,19 @@ import { Button, Icon } from '@bid/ui';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthProvider';
 import { Olho } from '../auth/Olho';
+import { useMeusConvites } from '../data/hooks';
 import { useToast } from './Toast';
 
-/** Menu de perfil no topo: mostra a conta e permite trocar a senha ou sair. */
+/**
+ * Menu de perfil no topo: conta, convites de obra (com notificação no ícone),
+ * trocar senha e sair.
+ */
 export function ProfileMenu() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+  const convites = useMeusConvites();
+  const pendentes = convites.data?.length ?? 0;
   const ref = useRef<HTMLDivElement>(null);
   const [aberto, setAberto] = useState(false);
   const [trocando, setTrocando] = useState(false);
@@ -74,12 +80,17 @@ export function ProfileMenu() {
       <button
         className="bell"
         type="button"
-        aria-label="Perfil"
+        aria-label={pendentes > 0 ? `Perfil — ${pendentes} convite${pendentes === 1 ? '' : 's'}` : 'Perfil'}
         aria-haspopup="menu"
         aria-expanded={aberto}
         onClick={() => (aberto ? fechar() : setAberto(true))}
       >
         <Icon name="user" />
+        {pendentes > 0 && (
+          <span className="badge" aria-hidden="true">
+            {pendentes > 9 ? '9+' : pendentes}
+          </span>
+        )}
       </button>
 
       {aberto && (
@@ -103,11 +114,12 @@ export function ProfileMenu() {
                 type="button"
                 onClick={() => {
                   fechar();
-                  navigate('/equipe');
+                  navigate('/convites');
                 }}
               >
                 <Icon name="users" />
-                Minha equipe
+                Convites
+                {pendentes > 0 && <span className="count">{pendentes}</span>}
               </button>
               <button className="pm-item" type="button" onClick={() => setTrocando(true)}>
                 <Icon name="link" />

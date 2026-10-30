@@ -14,7 +14,7 @@ select function_privs_are('public', 'apagar_obra', ARRAY['uuid'],
 select function_privs_are('public', 'apagar_obra', ARRAY['uuid'],
   'anon', ARRAY[]::text[], 'anon não executa apagar_obra');
 
--- Guard de obra (gestor OU criador) e trigger de criador presentes.
+-- Guard de obra (só o criador, desde 20261030270000) e trigger de criador presentes.
 select isnt((select count(*) from pg_trigger where tgname = 'trg_obras_guard_del'),
   0::bigint, 'guard de soft-delete em obras presente');
 select isnt((select count(*) from pg_trigger where tgname = 'trg_obras_criador'),

@@ -3,12 +3,21 @@ import { BrandLogo, Icon, TabBar, type TabKey } from '@bid/ui';
 import { ToastProvider } from './Toast';
 import { ProfileMenu } from './ProfileMenu';
 
+/** Ação principal de cada aba: rótulo curto no botão, nome completo no aria-label. */
+const CTA: Partial<Record<TabKey, { label: string; aria: string; to: string }>> = {
+  propostas: { label: 'Proposta', aria: 'Nova proposta', to: '/propostas/nova' },
+  equalizacoes: { label: 'Equalizar', aria: 'Iniciar equalização', to: '/equalizacoes/nova' },
+  contratos: { label: 'Contrato', aria: 'Novo contrato', to: '/contratos/nova' },
+  obras: { label: 'Obra', aria: 'Nova obra', to: '/obras/nova' },
+};
+
 /** Casca do app: topo com a marca, conteúdo roteado e abas inferiores. */
 export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
 
   const active = (location.pathname.split('/')[1] || 'propostas') as TabKey;
+  const cta = CTA[active];
 
   return (
     <div className="stage">
@@ -16,48 +25,10 @@ export function AppShell() {
         <ToastProvider>
         <header className="topbar">
           <BrandLogo />
-          {active === 'propostas' && (
-            <button
-              className="ticon"
-              type="button"
-              aria-label="Nova proposta"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => navigate('/propostas/nova')}
-            >
+          {cta && (
+            <button className="cta" type="button" aria-label={cta.aria} onClick={() => navigate(cta.to)}>
               <Icon name="plus" />
-            </button>
-          )}
-          {active === 'equalizacoes' && (
-            <button
-              className="ticon"
-              type="button"
-              aria-label="Iniciar equalização"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => navigate('/equalizacoes/nova')}
-            >
-              <Icon name="plus" />
-            </button>
-          )}
-          {active === 'contratos' && (
-            <button
-              className="ticon"
-              type="button"
-              aria-label="Novo contrato"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => navigate('/contratos/nova')}
-            >
-              <Icon name="plus" />
-            </button>
-          )}
-          {active === 'obras' && (
-            <button
-              className="ticon"
-              type="button"
-              aria-label="Nova obra"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => navigate('/obras/nova')}
-            >
-              <Icon name="plus" />
+              <span className="lbl">{cta.label}</span>
             </button>
           )}
           <ProfileMenu />

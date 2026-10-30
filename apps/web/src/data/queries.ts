@@ -87,7 +87,7 @@ export async function fetchObras(): Promise<ObraResumo[]> {
   const { data, error } = await db()
     .from('obras')
     .select(
-      `id, org_id, nome, cidade, fase, fase_pill, created_at, updated_at, deleted_at,
+      `id, org_id, nome, cidade, fase, fase_pill, criado_por, created_at, updated_at, deleted_at,
        certames ( id, status )`,
     )
     .is('deleted_at', null)
@@ -143,7 +143,7 @@ export async function fetchObra(id: string): Promise<ObraDetalhe | null> {
   const { data, error } = await db()
     .from('obras')
     .select(
-      `id, org_id, nome, cidade, fase, fase_pill, created_at, updated_at, deleted_at,
+      `id, org_id, nome, cidade, fase, fase_pill, criado_por, created_at, updated_at, deleted_at,
        certames ( id, categoria, titulo, status, vencedora_proposta_id )`,
     )
     .eq('id', id)
@@ -187,6 +187,56 @@ export async function fetchObra(id: string): Promise<ObraDetalhe | null> {
     };
   });
   return { obra: obra as Obra, certames: resumos };
+}
+
+/* ---------- Acesso por obra: convites ---------- */
+
+export interface ConviteRecebido {
+  id: string;
+  obraId: string;
+  obraNome: string;
+  obraCidade: string | null;
+  convidadoPor: string | null;
+  createdAt: string;
+}
+
+/** Convites pendentes para mim (RPC `meus_convites`, por user_id ou e-mail). */
+export async function fetchMeusConvites(): Promise<ConviteRecebido[]> {
+  const { data, error } = await db().rpc('meus_convites');
+  if (error) throw error;
+  return ((data ?? []) as {
+    id: string;
+    obra_id: string;
+    obra_nome: string;
+    obra_cidade: string | null;
+    convidado_por_email: string | null;
+    created_at: string;
+  }[]).map((r) => ({
+    id: r.id,
+    obraId: r.obra_id,
+    obraNome: r.obra_nome,
+    obraCidade: r.obra_cidade,
+    convidadoPor: r.convidado_por_email,
+    createdAt: r.created_at,
+  }));
+}
+
+export interface AcessoObra {
+  /** null para a linha do dono. */
+  conviteId: string | null;
+  email: string;
+  status: 'dono' | 'pendente' | 'aceito';
+}
+
+/** Quem tem acesso à obra: dono + convites pendentes/aceitos. */
+export async function fetchAcessoObra(obraId: string): Promise<AcessoObra[]> {
+  const { data, error } = await db().rpc('listar_acesso_obra', { p_obra: obraId });
+  if (error) throw error;
+  return ((data ?? []) as { convite_id: string | null; email: string; status: string }[]).map((r) => ({
+    conviteId: r.convite_id,
+    email: r.email,
+    status: r.status as AcessoObra['status'],
+  }));
 }
 
 /* ---------- Proposta (detalhe + versões) ---------- */
