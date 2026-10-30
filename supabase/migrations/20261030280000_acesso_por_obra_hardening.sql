@@ -42,6 +42,61 @@ drop trigger if exists trg_certames_obra_immutable on public.certames;
 create trigger trg_certames_obra_immutable before update on public.certames
   for each row execute function public.block_certame_obra_change();
 
+-- 4) eventos: um convidado só lê eventos das entidades a que tem acesso (ou os
+--    que ele mesmo gerou); membros da org seguem lendo tudo da org.
+drop policy if exists "eventos_select" on public.eventos;
+create policy "eventos_select" on public.eventos
+  for select to authenticated using (
+    public.is_member(org_id)
+    or autor = auth.uid()
+    or (entidade = 'obra' and public.pode_obra(entidade_id))
+    or (entidade = 'proposta' and public.pode_proposta(entidade_id))
+    or (entidade = 'contrato' and public.pode_contrato(entidade_id)));
+
+-- 5) equalizações ENTRE OBRAS (sem certame): só membro da org ou quem criou —
+--    não basta colaborar em uma obra qualquer da org.
+drop policy if exists "equalizacoes_select" on public.equalizacoes;
+drop policy if exists "equalizacoes_insert" on public.equalizacoes;
+drop policy if exists "equalizacoes_update" on public.equalizacoes;
+create policy "equalizacoes_select" on public.equalizacoes
+  for select to authenticated using (
+    case when certame_id is not null then public.pode_certame(certame_id)
+         else (public.is_member(org_id) or criado_por = auth.uid()) end);
+create policy "equalizacoes_insert" on public.equalizacoes
+  for insert to authenticated with check (
+    case when certame_id is not null then public.pode_certame(certame_id)
+         else (public.is_member(org_id) or criado_por = auth.uid()) end);
+create policy "equalizacoes_update" on public.equalizacoes
+  for update to authenticated
+  using (case when certame_id is not null then public.pode_certame(certame_id)
+              else (public.is_member(org_id) or criado_por = auth.uid()) end)
+  with check (case when certame_id is not null then public.pode_certame(certame_id)
+                   else (public.is_member(org_id) or criado_por = auth.uid()) end);
+
+-- 6) proposta_versoes.arquivo_path: o cliente só pode apontar para um arquivo que
+--    ELE enviou (dono do objeto no bucket `propostas`), e o caminho é imutável —
+--    fecha o uso de uma versão forjada para ler arquivo alheio via policy de storage.
+create or replace function public.check_versao_arquivo()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return new; end if;  -- servidor: livre
+  if tg_op = 'UPDATE' and new.arquivo_path is distinct from old.arquivo_path then
+    raise exception 'arquivo_path da versão é imutável';
+  end if;
+  if tg_op = 'INSERT' and new.arquivo_path is not null and not exists (
+    select 1 from storage.objects o
+     where o.bucket_id = 'propostas' and o.name = new.arquivo_path
+       and o.owner_id = auth.uid()::text
+  ) then
+    raise exception 'arquivo da proposta não encontrado entre os seus uploads';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists trg_versoes_arquivo on public.proposta_versoes;
+create trigger trg_versoes_arquivo before insert or update on public.proposta_versoes
+  for each row execute function public.check_versao_arquivo();
+
 -- Storage: leitura por contrato acessível (ou membro da org).
 drop policy if exists "bid_contratos_select" on storage.objects;
 create policy "bid_contratos_select" on storage.objects

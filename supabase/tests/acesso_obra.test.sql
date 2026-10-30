@@ -1,6 +1,8 @@
 -- Teste (pgTAP) do acesso por obra: dono, convites e RLS. `supabase test db`.
 begin;
-select plan(18);
+select plan(19);
+select isnt((select count(*) from pg_trigger where tgname = 'trg_versoes_arquivo'),
+  0::bigint, 'proposta_versoes valida o dono do arquivo e torna arquivo_path imutável');
 
 -- Endurecimento (20261030280000): certame não muda de obra; guard mantém a trava de propostas.
 select isnt((select count(*) from pg_trigger where tgname = 'trg_certames_obra_immutable'),
