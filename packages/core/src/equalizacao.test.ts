@@ -116,4 +116,37 @@ describe('normalizarAnalise', () => {
     expect(r.achados).toHaveLength(1);
     expect(r.achados[0]?.pontos).toEqual(['p1', 'p2']);
   });
+
+  it('monta a matriz de escopo alinhada aos itens e só com propostas válidas', () => {
+    const r = normalizarAnalise(
+      {
+        escopo: {
+          itens: ['Transporte', 'Montagem', 'Transporte'], // duplicado é removido
+          propostas: [
+            {
+              proposta_id: 'a',
+              marcacoes: [
+                { item: 'Transporte', status: 'incluido' },
+                { item: 'Montagem', status: 'parcial' },
+              ],
+            },
+            // 'Montagem' faltando → 'na'; status inválido vira 'na'
+            { proposta_id: 'b', marcacoes: [{ item: 'Transporte', status: 'xunga' }] },
+            { proposta_id: 'z', marcacoes: [] }, // fora da lista → descartada
+          ],
+        },
+      },
+      ['a', 'b'],
+    );
+    expect(r.escopo.itens).toEqual(['Transporte', 'Montagem']);
+    expect(r.escopo.porProposta).toEqual([
+      { proposta_id: 'a', status: ['incluido', 'parcial'] },
+      { proposta_id: 'b', status: ['na', 'na'] },
+    ]);
+  });
+
+  it('escopo vazio quando não há itens', () => {
+    const r = normalizarAnalise({ escopo: { itens: [], propostas: [{ proposta_id: 'a', marcacoes: [] }] } }, ['a']);
+    expect(r.escopo).toEqual({ itens: [], porProposta: [] });
+  });
 });

@@ -84,10 +84,22 @@ export function compararPropostas(props: readonly PropostaComparavel[]): Compara
 
 /* ---------- Análise por IA (apoio) — partes puras ---------- */
 
+/** Situação de um item de escopo numa proposta. `na` = não avaliado pela IA. */
+export type EscopoStatus = 'incluido' | 'ausente' | 'parcial' | 'na';
+
 export interface AnaliseEqualizacao {
   veredito: string | null;
   achados: { fornecedor: string; pontos: string[] }[];
   recomendacao: { proposta_id: string | null; fornecedor: string | null; justificativa: string | null };
+  /**
+   * Matriz de escopo: itens comparados (linhas) e, por proposta, a situação de
+   * cada item — alinhada a `itens` (mesmo tamanho e ordem). Vazia quando a IA
+   * não identificou itens de escopo comparáveis.
+   */
+  escopo: {
+    itens: string[];
+    porProposta: { proposta_id: string; status: EscopoStatus[] }[];
+  };
 }
 
 export const EQUALIZE_TOOL_NAME = 'registrar_analise';
@@ -118,8 +130,44 @@ export const EQUALIZE_INPUT_SCHEMA = {
       },
       required: ['proposta_id', 'fornecedor', 'justificativa'],
     },
+    escopo: {
+      type: 'object',
+      description:
+        'Matriz de escopo: a UNIÃO dos itens de serviço comparados e, para cada proposta, se cada item está incluído, ausente ou parcial.',
+      properties: {
+        itens: {
+          type: 'array',
+          description:
+            'Lista canônica e enxuta dos itens de escopo comparados (ex.: "Transporte", "Montagem"), na ordem em que aparecem na tabela.',
+          items: { type: 'string' },
+        },
+        propostas: {
+          type: 'array',
+          description: 'Situação dos itens por proposta.',
+          items: {
+            type: 'object',
+            properties: {
+              proposta_id: { type: 'string', description: 'Um dos ids informados.' },
+              marcacoes: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    item: { type: 'string', description: 'Nome do item, igual ao listado em escopo.itens.' },
+                    status: { type: 'string', enum: ['incluido', 'ausente', 'parcial'] },
+                  },
+                  required: ['item', 'status'],
+                },
+              },
+            },
+            required: ['proposta_id', 'marcacoes'],
+          },
+        },
+      },
+      required: ['itens', 'propostas'],
+    },
   },
-  required: ['veredito', 'achados', 'recomendacao'],
+  required: ['veredito', 'achados', 'recomendacao', 'escopo'],
 } as const;
 
 export const EQUALIZE_PROMPT = [
@@ -130,6 +178,14 @@ export const EQUALIZE_PROMPT = [
   '- Recomende a melhor proposta por CUSTO-BENEFÍCIO, não só o menor preço.',
   '- recomendacao.proposta_id DEVE ser um dos ids informados (ou null se não der).',
   '- A recomendação é apoio; seja objetivo e justifique.',
+  '',
+  'MATRIZ DE ESCOPO (campo escopo):',
+  '- Em escopo.itens, liste a UNIÃO dos itens de serviço relevantes para comparar',
+  '  (poucos e objetivos, 3 a 8 itens; use os `itens` de cada proposta e o bom',
+  '  senso do serviço). Nomes curtos e consistentes.',
+  '- Em escopo.propostas, para CADA proposta informada, marque cada item como',
+  '  "incluido", "ausente" ou "parcial". Use os MESMOS nomes de escopo.itens.',
+  '- Se não houver itens comparáveis, devolva escopo.itens vazio.',
 ].join('\n');
 
 const MAX = 2000;
@@ -166,6 +222,7 @@ export function normalizarAnalise(raw: unknown, idsValidos: readonly string[]): 
     unknown
   >;
   const recId = txt(recRaw.proposta_id);
+
   return {
     veredito: txt(o.veredito),
     achados,
@@ -174,5 +231,48 @@ export function normalizarAnalise(raw: unknown, idsValidos: readonly string[]): 
       fornecedor: txt(recRaw.fornecedor),
       justificativa: txt(recRaw.justificativa),
     },
+    escopo: normalizarEscopo(o.escopo, idsValidos),
   };
+}
+
+function statusEscopo(v: unknown): EscopoStatus {
+  return v === 'incluido' || v === 'ausente' || v === 'parcial' ? v : 'na';
+}
+
+/**
+ * Normaliza a matriz de escopo: itens únicos (ordem preservada) e, por proposta
+ * VÁLIDA, um vetor de situação alinhado a `itens` (faltando → 'na').
+ */
+function normalizarEscopo(
+  raw: unknown,
+  idsValidos: readonly string[],
+): AnaliseEqualizacao['escopo'] {
+  const e = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const itens = [
+    ...new Set(
+      (Array.isArray(e.itens) ? e.itens : [])
+        .map((s) => txt(s)?.slice(0, 80) ?? null)
+        .filter((s): s is string => s !== null),
+    ),
+  ].slice(0, 12);
+
+  const porProposta = (Array.isArray(e.propostas) ? e.propostas : [])
+    .map((p) => {
+      if (typeof p !== 'object' || p === null) return null;
+      const po = p as Record<string, unknown>;
+      const pid = txt(po.proposta_id);
+      if (!pid || !idsValidos.includes(pid)) return null;
+      const mapa = new Map<string, EscopoStatus>();
+      for (const m of Array.isArray(po.marcacoes) ? po.marcacoes : []) {
+        if (typeof m !== 'object' || m === null) continue;
+        const mo = m as Record<string, unknown>;
+        const item = txt(mo.item);
+        if (item) mapa.set(item, statusEscopo(mo.status));
+      }
+      return { proposta_id: pid, status: itens.map((it) => mapa.get(it) ?? 'na') };
+    })
+    .filter((x): x is { proposta_id: string; status: EscopoStatus[] } => x !== null);
+
+  // Sem itens não há matriz; devolve estrutura vazia coerente.
+  return itens.length ? { itens, porProposta } : { itens: [], porProposta: [] };
 }

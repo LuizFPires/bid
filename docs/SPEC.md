@@ -33,7 +33,7 @@ Todas as tabelas: `id uuid pk`, `created_at`, `updated_at`, `deleted_at` (exclus
 - **certames** (tomada de preços) — `obra_id`, `categoria` (texto livre), `titulo`, `escopo`, `status` ∈ {aberta, analise, adjudicada}, `abertura`, `limite`, `vencedora_proposta_id` (nullable).
 - **propostas** — `certame_id`, `fornecedor` (texto), `status` ∈ {recebida, analise, vencedora, desclassificada}, `valor_atual`, `prazo_atual`, `condicao_pagamento`, `garantia`, `versao_atual` (int).
 - **proposta_versoes** — `proposta_id`, `n` (int), `data`, `valor`, `prazo`, `condicao_pagamento`, `garantia`, `obs`, `arquivo_path` (Storage), `dados_extraidos` (jsonb — saída bruta da IA).
-- **equalizacoes** — `escopo` ∈ {obra, entre_obras}, `categoria`, `certame_id` (nullable p/ entre_obras), `proposta_ids` (uuid[]), `resultado_ia` (jsonb: veredito, achados, recomendação), `criado_por`.
+- **equalizacoes** — `escopo` ∈ {obra, entre_obras}, `categoria`, `certame_id` (nullable p/ entre_obras), `proposta_ids` (uuid[]), `resultado_ia` (jsonb: veredito, achados, recomendação, **escopo** — matriz itens×propostas), `criado_por`.
 - **contratos** — `certame_id`, `proposta_id` (vencedora), `obra_id`, `categoria`, `valor`, `status` ∈ {rascunho, enviado, assinado}, `pdf_path`, `paginas` (int).
 - **contrato_clausulas** — `contrato_id`, `numero`, `titulo`, `texto`, `origem` (ex.: "proposta v2" | "modelo"). (Ou template + overrides em jsonb.)
 - **assinaturas** — `contrato_id`, `parte` ∈ {contratante, contratada}, `signatario_nome`, `assinatura_img_path`, `via` ∈ {app, link}, `token` (p/ link), `assinado_em`, `ip`, `user_agent`, `doc_hash`.
@@ -56,7 +56,7 @@ Chaves **apenas** no servidor (`ANTHROPIC_API_KEY`).
 
 ### Equalização (`/ai/equalize`)
 - Entrada: conjunto de propostas (dados + arquivos) de um certame (ou entre obras).
-- Claude normaliza escopos, identifica itens faltantes, estima impacto de itens não inclusos (ex.: transporte) e recomenda a melhor proposta com justificativa. Saída `jsonb` (veredito, achados por proposta, recomendação).
+- Claude normaliza escopos, identifica itens faltantes, estima impacto de itens não inclusos (ex.: transporte) e recomenda a melhor proposta com justificativa. Saída `jsonb`: `veredito`, `achados` por proposta, `recomendacao` e **`escopo`** — a matriz de escopo `{ itens: string[], porProposta: [{ proposta_id, status: ('incluido'|'ausente'|'parcial'|'na')[] }] }`, com `status` alinhado a `itens` (gerada/normalizada no `core`, regra #1).
 - Modelo sugerido: **`claude-sonnet-5-5`**; **`claude-opus-5-5`** para casos complexos. Salvar em `equalizacoes.resultado_ia`.
 
 > Boas práticas: enviar só o necessário, usar prompt caching quando aplicável, tratar timeouts e exibir estado "lendo…". A recomendação é apoio; a decisão é do usuário.

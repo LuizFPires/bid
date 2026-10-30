@@ -36,8 +36,8 @@ A UX e a navegação seguem esta ordem (é a espinha dorsal do app):
 ### 3. Equalização
 - Lista de **equalizações** (certames) agrupada por estado: aguardando decisão, recebendo propostas, concluídas.
 - **Iniciar equalização** (ação discreta no topo à direita): escolher **escopo** (em uma obra ou **entre obras**), **categoria** (campo livre) e as propostas que entram; abrir o comparativo.
-- Comparativo **lado a lado**: itens de escopo, prazo, condição de pagamento, garantia e total; destaque de menor/maior.
-- **Análise com IA (Claude)**: lê planilhas/PDFs, normaliza escopos, aponta itens faltando, risco de custo extra e recomenda a melhor proposta (custo-benefício), com justificativa.
+- Comparativo em **tabela horizontal** (itens nas linhas, propostas nas colunas): **matriz de escopo** (cada item marcado ✓ incluído / ✗ ausente / ~ parcial por proposta) e, no rodapé, prazo, condição de pagamento, garantia e total; destaque de menor/maior. Dá para **definir a vencedora** a partir dessa tela (ação por proposta).
+- **Análise com IA (Claude)**: lê planilhas/PDFs, normaliza escopos e **monta a matriz de escopo** (quais itens cada proposta inclui), aponta itens faltando, risco de custo extra e recomenda a melhor proposta (custo-benefício), com justificativa. A matriz de escopo vem dessa análise; antes de rodar a IA, a tabela mostra só prazo/pagamento/garantia/total.
 - **Equalização entre obras:** reúne propostas da mesma categoria de N obras (histórico de preços).
 
 ### 4. Vencedora → contrato

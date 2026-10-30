@@ -303,6 +303,11 @@ export interface ResultadoIA {
   veredito?: string | null;
   achados?: { fornecedor?: string; pontos?: string[] }[];
   recomendacao?: { proposta_id?: string | null; fornecedor?: string | null; justificativa?: string | null };
+  /** Matriz de escopo da análise (itens × propostas); `status` alinhado a `itens`. */
+  escopo?: {
+    itens?: string[];
+    porProposta?: { proposta_id?: string; status?: ('incluido' | 'ausente' | 'parcial' | 'na')[] }[];
+  };
 }
 
 export interface EqualizacaoDetalhe {

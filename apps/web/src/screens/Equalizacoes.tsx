@@ -26,6 +26,29 @@ import {
 import { desfazerVencedora } from '../data/mutations';
 import { useToast } from '../app/Toast';
 
+/** Marca de um item de escopo na matriz: ✓ incluído, ✗ ausente, ~ parcial. */
+function MarcaEscopo({ status }: { status: 'incluido' | 'ausente' | 'parcial' | 'na' }) {
+  if (status === 'incluido')
+    return (
+      <span className="mark y">
+        <Icon name="check" />
+      </span>
+    );
+  if (status === 'ausente')
+    return (
+      <span className="mark n">
+        <Icon name="x" />
+      </span>
+    );
+  if (status === 'parcial')
+    return (
+      <span className="mark p">
+        <Icon name="tilde" />
+      </span>
+    );
+  return <span style={{ color: 'var(--faint)', fontWeight: 800 }}>—</span>;
+}
+
 /* ---------- Lista ---------- */
 
 export function EqualizacoesScreen() {
@@ -461,6 +484,20 @@ export function EqualizacaoScreen() {
             </tr>
           </thead>
           <tbody>
+            {(ia?.escopo?.itens ?? []).map((item, i) => (
+              <tr key={`esc-${i}`}>
+                <td className="itm">{item}</td>
+                {data.propostas.map((p) => {
+                  const st =
+                    ia?.escopo?.porProposta?.find((x) => x.proposta_id === p.id)?.status?.[i] ?? 'na';
+                  return (
+                    <td key={p.id} style={{ textAlign: 'center' }}>
+                      <MarcaEscopo status={st} />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
             <tr>
               <td className="itm">Prazo</td>
               {data.propostas.map((p) => {
