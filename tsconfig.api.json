@@ -5,5 +5,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["api"]
+  "include": ["api", "srvlib"]
 }
