@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import Anthropic from '@anthropic-ai/sdk';
 import { analisarEqualizacao, type PropostaParaIA } from '@bid/server';
-import { MissingEnvError } from '@bid/server';
+import { MissingEnvError, env } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';
 import { userClient } from '@bid/server';
 
@@ -92,7 +93,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }));
 
   try {
-    const analise = await analisarEqualizacao(propostas);
+    const client = new Anthropic({ apiKey: env.anthropicKey() });
+    const analise = await analisarEqualizacao(client, propostas);
     const { data: eqRow, error: upErr } = await sb
       .from('equalizacoes')
       .update({ resultado_ia: analise })

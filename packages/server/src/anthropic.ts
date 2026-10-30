@@ -1,4 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
+// IMPORT SÓ DE TIPO: o SDK NÃO entra no bundle do @bid/server. Ele é importado
+// de verdade nas funções /api (onde o Vercel o instala), e passado como `client`.
+// Empacotar o SDK pelo esbuild quebrava a chamada em runtime (crash incapturável).
+import type Anthropic from '@anthropic-ai/sdk';
 import {
   EQUALIZE_INPUT_SCHEMA,
   EQUALIZE_PROMPT,
@@ -18,9 +21,10 @@ import { env } from './env';
  * estruturada por ferramenta forçada. A normalização/validação final é do
  * core (`normalizarExtracao`), então a saída é sempre segura.
  */
-export async function extrairPropostaDePdf(pdfBase64: string): Promise<PropostaExtraida> {
-  const client = new Anthropic({ apiKey: env.anthropicKey() });
-
+export async function extrairPropostaDePdf(
+  client: Anthropic,
+  pdfBase64: string,
+): Promise<PropostaExtraida> {
   const msg = await client.messages.create({
     model: env.modelExtract(),
     max_tokens: 2048,
@@ -66,8 +70,10 @@ export interface PropostaParaIA {
 }
 
 /** Analisa um conjunto de propostas e devolve a recomendação (apoio). */
-export async function analisarEqualizacao(propostas: PropostaParaIA[]): Promise<AnaliseEqualizacao> {
-  const client = new Anthropic({ apiKey: env.anthropicKey() });
+export async function analisarEqualizacao(
+  client: Anthropic,
+  propostas: PropostaParaIA[],
+): Promise<AnaliseEqualizacao> {
   const ids = propostas.map((p) => p.id);
 
   // Os dados das propostas vêm de arquivos de terceiros (não confiáveis). Vão

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import Anthropic from '@anthropic-ai/sdk';
 import { extrairPropostaDePdf } from '@bid/server';
-import { MissingEnvError } from '@bid/server';
+import { MissingEnvError, env } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';
 import { userClient } from '@bid/server';
 
@@ -88,7 +89,9 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   const buf = Buffer.concat(pedacos);
 
   try {
-    const dados = await extrairPropostaDePdf(buf.toString('base64'));
+    // SDK criado AQUI (na função), com o pacote real que o Vercel instala.
+    const client = new Anthropic({ apiKey: env.anthropicKey() });
+    const dados = await extrairPropostaDePdf(client, buf.toString('base64'));
     res.status(200).json({ dados });
   } catch (e) {
     if (e instanceof MissingEnvError) {
