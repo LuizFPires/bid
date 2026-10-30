@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   formatBRL,
@@ -47,6 +47,80 @@ function Delta({ v, money }: { v: Variacao; money?: boolean }) {
 async function baixar(path: string) {
   const url = await urlArquivoProposta(path);
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/** Menu de 3 pontinhos (editar / apagar) ao lado do nome do fornecedor. */
+function PropMenu({
+  onEditar,
+  onApagar,
+  apagando,
+}: {
+  onEditar: () => void;
+  onApagar: () => void;
+  apagando: boolean;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === 'Escape') setAberto(false);
+    }
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [aberto]);
+
+  return (
+    <div ref={ref} className="kebab-wrap">
+      <button
+        type="button"
+        className="kebab"
+        aria-label="Mais ações"
+        aria-haspopup="menu"
+        aria-expanded={aberto}
+        onClick={() => setAberto((v) => !v)}
+      >
+        <Icon name="dots" />
+      </button>
+      {aberto && (
+        <div className="kebab-menu" role="menu">
+          <button
+            type="button"
+            className="kebab-item"
+            role="menuitem"
+            onClick={() => {
+              setAberto(false);
+              onEditar();
+            }}
+          >
+            <Icon name="pencil" />
+            Editar dados
+          </button>
+          <button
+            type="button"
+            className="kebab-item danger"
+            role="menuitem"
+            disabled={apagando}
+            onClick={() => {
+              setAberto(false);
+              onApagar();
+            }}
+          >
+            <Icon name="trash" />
+            {apagando ? 'Apagando…' : 'Apagar proposta'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function PropostaScreen() {
@@ -152,11 +226,20 @@ export function PropostaScreen() {
         <span>{data.fornecedor}</span>
       </div>
 
-      <div className="page-head">
-        <h1>{data.fornecedor}</h1>
-        <p className="lead">
-          {data.categoria} · {data.obraNome}
-        </p>
+      <div className="page-head prop-head">
+        <div style={{ minWidth: 0 }}>
+          <h1>{data.fornecedor}</h1>
+          <p className="lead">
+            {data.categoria} · {data.obraNome}
+          </p>
+        </div>
+        {modo === 'ver' && (
+          <PropMenu
+            apagando={apagar.isPending}
+            onEditar={() => setModo('editar')}
+            onApagar={apagarEsta}
+          />
+        )}
       </div>
 
       <div className="card resumo-prop">
@@ -202,14 +285,6 @@ export function PropostaScreen() {
                 {criarContrato.isPending ? 'Gerando…' : 'Gerar contrato'}
               </Button>
             )}
-          </div>
-          <div className="acoes-sec">
-            <button type="button" className="linklike" onClick={() => setModo('editar')}>
-              <Icon name="pencil" /> Editar dados
-            </button>
-            <button type="button" className="linklike danger" disabled={apagar.isPending} onClick={apagarEsta}>
-              <Icon name="trash" /> {apagar.isPending ? 'Apagando…' : 'Apagar proposta'}
-            </button>
           </div>
           <Timeline versoes={data.versoes} />
           {data.versoes.length >= 2 && <Comparar versoes={data.versoes} />}
