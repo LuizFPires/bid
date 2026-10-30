@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
+import { nomeProposta } from '@bid/core';
 import { analisarEqualizacao, type PropostaParaIA } from '@bid/server';
 import { MissingEnvError, env } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';
@@ -46,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { data: props, error: pErr } = await sb
     .from('propostas')
-    .select('id, fornecedor, valor_atual, prazo_atual, condicao_pagamento, garantia')
+    .select('id, fornecedor, opcao, valor_atual, prazo_atual, condicao_pagamento, garantia')
     .in('id', ids)
     .is('deleted_at', null);
   if (pErr || !props) {
@@ -77,6 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     props as {
       id: string;
       fornecedor: string;
+      opcao: string | null;
       valor_atual: number | null;
       prazo_atual: number | null;
       condicao_pagamento: string | null;
@@ -84,7 +86,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }[]
   ).map((p) => ({
     id: p.id,
-    fornecedor: p.fornecedor,
+    // Duas opções do mesmo fornecedor precisam de nomes distintos para a IA.
+    fornecedor: nomeProposta(p.fornecedor, p.opcao),
     valor: p.valor_atual,
     prazo: p.prazo_atual,
     condicao_pagamento: p.condicao_pagamento,

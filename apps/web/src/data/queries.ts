@@ -1,4 +1,10 @@
-import { certameAtivo, type CertameStatus, type PropostaAcervo, type PropostaStatus } from '@bid/core';
+import {
+  certameAtivo,
+  nomeProposta,
+  type CertameStatus,
+  type PropostaAcervo,
+  type PropostaStatus,
+} from '@bid/core';
 import { supabase } from '../lib/supabase';
 import type { Obra, Organizacao } from './types';
 
@@ -18,6 +24,7 @@ function one<T>(v: T | T[] | null | undefined): T | undefined {
 interface RawAcervoRow {
   id: string;
   fornecedor: string;
+  opcao: string | null;
   status: PropostaStatus;
   valor_atual: number | null;
   versao_atual: number;
@@ -37,7 +44,7 @@ export async function fetchAcervo(): Promise<PropostaAcervo[]> {
   const { data, error } = await db()
     .from('propostas')
     .select(
-      `id, fornecedor, status, valor_atual, versao_atual, certame_id,
+      `id, fornecedor, opcao, status, valor_atual, versao_atual, certame_id,
        certames!inner ( id, titulo, categoria, obra_id, obras!inner ( id, nome ) )`,
     )
     .is('deleted_at', null)
@@ -52,6 +59,7 @@ export async function fetchAcervo(): Promise<PropostaAcervo[]> {
     return {
       id: r.id,
       fornecedor: r.fornecedor,
+      opcao: r.opcao,
       categoria: cert?.categoria ?? '',
       obraId: cert?.obra_id ?? '',
       obraNome: obra?.nome ?? '',
@@ -198,6 +206,8 @@ export interface VersaoDetalhe {
 export interface PropostaDetalhe {
   id: string;
   fornecedor: string;
+  /** Rótulo da alternativa de preço (null = preço único). */
+  opcao: string | null;
   status: PropostaStatus;
   valorAtual: number | null;
   prazoAtual: number | null;
@@ -225,7 +235,7 @@ export async function fetchProposta(id: string): Promise<PropostaDetalhe | null>
   const { data: p, error } = await db()
     .from('propostas')
     .select(
-      'id, fornecedor, status, valor_atual, prazo_atual, condicao_pagamento, garantia, versao_atual, certame_id',
+      'id, fornecedor, opcao, status, valor_atual, prazo_atual, condicao_pagamento, garantia, versao_atual, certame_id',
     )
     .eq('id', id)
     .is('deleted_at', null)
@@ -260,6 +270,7 @@ export async function fetchProposta(id: string): Promise<PropostaDetalhe | null>
   return {
     id: p.id,
     fornecedor: p.fornecedor,
+    opcao: (p as { opcao?: string | null }).opcao ?? null,
     status: p.status,
     valorAtual: p.valor_atual,
     prazoAtual: p.prazo_atual,
@@ -359,6 +370,7 @@ export async function fetchEqualizacoes(): Promise<EqualizacaoResumo[]> {
 function toComparavel(p: {
   id: string;
   fornecedor: string;
+  opcao?: string | null;
   valor_atual: number | null;
   prazo_atual: number | null;
   condicao_pagamento: string | null;
@@ -370,6 +382,7 @@ function toComparavel(p: {
   return {
     id: p.id,
     fornecedor: p.fornecedor,
+    opcao: p.opcao ?? null,
     valor: p.valor_atual,
     prazo: p.prazo_atual,
     condicaoPagamento: p.condicao_pagamento,
@@ -409,7 +422,7 @@ export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe |
   const { data: pdata, error: pErr } = await db()
     .from('propostas')
     .select(
-      `id, fornecedor, valor_atual, prazo_atual, condicao_pagamento, garantia,
+      `id, fornecedor, opcao, valor_atual, prazo_atual, condicao_pagamento, garantia,
        certames ( obras ( nome ) )`,
     )
     .in('id', r.proposta_ids.length ? r.proposta_ids : ['00000000-0000-0000-0000-000000000000'])
@@ -446,7 +459,7 @@ export async function fetchPropostasDoCertame(
   const { data, error } = await db()
     .from('propostas')
     .select(
-      `id, fornecedor, valor_atual, prazo_atual, condicao_pagamento, garantia,
+      `id, fornecedor, opcao, valor_atual, prazo_atual, condicao_pagamento, garantia,
        certames ( obras ( nome ) )`,
     )
     .eq('certame_id', certameId)
@@ -462,7 +475,7 @@ export async function fetchPropostasPorCategoria(
   const { data, error } = await db()
     .from('propostas')
     .select(
-      `id, fornecedor, valor_atual, prazo_atual, condicao_pagamento, garantia,
+      `id, fornecedor, opcao, valor_atual, prazo_atual, condicao_pagamento, garantia,
        certames!inner ( categoria, obras!inner ( nome ) )`,
     )
     .eq('certames.categoria', categoria)
@@ -576,6 +589,7 @@ export async function fetchContrato(id: string): Promise<ContratoDetalhe | null>
 
 export interface VencedoraResumo {
   id: string;
+  /** Já com o rótulo da opção, quando houver ("PANAIR · Opção 2"). */
   fornecedor: string;
   categoria: string;
   obraNome: string;
@@ -585,7 +599,7 @@ export interface VencedoraResumo {
 export async function fetchVencedoras(): Promise<VencedoraResumo[]> {
   const { data, error } = await db()
     .from('propostas')
-    .select('id, fornecedor, certames!inner ( categoria, status, obras!inner ( nome ) )')
+    .select('id, fornecedor, opcao, certames!inner ( categoria, status, obras!inner ( nome ) )')
     .eq('status', 'vencedora')
     .eq('certames.status', 'adjudicada')
     .is('deleted_at', null)
@@ -594,6 +608,7 @@ export async function fetchVencedoras(): Promise<VencedoraResumo[]> {
   const rows = (data ?? []) as unknown as {
     id: string;
     fornecedor: string;
+    opcao: string | null;
     certames: { categoria: string; obras: { nome: string } | { nome: string }[] | null } | { categoria: string }[] | null;
   }[];
   // Exclui as vencedoras que já viraram contrato (evita duplicar).
@@ -608,7 +623,7 @@ export async function fetchVencedoras(): Promise<VencedoraResumo[]> {
       );
       return {
         id: r.id,
-        fornecedor: r.fornecedor,
+        fornecedor: nomeProposta(r.fornecedor, r.opcao),
         categoria: cert?.categoria ?? '',
         obraNome: one(cert?.obras ?? null)?.nome ?? '',
       };

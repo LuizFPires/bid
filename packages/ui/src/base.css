@@ -1471,6 +1471,98 @@ table.eq .high {
   margin-bottom: 18px;
 }
 
+/* Conferência: documento com mais de uma opção de preço. */
+.card.opcoes {
+  margin-bottom: 14px;
+  border-color: var(--warn);
+}
+.opcoes-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.opcoes-head svg {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--warn);
+  margin-top: 1px;
+}
+.opcoes-head strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+}
+.opcoes-head p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.opcoes-lista {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.opcao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  cursor: pointer;
+}
+.opcao input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+.opcao .tt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.opcao .t1 {
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.opcao .t2 {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.opcao .v {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.card.opcoes .link {
+  display: block;
+  margin: 10px auto 0;
+  min-height: 44px;
+  padding: 0 12px;
+  background: none;
+  border: 0;
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Cabeçalho da proposta: nome à esquerda, menu de 3 pontinhos à direita. */
 .page-head.prop-head {
   display: flex;

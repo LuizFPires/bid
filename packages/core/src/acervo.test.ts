@@ -6,8 +6,20 @@ import {
   categoriasDoAcervo,
   ordenarSugestoes,
   filtrarSugestoes,
+  nomeProposta,
   type PropostaAcervo,
 } from './acervo';
+
+describe('nomeProposta', () => {
+  it('só o fornecedor quando o preço é único', () => {
+    expect(nomeProposta('PANAIR')).toBe('PANAIR');
+    expect(nomeProposta('PANAIR', null)).toBe('PANAIR');
+    expect(nomeProposta('PANAIR', '  ')).toBe('PANAIR');
+  });
+  it('fornecedor · opção quando há alternativa de preço', () => {
+    expect(nomeProposta('PANAIR', 'Opção 2 (Splitão)')).toBe('PANAIR · Opção 2 (Splitão)');
+  });
+});
 
 const base: PropostaAcervo[] = [
   {

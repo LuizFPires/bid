@@ -1,6 +1,12 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatBRL, normalizarExtracao, somaItens, type PropostaExtraida } from '@bid/core';
+import {
+  formatBRL,
+  normalizarExtracao,
+  somaItens,
+  type OpcaoExtraida,
+  type PropostaExtraida,
+} from '@bid/core';
 import { Autocomplete, Button, Icon } from '@bid/ui';
 import { useObras, useSugestoes } from '../data/hooks';
 import { useCriarProposta } from '../data/hooks';
@@ -17,6 +23,7 @@ const VAZIO: PropostaExtraida = {
   condicao_pagamento: null,
   garantia: null,
   itens: [],
+  opcoes: [],
   observacoes: null,
 };
 
@@ -75,6 +82,10 @@ export function NovaPropostaScreen() {
   const [garantia, setGarantia] = useState('');
   const [obs, setObs] = useState('');
   const [itens, setItens] = useState<PropostaExtraida['itens']>([]);
+  // Alternativas de preço detectadas pela IA (≥2) e quais o usuário quer arquivar.
+  // Cada opção marcada vira UMA proposta no acervo (mesmo fornecedor e arquivo).
+  const [opcoes, setOpcoes] = useState<OpcaoExtraida[]>([]);
+  const [opcoesMarcadas, setOpcoesMarcadas] = useState<boolean[]>([]);
 
   const ehPdf =
     !!file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
@@ -88,6 +99,16 @@ export function NovaPropostaScreen() {
     setGarantia(d.garantia ?? '');
     setObs(d.observacoes ?? '');
     setItens(d.itens);
+    setOpcoes(d.opcoes);
+    setOpcoesMarcadas(d.opcoes.map(() => true));
+  }
+
+  /** Volta ao fluxo de preço único (o valor fica com a opção escolhida ou a 1ª). */
+  function tratarComoPrecoUnico(idx = 0) {
+    const v = opcoes[idx]?.valor;
+    if (v != null) setValor(formatBRL(v).replace('R$', '').trim());
+    setOpcoes([]);
+    setOpcoesMarcadas([]);
   }
 
   async function prosseguir(e: FormEvent) {
@@ -146,13 +167,25 @@ export function NovaPropostaScreen() {
       observacoes: obs,
       itens,
     });
+    const base = { ...limpos, fornecedor: fornecedor.trim() };
+    const escolhidas = opcoes.filter((_, i) => opcoesMarcadas[i]);
     try {
-      await criar.mutateAsync({
-        obraId,
-        categoria: categoria.trim(),
-        arquivoPath,
-        dados: { ...limpos, fornecedor: fornecedor.trim() },
-      });
+      if (escolhidas.length === 0) {
+        await criar.mutateAsync({ obraId, categoria: categoria.trim(), arquivoPath, dados: base });
+      } else {
+        // Uma proposta por alternativa: só valor e rótulo mudam; o que a opção
+        // altera no escopo vai para as observações daquela proposta.
+        for (const op of escolhidas) {
+          const obsOp = [op.descricao, base.observacoes].filter(Boolean).join('\n\n') || null;
+          await criar.mutateAsync({
+            obraId,
+            categoria: categoria.trim(),
+            arquivoPath,
+            opcao: op.rotulo,
+            dados: { ...base, valor: op.valor, observacoes: obsOp },
+          });
+        }
+      }
       navigate(`/obras/${obraId}`);
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível arquivar a proposta.');
@@ -161,6 +194,8 @@ export function NovaPropostaScreen() {
 
   const listaObras = obras.data ?? [];
   const soma = somaItens(itens);
+  const nMarcadas = opcoesMarcadas.filter(Boolean).length;
+  const comOpcoes = opcoes.length >= 2;
 
   return (
     <>
@@ -261,15 +296,55 @@ export function NovaPropostaScreen() {
           </div>
 
           <form onSubmit={salvar}>
+            {comOpcoes && (
+              <div className="card opcoes" role="group" aria-label="Opções de preço">
+                <div className="opcoes-head">
+                  <Icon name="alert" />
+                  <div>
+                    <strong>Este documento tem {opcoes.length} opções de preço</strong>
+                    <p>
+                      Cada opção marcada vira uma proposta no acervo (mesmo fornecedor e arquivo),
+                      para você comparar e escolher a vencedora.
+                    </p>
+                  </div>
+                </div>
+                <ul className="opcoes-lista">
+                  {opcoes.map((op, i) => (
+                    <li key={i}>
+                      <label className="opcao">
+                        <input
+                          type="checkbox"
+                          checked={!!opcoesMarcadas[i]}
+                          onChange={(e) =>
+                            setOpcoesMarcadas((m) => m.map((x, j) => (j === i ? e.target.checked : x)))
+                          }
+                        />
+                        <span className="tt">
+                          <span className="t1">{op.rotulo}</span>
+                          {op.descricao && <span className="t2">{op.descricao}</span>}
+                        </span>
+                        <span className="v">{op.valor != null ? formatBRL(op.valor) : '—'}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <button type="button" className="link" onClick={() => tratarComoPrecoUnico()}>
+                  Não são opções — tratar como preço único
+                </button>
+              </div>
+            )}
+
             <Campo label="Fornecedor" value={fornecedor} onChange={setFornecedor} placeholder="Quem propôs" />
             <div className="pair">
-              <Campo
-                label="Valor (R$)"
-                value={valor}
-                onChange={setValor}
-                inputMode="decimal"
-                placeholder="1.284.500,00"
-              />
+              {!comOpcoes && (
+                <Campo
+                  label="Valor (R$)"
+                  value={valor}
+                  onChange={setValor}
+                  inputMode="decimal"
+                  placeholder="1.284.500,00"
+                />
+              )}
               <Campo
                 label="Prazo (dias)"
                 value={prazo}
@@ -325,8 +400,16 @@ export function NovaPropostaScreen() {
               <Button type="button" variant="ghost" onClick={() => setFase('form')}>
                 Voltar
               </Button>
-              <Button type="submit" icon="check" disabled={criar.isPending || !fornecedor.trim()}>
-                {criar.isPending ? 'Arquivando…' : 'Arquivar no acervo'}
+              <Button
+                type="submit"
+                icon="check"
+                disabled={criar.isPending || !fornecedor.trim() || (comOpcoes && nMarcadas === 0)}
+              >
+                {criar.isPending
+                  ? 'Arquivando…'
+                  : comOpcoes
+                    ? `Arquivar ${nMarcadas} ${nMarcadas === 1 ? 'proposta' : 'propostas'}`
+                    : 'Arquivar no acervo'}
               </Button>
             </div>
           </form>

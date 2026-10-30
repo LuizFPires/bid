@@ -8,10 +8,21 @@ export function normalizar(texto: string): string {
     .toLowerCase();
 }
 
+/**
+ * Nome de exibição de uma proposta: o fornecedor e, quando o documento trouxe
+ * mais de uma alternativa de preço, o rótulo da opção ("PANAIR · Opção 2 (Splitão)").
+ */
+export function nomeProposta(fornecedor: string, opcao?: string | null): string {
+  const o = (opcao ?? '').trim();
+  return o ? `${fornecedor} · ${o}` : fornecedor;
+}
+
 /** Uma proposta como aparece no acervo (achatada para a lista). */
 export interface PropostaAcervo {
   id: string;
   fornecedor: string;
+  /** Rótulo da alternativa de preço (null = preço único). */
+  opcao?: string | null;
   categoria: string;
   obraId: string;
   obraNome: string;
@@ -43,7 +54,7 @@ export function filtrarAcervo(
   if (q) {
     const nq = normalizar(q);
     r = r.filter((p) =>
-      normalizar(`${p.fornecedor} ${p.categoria} ${p.obraNome} ${p.certameTitulo}`).includes(nq),
+      normalizar(`${p.fornecedor} ${p.opcao ?? ''} ${p.categoria} ${p.obraNome} ${p.certameTitulo}`).includes(nq),
     );
   }
   return r.sort((a, b) => (a.valor ?? Infinity) - (b.valor ?? Infinity));

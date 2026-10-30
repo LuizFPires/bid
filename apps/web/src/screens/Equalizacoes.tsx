@@ -5,6 +5,7 @@ import {
   compararPropostas,
   formatBRL,
   formatBRLCompact,
+  nomeProposta,
   type CertameStatus,
   type PropostaComparavel,
 } from '@bid/core';
@@ -358,7 +359,7 @@ function SelecaoRow({
         <Icon name={on ? 'check' : 'doc'} />
       </span>
       <span className="tt">
-        <span className="t1">{p.fornecedor}</span>
+        <span className="t1">{nomeProposta(p.fornecedor, p.opcao)}</span>
         <span className="t2">
           {escopo === 'entre_obras' ? `${p.obraNome} · ` : ''}
           {p.prazo != null ? `${p.prazo} dias` : 'prazo —'}
@@ -474,6 +475,7 @@ export function EqualizacaoScreen() {
                       <span className="nm" style={recomendada ? { color: 'var(--ok)' } : undefined}>
                         {p.fornecedor}
                       </span>
+                      {p.opcao && <span className="vz">{p.opcao}</span>}
                       {data.escopo === 'entre_obras' && p.obraNome && (
                         <span className="vz">{p.obraNome}</span>
                       )}

@@ -4,6 +4,7 @@ import {
   formatBRL,
   formatNumber,
   formatNumeric,
+  nomeProposta,
   normalizarExtracao,
   variacao,
   PROPOSTA_LABEL,
@@ -198,7 +199,7 @@ export function PropostaScreen() {
   async function apagarEsta() {
     if (!data) return;
     const propostaId = data.id;
-    const nome = data.fornecedor;
+    const nome = nomeProposta(data.fornecedor, data.opcao);
     try {
       await apagar.mutateAsync(propostaId);
       navigate('/propostas');
@@ -224,13 +225,14 @@ export function PropostaScreen() {
       <div className="crumb">
         <button onClick={() => navigate('/propostas')}>Propostas</button>
         <Icon name="chev" />
-        <span>{data.fornecedor}</span>
+        <span>{nomeProposta(data.fornecedor, data.opcao)}</span>
       </div>
 
       <div className="page-head prop-head">
         <div style={{ minWidth: 0 }}>
           <h1>{data.fornecedor}</h1>
           <p className="lead">
+            {data.opcao ? `${data.opcao} · ` : ''}
             {data.categoria} · {data.obraNome}
           </p>
         </div>

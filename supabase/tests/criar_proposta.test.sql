@@ -5,7 +5,7 @@ select plan(5);
 -- Função existe.
 select has_function(
   'public', 'criar_proposta',
-  ARRAY['uuid', 'text', 'text', 'numeric', 'integer', 'text', 'text', 'text', 'text', 'jsonb'],
+  ARRAY['uuid', 'text', 'text', 'numeric', 'integer', 'text', 'text', 'text', 'text', 'jsonb', 'text'],
   'função criar_proposta existe'
 );
 
@@ -18,13 +18,13 @@ select is(
 -- Fail-closed: authenticated executa; anon não.
 select function_privs_are(
   'public', 'criar_proposta',
-  ARRAY['uuid', 'text', 'text', 'numeric', 'integer', 'text', 'text', 'text', 'text', 'jsonb'],
+  ARRAY['uuid', 'text', 'text', 'numeric', 'integer', 'text', 'text', 'text', 'text', 'jsonb', 'text'],
   'authenticated', ARRAY['EXECUTE'],
   'authenticated pode executar criar_proposta'
 );
 select function_privs_are(
   'public', 'criar_proposta',
-  ARRAY['uuid', 'text', 'text', 'numeric', 'integer', 'text', 'text', 'text', 'text', 'jsonb'],
+  ARRAY['uuid', 'text', 'text', 'numeric', 'integer', 'text', 'text', 'text', 'text', 'jsonb', 'text'],
   'anon', ARRAY[]::text[],
   'anon não pode executar criar_proposta'
 );

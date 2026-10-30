@@ -5,6 +5,7 @@ import {
   categoriasDoAcervo,
   formatBRL,
   formatBRLCompact,
+  nomeProposta,
   type PropostaAcervo,
 } from '@bid/core';
 import { useNavigate } from 'react-router-dom';
@@ -146,7 +147,7 @@ function AcervoRow({ p }: { p: PropostaAcervo }) {
         <Icon name={vencedora ? 'trophy' : iconeCategoria(p.categoria)} />
       </span>
       <span className="tt">
-        <span className="t1">{p.fornecedor}</span>
+        <span className="t1">{nomeProposta(p.fornecedor, p.opcao)}</span>
         <span className="t2">
           {p.categoria} · {p.obraNome}
           {p.versaoAtual > 1 ? ` · v${p.versaoAtual}` : ''}

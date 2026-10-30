@@ -58,6 +58,28 @@ describe('normalizarExtracao', () => {
     expect(normalizarExtracao({ prazo_dias: 30.4 }).prazo_dias).toBe(30);
   });
 
+  it('mantém as alternativas de preço (opcoes) e usa a 1ª como valor quando falta', () => {
+    const r = normalizarExtracao({
+      fornecedor: 'PANAIR',
+      valor: null,
+      opcoes: [
+        { rotulo: 'Opção 1 (Cassete)', valor: 'R$ 1.016.729,00', descricao: 'Cassetes' },
+        { rotulo: 'Opção 2 (Splitão)', valor: 980462, descricao: null },
+        { valor: 1 }, // sem rótulo → fora
+      ],
+    });
+    expect(r.opcoes).toHaveLength(2);
+    expect(r.opcoes[0]).toEqual({ rotulo: 'Opção 1 (Cassete)', valor: 1016729, descricao: 'Cassetes' });
+    expect(r.valor).toBe(1016729);
+  });
+
+  it('uma única "opção" não é alternativa: lista vazia', () => {
+    const r = normalizarExtracao({ valor: 100, opcoes: [{ rotulo: 'Única', valor: 100, descricao: null }] });
+    expect(r.opcoes).toEqual([]);
+    expect(r.valor).toBe(100);
+    expect(normalizarExtracao({ opcoes: 'x' }).opcoes).toEqual([]);
+  });
+
   it('trata string vazia como null e limita o tamanho do texto', () => {
     const r = normalizarExtracao({ fornecedor: '   ', observacoes: 'a'.repeat(5000) });
     expect(r.fornecedor).toBeNull();
@@ -84,5 +106,6 @@ describe('schema da tool', () => {
     expect(EXTRACAO_TOOL_NAME).toBe('registrar_proposta');
     expect(EXTRACAO_INPUT_SCHEMA.required).toContain('valor');
     expect(EXTRACAO_INPUT_SCHEMA.required).toContain('itens');
+    expect(EXTRACAO_INPUT_SCHEMA.required).toContain('opcoes');
   });
 });

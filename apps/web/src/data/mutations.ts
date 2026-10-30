@@ -122,6 +122,8 @@ export interface NovaPropostaInput {
   /** Dados já conferidos/editados pelo usuário. `fornecedor` é obrigatório. */
   dados: PropostaExtraida & { fornecedor: string };
   arquivoPath: string | null;
+  /** Rótulo da alternativa de preço, quando o documento trouxe mais de uma. */
+  opcao?: string | null;
 }
 
 /**
@@ -148,6 +150,7 @@ export async function criarProposta(input: NovaPropostaInput): Promise<string> {
     p_obs: d.observacoes,
     p_arquivo_path: input.arquivoPath,
     p_dados: d,
+    p_opcao: input.opcao?.trim() || null,
   });
   if (error) throw error;
   const propostaId = data as string;

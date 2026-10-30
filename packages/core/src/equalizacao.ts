@@ -8,6 +8,8 @@
 export interface PropostaComparavel {
   id: string;
   fornecedor: string;
+  /** Rótulo da alternativa de preço (null = preço único). */
+  opcao?: string | null;
   valor: number | null;
   prazo: number | null;
   condicaoPagamento: string | null;

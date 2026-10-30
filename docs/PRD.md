@@ -28,6 +28,7 @@ A UX e a navegação seguem esta ordem (é a espinha dorsal do app):
 - Tela inicial é o **acervo** de propostas, com busca por fornecedor/categoria/obra.
 - Filtro por **categoria de serviço** (campo livre, ver regra 2) e por **escopo**: *todo o sistema* ou *uma obra*.
 - **Nova proposta** (ação discreta no topo à direita): o usuário informa **apenas obra + categoria** e **anexa o arquivo** (PDF/planilha). A **IA lê o arquivo** e extrai fornecedor, valor, prazo, condição de pagamento, garantia e itens; o usuário confere e arquiva.
+- **Proposta com mais de uma opção de preço** (ex.: "Opção 1 – Cassete" e "Opção 2 – Splitão" no mesmo PDF): a IA **detecta as alternativas** e a tela de conferência avisa "Este documento tem N opções de preço". Cada opção marcada é arquivada como **uma proposta própria** (mesmo fornecedor, mesmo arquivo, prazo/pagamento/garantia comuns; valor e rótulo da opção próprios), exibida como "Fornecedor · Opção", para entrar na equalização e poder ser vencedora como qualquer outra. O usuário pode desmarcar opções ou "tratar como preço único".
 - Cada proposta pertence a um **certame** (tomada de preços) daquela obra + categoria.
 - No detalhe da proposta é possível **editar** os dados (fornecedor, valor, prazo, pagamento, garantia) — é correção da versão atual, não gera revisão — e **apagar** a proposta. Apagar é **exclusão lógica** com **Desfazer** (regra 10/11); só **gestor** apaga. Apagar a vencedora desadjudica o certame; não se apaga proposta que já virou contrato.
 
