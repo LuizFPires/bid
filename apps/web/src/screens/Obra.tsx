@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CERTAME_LABEL, type CertameStatus } from '@bid/core';
-import { Icon } from '@bid/ui';
+import { Icon, iconeCategoria } from '@bid/ui';
 import { useObra } from '../data/hooks';
 
 export function ObraScreen() {
@@ -60,7 +60,7 @@ export function ObraScreen() {
             return (
               <div key={c.id} className="row">
                 <span className="ic">
-                  <Icon name="doc" />
+                  <Icon name={c.vencedoraFornecedor ? 'trophy' : iconeCategoria(c.categoria)} />
                 </span>
                 <span className="tt">
                   <span className="t1">{c.categoria}</span>

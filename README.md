@@ -4,6 +4,12 @@ App (PWA, mobile first) para gerir **propostas de obra**: acervo por categoria, 
 
 Produto independente. Documentação em [`docs/`](docs/): [PRD](docs/PRD.md) · [SPEC](docs/SPEC.md) · [PLAN](docs/PLAN.md) · [protótipo](docs/prototipo-bid.html). Guia do agente: [CLAUDE.md](CLAUDE.md).
 
+## Identidade visual v1.0
+
+[Manual da marca e kit](docs/brand/README.md) · [Manual PDF](output/pdf/bid-manual-da-marca-v1.pdf) · [Catálogo visual](docs/brand/index.html) · [Design system](docs/brand/DESIGN-SYSTEM.md).
+
+A nova identidade aprovada usa duas folhas sobrepostas, lettering próprio e Sora na interface. O kit está documentado; a migração do aplicativo, que ainda utiliza a identidade anterior, permanece separada.
+
 ## Monorepo
 
 ```

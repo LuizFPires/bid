@@ -170,7 +170,7 @@ export function NovaPropostaScreen() {
         <>
           <div className="page-head">
             <h1>Nova proposta</h1>
-            <p className="lead">Informe obra e categoria, anexe o arquivo — a IA lê o resto.</p>
+            <p className="lead">Diga a obra e a categoria e anexe o arquivo — a IA lê o resto da proposta.</p>
           </div>
 
           {listaObras.length === 0 ? (
@@ -335,7 +335,7 @@ export function NovaPropostaScreen() {
                 Voltar
               </Button>
               <Button type="submit" icon="check" disabled={criar.isPending || !fornecedor.trim()}>
-                {criar.isPending ? 'Arquivando…' : 'Arquivar proposta'}
+                {criar.isPending ? 'Arquivando…' : 'Arquivar no acervo'}
               </Button>
             </div>
           </form>

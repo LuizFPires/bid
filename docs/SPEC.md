@@ -3,7 +3,7 @@
 Complemento técnico do [PRD.md](PRD.md). Define stack, arquitetura, modelo de dados, IA, geração de contrato, assinatura, infraestrutura (nuvem) e segurança.
 
 ## Stack
-- **Frontend:** React 18 + TypeScript + **Vite** (PWA, mobile first). **TanStack Query** (estado de servidor). Roteamento com React Router. Design system próprio do bid (tokens índigo do protótipo).
+- **Frontend:** React 18 + TypeScript + **Vite** (PWA, mobile first). **TanStack Query** (estado de servidor). Roteamento com React Router. Design system próprio do bid. A identidade v1.0 e o plano de adoção estão em `docs/brand/`; o aplicativo ainda utiliza os tokens anteriores do protótipo até a migração.
 - **Backend / dados:** **Supabase** — Postgres, Auth, Storage, **RLS**, **Edge Functions** (Deno), e cron (pg_cron) se necessário.
 - **IA:** **API da Anthropic (Claude)**, chamada **sempre no servidor** (Edge Function), nunca no cliente. Extração de propostas e equalização.
 - **Geração de contrato (PDF):** serviço HTML→PDF (Playwright/Chromium) rodando como função serverless (Vercel Functions suportam Playwright) ou Edge Function dedicada; alternativa: `@react-pdf/renderer`.

@@ -35,7 +35,7 @@ export function ContratosScreen() {
     <>
       <div className="page-head">
         <h1>Contratos</h1>
-        <p className="lead">A proposta vencedora vira contrato, assinado digitalmente.</p>
+        <p className="lead">A vencedora vira contrato — toque em + para gerar um novo.</p>
       </div>
 
       {isLoading ? (
@@ -75,7 +75,7 @@ export function ContratosScreen() {
                 }}
               >
                 <span className="ic">
-                  <Icon name="tab-contratos" />
+                  <Icon name="doc" />
                 </span>
                 <span className="tt">
                   <span className="t1">{c.categoria}</span>
@@ -85,10 +85,14 @@ export function ContratosScreen() {
                   </span>
                 </span>
                 <span className="rt">
+                  {c.valor != null && <span className="v">{formatBRL(c.valor)}</span>}
                   <span className={`pill ${label.tom}`}>
                     <span className={`dot ${label.tom}`} />
                     {label.texto}
                   </span>
+                </span>
+                <span className="chev">
+                  <Icon name="chev" />
                 </span>
               </div>
             );
@@ -125,7 +129,7 @@ export function NovoContratoScreen() {
         <span>Novo</span>
       </div>
       <div className="page-head">
-        <h1>Gerar contrato</h1>
+        <h1>Novo contrato</h1>
         <p className="lead">Escolha a proposta vencedora que vira contrato.</p>
       </div>
 

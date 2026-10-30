@@ -162,8 +162,8 @@ export function PropostaScreen() {
       {modo === 'ver' ? (
         <>
           <div className="acoes-prop">
-            <Button block variant="soft" icon="layers" onClick={() => setModo('nova')}>
-              Revisar
+            <Button block variant="soft" icon="upload" onClick={() => setModo('nova')}>
+              Nova versão
             </Button>
             {data.status !== 'vencedora' && (
               <Button block icon="trophy" disabled={definir.isPending} onClick={marcarVencedora}>
@@ -196,59 +196,64 @@ function Timeline({ versoes }: { versoes: VersaoDetalhe[] }) {
   return (
     <>
       <div className="section-title">
-        <h2>Histórico</h2>
+        <h2>Versões</h2>
         <span className="c">
-          {versoes.length} {versoes.length === 1 ? 'versão' : 'versões'}
+          {versoes.length} {versoes.length > 1 ? 'revisões' : 'versão'}
         </span>
       </div>
-      <div className="card rowlist">
+      <div className="timeline">
         {versoes.map((v, i) => {
-          const anterior = versoes[i + 1]; // lista é desc: o próximo é o mais antigo
-          const dv = anterior && v.valor != null && anterior.valor != null ? variacao(anterior.valor, v.valor) : null;
-          const dp = anterior && v.prazo != null && anterior.prazo != null ? variacao(anterior.prazo, v.prazo) : null;
+          const atual = i === 0; // lista é desc: a primeira é a mais nova
+          const anterior = versoes[i + 1]; // o próximo é o mais antigo
+          const dv =
+            anterior && v.valor != null && anterior.valor != null ? variacao(anterior.valor, v.valor) : null;
+          const ext = v.arquivo_path ? (v.arquivo_path.split('.').pop() || 'arq').toUpperCase().slice(0, 4) : '';
           return (
-            <div key={v.id} className="row" style={{ alignItems: 'flex-start' }}>
-              <span className="ic">
-                <span style={{ fontWeight: 900, fontSize: 13 }}>v{v.n}</span>
-              </span>
-              <span className="tt">
-                <span className="t1">
-                  {v.valor != null ? formatBRL(v.valor) : '—'}
-                  {v.prazo != null ? ` · ${v.prazo} dias` : ''}
-                </span>
-                <span className="t2">{formatNumeric(v.data)}</span>
-                {(dv || dp) && (
-                  <span className="t2" style={{ marginTop: 4, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    {dv && (
-                      <span>
-                        valor <Delta v={dv} money />
-                      </span>
-                    )}
-                    {dp && (
-                      <span>
-                        prazo <Delta v={dp} />
-                      </span>
-                    )}
-                  </span>
-                )}
-                {v.obs && (
-                  <span className="t2" style={{ marginTop: 4, fontWeight: 600 }}>
-                    {v.obs}
-                  </span>
-                )}
-              </span>
-              <span className="rt">
+            <div key={v.id} className={`tl ${atual ? 'cur' : ''}`}>
+              <div className="tdot">v{v.n}</div>
+              <div className="tbody">
+                <div className="th">
+                  <b style={{ fontSize: 13.5 }}>Versão {v.n}</b>
+                  {atual && <span className="pill aberta">Atual</span>}
+                  <span className="d">{formatNumeric(v.data)}</span>
+                </div>
+                <div className="vls">
+                  <div className="v">
+                    Valor
+                    <b>
+                      {v.valor != null ? formatBRL(v.valor) : '—'}
+                      {dv && dv.dir !== 'flat' && (
+                        <span className={`delta ${dv.dir === 'up' ? 'up' : 'down'}`} style={{ fontSize: 11, marginLeft: 6 }}>
+                          {dv.dir === 'up' ? '▲' : '▼'}
+                          {formatBRL(Math.abs(dv.abs)).replace('R$', '').trim()}
+                        </span>
+                      )}
+                    </b>
+                  </div>
+                  <div className="v">
+                    Prazo<b>{v.prazo != null ? `${v.prazo} dias` : '—'}</b>
+                  </div>
+                </div>
+                {v.obs && <div className="obs">{v.obs}</div>}
                 {v.arquivo_path && (
-                  <button
-                    className="ticon"
-                    type="button"
-                    aria-label={`Baixar arquivo da versão ${v.n}`}
-                    onClick={() => baixar(v.arquivo_path as string)}
-                  >
-                    <Icon name="dl" />
-                  </button>
+                  <div className="files">
+                    <div className="file">
+                      <span className="fi">{ext}</span>
+                      <span className="fn">
+                        Arquivo da versão {v.n}
+                        <small>{formatNumeric(v.data)}</small>
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="dl"
+                        aria-label={`Baixar arquivo da versão ${v.n}`}
+                        onClick={() => baixar(v.arquivo_path as string)}
+                      />
+                    </div>
+                  </div>
                 )}
-              </span>
+              </div>
             </div>
           );
         })}

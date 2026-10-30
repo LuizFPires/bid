@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { compararPropostas, formatBRL, formatBRLCompact, type PropostaComparavel } from '@bid/core';
-import { Autocomplete, Button, Icon } from '@bid/ui';
+import {
+  CERTAME_LABEL,
+  compararPropostas,
+  formatBRL,
+  formatBRLCompact,
+  type CertameStatus,
+  type PropostaComparavel,
+} from '@bid/core';
+import { Autocomplete, Button, Icon, iconeCategoria } from '@bid/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   invalidarVencedora,
@@ -31,8 +38,8 @@ export function EqualizacoesScreen() {
     const decisao = eqs.filter((e) => e.certameStatus !== 'adjudicada' && e.temAnalise);
     const analise = eqs.filter((e) => e.certameStatus !== 'adjudicada' && !e.temAnalise);
     return [
-      { titulo: 'Aguardando decisão', itens: decisao },
-      { titulo: 'Em equalização', itens: analise },
+      { titulo: 'Aguardam decisão', itens: decisao },
+      { titulo: 'Recebendo propostas', itens: analise },
       { titulo: 'Concluídas', itens: concluida },
     ].filter((g) => g.itens.length > 0);
   }, [eqs]);
@@ -40,8 +47,8 @@ export function EqualizacoesScreen() {
   return (
     <>
       <div className="page-head">
-        <h1>Equalizar</h1>
-        <p className="lead">Compare concorrentes no mesmo nível, com apoio de IA.</p>
+        <h1>Equalizações</h1>
+        <p className="lead">Compare as propostas e defina a vencedora.</p>
       </div>
 
       {isLoading ? (
@@ -69,36 +76,46 @@ export function EqualizacoesScreen() {
               <span className="c">{g.itens.length}</span>
             </div>
             <div className="card rowlist">
-              {g.itens.map((e) => (
-                <div
-                  key={e.id}
-                  className="row"
-                  role="button"
-                  tabIndex={0}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/equalizacoes/${e.id}`)}
-                  onKeyDown={(ev) => {
-                    if (ev.key === 'Enter' || ev.key === ' ') {
-                      ev.preventDefault();
-                      navigate(`/equalizacoes/${e.id}`);
-                    }
-                  }}
-                >
-                  <span className="ic">
-                    <Icon name="scale" />
-                  </span>
-                  <span className="tt">
-                    <span className="t1">{e.categoria}</span>
-                    <span className="t2">
-                      {e.escopo === 'entre_obras' ? 'Entre obras' : 'Em uma obra'} · {e.totalPropostas} propostas
-                      {e.temAnalise ? ' · com análise IA' : ''}
+              {g.itens.map((e) => {
+                const adjudicada = e.certameStatus === 'adjudicada';
+                const tom = CERTAME_LABEL[(e.certameStatus ?? 'aberta') as CertameStatus].tom;
+                return (
+                  <div
+                    key={e.id}
+                    className="row"
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/equalizacoes/${e.id}`)}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        navigate(`/equalizacoes/${e.id}`);
+                      }
+                    }}
+                  >
+                    <span
+                      className="ic"
+                      style={adjudicada ? { background: 'var(--ok-soft)', color: 'var(--ok)' } : undefined}
+                    >
+                      <Icon name={adjudicada ? 'trophy' : iconeCategoria(e.categoria)} />
                     </span>
-                  </span>
-                  <span className="rt">
-                    <Icon name="chev" />
-                  </span>
-                </div>
-              ))}
+                    <span className="tt">
+                      <span className="t1">{e.categoria}</span>
+                      <span className="t2">
+                        {e.escopo === 'entre_obras' ? 'Entre obras' : 'Em uma obra'} · {e.totalPropostas} propostas
+                        {e.temAnalise ? ' · com análise IA' : ''}
+                      </span>
+                    </span>
+                    <span className="rt">
+                      <span className={`dot ${tom}`} />
+                    </span>
+                    <span className="chev">
+                      <Icon name="chev" />
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))

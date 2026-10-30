@@ -8,7 +8,7 @@ import {
   type PropostaAcervo,
 } from '@bid/core';
 import { useNavigate } from 'react-router-dom';
-import { Icon } from '@bid/ui';
+import { Icon, iconeCategoria } from '@bid/ui';
 import { useAcervo } from '../data/hooks';
 
 export function PropostasScreen() {
@@ -143,7 +143,7 @@ function AcervoRow({ p }: { p: PropostaAcervo }) {
         className="ic"
         style={vencedora ? { background: 'var(--ok-soft)', color: 'var(--ok)' } : undefined}
       >
-        <Icon name={vencedora ? 'trophy' : 'doc'} />
+        <Icon name={vencedora ? 'trophy' : iconeCategoria(p.categoria)} />
       </span>
       <span className="tt">
         <span className="t1">{p.fornecedor}</span>
@@ -154,6 +154,9 @@ function AcervoRow({ p }: { p: PropostaAcervo }) {
       </span>
       <span className="rt">
         <span className="v">{p.valor != null ? formatBRL(p.valor) : '—'}</span>
+      </span>
+      <span className="chev">
+        <Icon name="chev" />
       </span>
     </div>
   );

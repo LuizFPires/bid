@@ -22,6 +22,12 @@ export type IconName =
   | 'search'
   | 'arrow'
   | 'bell'
+  | 'cat-estrutura'
+  | 'cat-pisos'
+  | 'cat-clima'
+  | 'cat-esquadria'
+  | 'cat-eletrica'
+  | 'cat-hidraulica'
   | 'tab-propostas'
   | 'tab-equalizacoes'
   | 'tab-contratos'
@@ -60,6 +66,46 @@ const PATHS: Record<IconName, { sw: number; el: React.ReactNode }> = {
   search: { sw: 2, el: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></> },
   arrow: { sw: 2, el: <path d="M5 12h14M13 6l6 6-6 6" /> },
   bell: { sw: 1.9, el: <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" /> },
+  'cat-estrutura': {
+    sw: 1.8,
+    el: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </>
+    ),
+  },
+  'cat-pisos': {
+    sw: 1.8,
+    el: (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="1" />
+        <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+      </>
+    ),
+  },
+  'cat-clima': {
+    sw: 1.8,
+    el: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
+      </>
+    ),
+  },
+  'cat-esquadria': {
+    sw: 1.8,
+    el: (
+      <>
+        <rect x="4" y="3" width="16" height="18" rx="1" />
+        <path d="M12 3v18M4 12h16" />
+      </>
+    ),
+  },
+  'cat-eletrica': { sw: 1.8, el: <path d="M13 2 4 14h7l-1 8 9-12h-7z" /> },
+  'cat-hidraulica': { sw: 1.8, el: <path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" /> },
   'tab-propostas': { sw: 1.9, el: <><rect x="4" y="3" width="16" height="18" rx="2.5" /><path d="M8 8h8M8 12h8M8 16h5" /></> },
   'tab-equalizacoes': { sw: 1.9, el: <path d="M12 3v18M7 7l-4 7h8zM17 7l-4 7h8zM8 21h8M5 7h14" /> },
   'tab-contratos': { sw: 1.9, el: <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5M9 13h6M9 17h4" /> },
@@ -86,4 +132,23 @@ export function Icon({ name, ...props }: IconProps) {
       {def.el}
     </svg>
   );
+}
+
+/**
+ * Ícone de uma categoria de serviço. Categoria é campo livre, então casamos por
+ * palavra-chave no texto (sem acento) e caímos num ícone neutro quando nada bate.
+ */
+export function iconeCategoria(categoria: string): IconName {
+  const t = categoria
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+  const tem = (...ks: string[]) => ks.some((k) => t.includes(k));
+  if (tem('eletric', 'eletr', 'energia', 'iluminac')) return 'cat-eletrica';
+  if (tem('hidraul', 'hidr', 'agua', 'encanamen', 'esgoto', 'tubula')) return 'cat-hidraulica';
+  if (tem('clima', 'ar-cond', 'ar cond', 'hvac', 'ventila', 'refriger', 'exaust')) return 'cat-clima';
+  if (tem('esquadri', 'vidro', 'janela', 'porta', 'aluminio', 'caixilh')) return 'cat-esquadria';
+  if (tem('piso', 'revestim', 'ceramic', 'porcelan', 'acabamen')) return 'cat-pisos';
+  if (tem('estrutur', 'pre-mold', 'premold', 'pre mold', 'concret', 'fundac', 'alvenar')) return 'cat-estrutura';
+  return 'doc';
 }

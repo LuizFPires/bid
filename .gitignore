@@ -37,3 +37,7 @@ test-results/
 
 # Estado local do roteiro (não versionar)
 .claude/roteiro.json
+
+# Revisão e dependências temporárias do manual da marca
+tmp/brand-deps/
+tmp/brand-review/

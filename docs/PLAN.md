@@ -68,6 +68,16 @@ Revisão independente (0 crítico/alto, 2 médio, 3 baixo): **integridade** — 
 Revisão de commit endureceu a trilha (achados HIGH): escrita de `assinaturas` é **só do servidor** (sem INSERT/UPDATE de cliente); token guardado como **hash** (claro sai 1x do RPC); no app só se assina como **contratante** (fornecedor via link); caminho do PDF **derivado no servidor**; token reivindicado **atomicamente** (uso único sem corrida); `status`/`pdf_path`/`valor` do contrato são **server-only** (trigger); cláusulas não editam após haver assinatura; auditoria de quem gerou o token. Modelo é **assinatura eletrônica simples** (regra #9; ICP/vínculo de identidade fora de escopo).
 
 ## M8 · Polimento e offline (desejável)
+
+### Decisão de identidade · 30/10/2026
+
+- [x] Documentar a nova marca minimalista aprovada: duas folhas sobrepostas, lettering com corte no “d”, índigo profundo e marfim; fonte Sora para interface.
+- [x] Criar manual PDF, guidelines editáveis, vetores, catálogo visual, tokens claro/escuro e especificação do design system em `docs/brand/`.
+- [ ] Migrar `packages/ui`, login, ícones PWA e telas para a nova identidade, com validação visual e acessibilidade. A entrega do manual não marca essa migração como concluída.
+
+Os registros históricos de M0 descrevem a marca anterior. A referência para a nova identidade é `docs/brand/README.md`.
+
+### Itens de produto
 - [ ] Ações otimistas + fila offline (upload em segundo plano).
 - [ ] "Desfazer" nas ações destrutivas; estados de erro claros.
 - [ ] Acessibilidade (alvos ≥ 44px, contraste AA, foco visível) e PWA instalável.

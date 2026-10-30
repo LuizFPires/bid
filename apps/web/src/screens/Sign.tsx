@@ -102,21 +102,27 @@ export function SignScreen() {
           )}
 
           {fase === 'assinado' && (
-            <div className="card" style={{ textAlign: 'center', padding: '34px 20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-                <span className="ic" style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--ok-soft)', color: 'var(--ok)' }}>
-                  <Icon name="check" style={{ width: 24, height: 24 }} />
+            <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+                <span className="ic" style={{ width: 66, height: 66, borderRadius: 20, background: 'var(--ok-soft)', color: 'var(--ok)' }}>
+                  <Icon name="check" style={{ width: 32, height: 32 }} />
                 </span>
               </div>
-              <h1 style={{ fontSize: 18 }}>Documento assinado</h1>
-              <p className="lead">Obrigado. Sua assinatura foi registrada.</p>
+              <h1 style={{ fontSize: 20 }}>Assinatura concluída</h1>
+              <p className="lead">O documento foi assinado e já aparece assinado no bid.</p>
             </div>
           )}
 
           {(fase === 'pronto' || fase === 'assinando') && resumo && (
             <>
+              <div className="banner warn" role="status" style={{ marginBottom: 14 }}>
+                <Icon name="alert" />
+                <span>
+                  Documento enviado pelo <strong>bid</strong> para sua assinatura.
+                </span>
+              </div>
               <div className="page-head">
-                <h1>Assinar contrato</h1>
+                <h1>Assinar documento</h1>
                 <p className="lead">
                   {resumo.categoria} · {resumo.obra}
                   {resumo.valor != null ? ` · ${formatBRL(resumo.valor)}` : ''}

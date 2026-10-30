@@ -46,6 +46,10 @@ React 18 + TypeScript + Vite (PWA) · TanStack Query · Supabase (Postgres, Auth
 12. **RLS em tudo.** Migration sempre com política e teste de política no mesmo PR. Arquivos em buckets privados (URL assinada).
 
 ## Design system bid
+
+**Referência atual de marca (30/10/2026):** `docs/brand/GUIDELINES.md` e `docs/brand/DESIGN-SYSTEM.md`. O usuário aprovou a evolução minimalista com duas folhas, lettering vetorial com corte no “d”, índigo profundo, marfim e Sora na interface. Essa direção substitui as restrições antigas de símbolo e tipografia abaixo para novos trabalhos de identidade. `packages/ui` ainda não foi migrado; as regras abaixo descrevem a implementação anterior e não devem orientar a reconstrução da nova marca.
+
+### Implementação anterior (migração pendente)
 - Identidade **índigo** (distinta do CONTRO): acento índigo, tinta quase-preta, fundo cinza claro; modo claro e escuro.
 - **Logomarca:** símbolo de **propostas empilhadas em 3D** (três camadas), conforme o protótipo. Não redesenhe o símbolo.
 - Vermelho só para **atraso/erro**; verde para sucesso/assinado; âmbar para atenção. Semântica sempre com texto + ícone, nunca só cor.
