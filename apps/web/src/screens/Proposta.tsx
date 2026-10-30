@@ -23,6 +23,7 @@ import {
 } from '../data/hooks';
 import { desfazerVencedora, extrairProposta, restaurarProposta, uploadPropostaArquivo } from '../data/mutations';
 import { urlArquivoProposta, type PropostaDetalhe, type VersaoDetalhe } from '../data/queries';
+import { LeituraIA } from '../components/LeituraIA';
 import { useToast } from '../app/Toast';
 
 /** Mostra a variação de um valor entre versões, com seta e sinal (não só cor). */
@@ -663,20 +664,7 @@ function NovaVersao({
   }
 
   if (etapa === 'lendo') {
-    return (
-      <div className="card" style={{ textAlign: 'center', padding: '34px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-          <span className="thinking" aria-label="Lendo a proposta">
-            <i />
-            <i />
-            <i />
-          </span>
-        </div>
-        <p className="lead" style={{ margin: 0 }}>
-          Lendo o arquivo da nova versão…
-        </p>
-      </div>
-    );
+    return <LeituraIA primeiraEtapa="Lendo a nova versão…" />;
   }
 
   if (etapa === 'conferir') {

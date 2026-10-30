@@ -6,6 +6,8 @@ import { useObras, useSugestoes } from '../data/hooks';
 import { useCriarProposta } from '../data/hooks';
 import { extrairProposta, uploadPropostaArquivo } from '../data/mutations';
 
+import { LeituraIA } from '../components/LeituraIA';
+
 type Fase = 'form' | 'lendo' | 'conferir';
 
 const VAZIO: PropostaExtraida = {
@@ -249,23 +251,7 @@ export function NovaPropostaScreen() {
         </>
       )}
 
-      {fase === 'lendo' && (
-        <div className="card" style={{ textAlign: 'center', padding: '34px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-            <span className="thinking" aria-label="Lendo a proposta">
-              <i />
-              <i />
-              <i />
-            </span>
-          </div>
-          <p className="lead" style={{ margin: 0 }}>
-            Lendo a proposta e extraindo os dados…
-          </p>
-          <p className="sub" style={{ margin: '6px 0 0', fontSize: 12 }}>
-            Pode levar alguns segundos.
-          </p>
-        </div>
-      )}
+      {fase === 'lendo' && <LeituraIA />}
 
       {fase === 'conferir' && (
         <>
