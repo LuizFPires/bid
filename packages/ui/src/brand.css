@@ -1,0 +1,31 @@
+/* bid · marca (identidade aprovada em 30/10/2026).
+   Dimensões da marca renderizada por <BrandLogo>/<LogoMark> (Logo.tsx).
+   Prancheta 94 × 32: badge 32 × 32 (raio 9) + ~10 px de intervalo + lettering ~50 × 28.
+   As proporções vêm do viewBox — nunca escalar largura e altura de forma diferente,
+   nem aplicar font-weight/letter-spacing/filtro: o lettering é um path, não texto.
+   Cores em tokens.css (--brand-badge, --brand-paper, --brand-wordmark). */
+
+.brand-logo {
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 32px;
+  overflow: visible;
+}
+
+/* marca completa (badge + lettering) */
+.brand-logo--full {
+  width: 94px;
+}
+
+/* só o badge (withWordmark={false} ou <LogoMark>) */
+.brand-logo--badge {
+  width: 32px;
+}
+
+/* As partes internas herdam a cor pelos atributos fill do SVG (variáveis CSS).
+   Estas classes existem para estilização pontual, sem alterar a geometria. */
+.brand-logo__badge,
+.brand-logo__paper,
+.brand-logo__wordmark {
+  shape-rendering: geometricPrecision;
+}

@@ -1,4 +1,5 @@
 import './base.css';
+import './brand.css';
 
 export { Icon, iconeCategoria, type IconName, type IconProps } from './Icon';
 export { LogoMark, BrandLogo, type BrandLogoProps } from './Logo';

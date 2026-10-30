@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./base.css": "./src/base.css",
+    "./brand.css": "./src/brand.css",
     "./tokens.css": "./src/tokens.css"
   },
   "scripts": {

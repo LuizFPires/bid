@@ -29,6 +29,10 @@
   --shadow: 0 1px 2px rgba(20, 22, 40, 0.04), 0 8px 24px rgba(20, 22, 40, 0.05);
   --radius: 18px;
   --ff: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* marca (badge roxo + duas folhas brancas + lettering "bid") — ver brand.css */
+  --brand-badge: #1c2150;
+  --brand-wordmark: #191a22;
+  --brand-paper: #ffffff;
 }
 
 /* modo escuro automático, salvo quando o usuário fixa o tema claro */
@@ -53,6 +57,9 @@
     --warn: #e0a95c;
     --warn-soft: #2e2414;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.4);
+    /* marca: badge com a mesma cor do botão "+" (.ticon usa --accent-soft) */
+    --brand-badge: var(--accent-soft);
+    --brand-wordmark: #ffffff;
   }
 }
 
@@ -77,4 +84,7 @@
   --warn: #e0a95c;
   --warn-soft: #2e2414;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.4);
+  /* marca: badge com a mesma cor do botão "+" (.ticon usa --accent-soft) */
+  --brand-badge: var(--accent-soft);
+  --brand-wordmark: #ffffff;
 }

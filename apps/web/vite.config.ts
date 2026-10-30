@@ -9,7 +9,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: [
+        'brand/bid-icone-app.svg',
+        'brand/bid-icone-32.png',
+        'brand/bid-icone-180.png',
+        'brand/bid-icone-192.png',
+        'brand/bid-icone-512.png',
+      ],
       manifest: {
         name: 'bid',
         short_name: 'bid',
@@ -19,13 +25,13 @@ export default defineConfig({
         background_color: '#F3F4F6',
         display: 'standalone',
         orientation: 'portrait',
+        // Ícone com fundo quadrado opaco (o sistema aplica a máscara).
         icons: [
-          {
-            src: 'icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable',
-          },
+          { src: 'brand/bid-icone-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'brand/bid-icone-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'brand/bid-icone-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: 'brand/bid-icone-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'brand/bid-icone-app.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],
       },
     }),
