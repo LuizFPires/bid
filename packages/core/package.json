@@ -12,10 +12,11 @@
   "files": ["dist"],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js && tsc -p tsconfig.build.json --emitDeclarationOnly",
     "test": "vitest run"
   },
   "devDependencies": {
+    "esbuild": "^0.25.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }
