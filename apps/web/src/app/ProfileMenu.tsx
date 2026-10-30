@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Icon } from '@bid/ui';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthProvider';
@@ -8,6 +9,7 @@ import { useToast } from './Toast';
 /** Menu de perfil no topo: mostra a conta e permite trocar a senha ou sair. */
 export function ProfileMenu() {
   const { session } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const ref = useRef<HTMLDivElement>(null);
   const [aberto, setAberto] = useState(false);
@@ -96,6 +98,17 @@ export function ProfileMenu() {
 
           {!trocando ? (
             <div className="pm-list">
+              <button
+                className="pm-item"
+                type="button"
+                onClick={() => {
+                  fechar();
+                  navigate('/equipe');
+                }}
+              >
+                <Icon name="users" />
+                Minha equipe
+              </button>
               <button className="pm-item" type="button" onClick={() => setTrocando(true)}>
                 <Icon name="link" />
                 Trocar senha

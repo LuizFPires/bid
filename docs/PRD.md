@@ -20,6 +20,8 @@ A UX e a navegação seguem esta ordem (é a espinha dorsal do app):
 - **Equipe:** tudo menos configurações sensíveis (ex.: excluir, alterar modelos de contrato). (Definir na RLS.)
 - **Signatário externo (sem conta):** acessa apenas um contrato específico por **link tokenizado** (recebido por WhatsApp), para assinar.
 
+**Equipe / organização.** Cada conta nasce com uma **organização própria** e todo o acervo é isolado por org (RLS). Para compartilhar, o **gestor** adiciona outras contas já existentes à sua org (tela **Equipe**, no menu de perfil), definindo o papel **Gestor** (acesso total, inclui apagar) ou **Equipe** (vê e edita, não apaga). A org sempre mantém ao menos um gestor. (Convite por e-mail de quem ainda não tem conta fica para depois — por ora a pessoa cria o login e o gestor a adiciona pelo e-mail.)
+
 ## Escopo — funcionalidades
 
 ### 1. Armazenamento de propostas (acervo)

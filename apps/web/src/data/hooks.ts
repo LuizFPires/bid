@@ -14,6 +14,7 @@ import {
   fetchAssinaturas,
   fetchSugestoes,
   fetchMinhaOrg,
+  fetchMembros,
 } from './queries';
 import {
   criarObra,
@@ -29,6 +30,9 @@ import {
   assinarApp,
   editarProposta,
   apagarProposta,
+  adicionarMembro,
+  mudarPapelMembro,
+  removerMembro,
 } from './mutations';
 
 export function useAcervo() {
@@ -151,6 +155,38 @@ export function useSugestoes(tipo: 'categoria' | 'fornecedor' | 'obra' | 'local'
 
 export function useMinhaOrg() {
   return useQuery({ queryKey: ['org'], queryFn: fetchMinhaOrg });
+}
+
+export function useMembros(orgId: string | undefined) {
+  return useQuery({
+    queryKey: ['membros', orgId],
+    queryFn: () => fetchMembros(orgId as string),
+    enabled: Boolean(orgId),
+  });
+}
+
+export function useAdicionarMembro(orgId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: adicionarMembro,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['membros', orgId] }),
+  });
+}
+
+export function useMudarPapelMembro(orgId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: mudarPapelMembro,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['membros', orgId] }),
+  });
+}
+
+export function useRemoverMembro(orgId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: removerMembro,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['membros', orgId] }),
+  });
 }
 
 export function useCriarObra() {

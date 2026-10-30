@@ -393,3 +393,39 @@ export async function restaurarProposta(propostaId: string): Promise<void> {
   const { error } = await db().rpc('restaurar_proposta', { p_proposta: propostaId });
   if (error) throw error;
 }
+
+/* ---------- Equipe (membros da organização) ---------- */
+
+/** Adiciona uma conta já existente (por e-mail) à org como gestor ou equipe. */
+export async function adicionarMembro(input: {
+  orgId: string;
+  email: string;
+  papel: 'gestor' | 'equipe';
+}): Promise<void> {
+  const email = input.email.trim();
+  if (!email) throw new Error('Informe o e-mail.');
+  const { error } = await db().rpc('adicionar_membro', {
+    p_org: input.orgId,
+    p_email: email,
+    p_papel: input.papel,
+  });
+  if (error) throw error;
+}
+
+export async function mudarPapelMembro(input: {
+  orgId: string;
+  userId: string;
+  papel: 'gestor' | 'equipe';
+}): Promise<void> {
+  const { error } = await db().rpc('mudar_papel_membro', {
+    p_org: input.orgId,
+    p_user: input.userId,
+    p_papel: input.papel,
+  });
+  if (error) throw error;
+}
+
+export async function removerMembro(input: { orgId: string; userId: string }): Promise<void> {
+  const { error } = await db().rpc('remover_membro', { p_org: input.orgId, p_user: input.userId });
+  if (error) throw error;
+}

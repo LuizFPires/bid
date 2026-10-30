@@ -665,6 +665,25 @@ export async function fetchMinhaOrg(): Promise<Organizacao | null> {
   return (data as Organizacao | null) ?? null;
 }
 
+export type MembroPapel = 'gestor' | 'equipe';
+
+export interface Membro {
+  userId: string;
+  email: string;
+  papel: MembroPapel;
+}
+
+/** Membros da organização (via RPC, que lê o e-mail em auth.users). */
+export async function fetchMembros(orgId: string): Promise<Membro[]> {
+  const { data, error } = await db().rpc('listar_membros', { p_org: orgId });
+  if (error) throw error;
+  return ((data ?? []) as { user_id: string; email: string; papel: MembroPapel }[]).map((m) => ({
+    userId: m.user_id,
+    email: m.email,
+    papel: m.papel,
+  }));
+}
+
 /* ---------- Sugestões (autocomplete) ---------- */
 
 export async function fetchSugestoes(
