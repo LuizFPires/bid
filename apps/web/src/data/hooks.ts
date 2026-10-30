@@ -30,6 +30,7 @@ import {
   assinarApp,
   editarProposta,
   apagarProposta,
+  apagarObra,
   adicionarMembro,
   mudarPapelMembro,
   removerMembro,
@@ -245,6 +246,18 @@ export function useApagarProposta() {
     mutationFn: apagarProposta,
     // Apagar pode desadjudicar um certame: invalida o mesmo conjunto da vencedora.
     onSuccess: () => invalidarVencedora(qc),
+  });
+}
+
+export function useApagarObra() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: apagarObra,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['obras'] });
+      qc.invalidateQueries({ queryKey: ['obra'] });
+      qc.invalidateQueries({ queryKey: ['acervo'] });
+    },
   });
 }
 

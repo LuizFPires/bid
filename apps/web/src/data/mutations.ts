@@ -394,6 +394,20 @@ export async function restaurarProposta(propostaId: string): Promise<void> {
   if (error) throw error;
 }
 
+/* ---------- Apagar / restaurar obra ---------- */
+
+/** Apaga a obra (exclusão lógica; gestor ou quem criou). */
+export async function apagarObra(obraId: string): Promise<void> {
+  const { error } = await db().rpc('apagar_obra', { p_obra: obraId });
+  if (error) throw error;
+}
+
+/** Restaura uma obra apagada (Desfazer). */
+export async function restaurarObra(obraId: string): Promise<void> {
+  const { error } = await db().rpc('restaurar_obra', { p_obra: obraId });
+  if (error) throw error;
+}
+
 /* ---------- Equipe (membros da organização) ---------- */
 
 /** Adiciona uma conta já existente (por e-mail) à org como gestor ou equipe. */

@@ -95,6 +95,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(503).json({ erro: 'Extração por IA não configurada no servidor.' });
       return;
     }
-    res.status(502).json({ erro: 'Não foi possível extrair os dados da proposta.' });
+    // Loga o erro real no servidor e devolve o motivo (sem stack) para o cliente
+    // — a extração é central; mensagens claras ajudam a diagnosticar.
+    const motivo = e instanceof Error ? e.message : String(e);
+    console.error('extract-proposal falhou:', motivo);
+    res.status(502).json({ erro: `Falha na extração: ${motivo}` });
   }
 }
