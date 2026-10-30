@@ -116,11 +116,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // Reivindica o token ATOMICAMENTE (uso único): só prossegue se esta chamada
+  // for a que zerou o token_hash. Evita corrida de duplo uso.
+  const { data: claim } = await sb
+    .from('assinaturas')
+    .update({ token_hash: null })
+    .eq('token_hash', tokenHash)
+    .is('assinado_em', null)
+    .gt('token_expira', new Date().toISOString())
+    .select('id')
+    .maybeSingle();
+  if (!claim) {
+    res.status(409).json({ erro: 'Link já utilizado ou expirado.' });
+    return;
+  }
+
+  // Caminho derivado no servidor (não confia no valor armazenado).
+  const pdfPath = `${a.org_id}/contrato-${c.id}.pdf`;
+
   try {
     await registrarAssinatura(sb, {
       contratoId: c.id,
       orgId: a.org_id,
-      pdfPath: c.pdf_path,
+      pdfPath,
       parte: a.parte,
       nome,
       via: 'link',

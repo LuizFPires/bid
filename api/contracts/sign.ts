@@ -33,10 +33,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     pngBase64?: unknown;
   };
   const contratoId = typeof body.contratoId === 'string' ? body.contratoId : '';
-  const parte = body.parte === 'contratante' || body.parte === 'contratada' ? (body.parte as Parte) : null;
   const nome = typeof body.signatarioNome === 'string' ? body.signatarioNome.trim() : '';
   const pngBase64 = typeof body.pngBase64 === 'string' ? body.pngBase64 : '';
-  if (!contratoId || !parte || !pngBase64) {
+  // No app, o usuário da org assina pela própria parte: a CONTRATANTE. A
+  // CONTRATADA (fornecedor) assina pelo link externo. Impede forjar o fornecedor.
+  const parte: Parte = 'contratante';
+  if (body.parte && body.parte !== 'contratante') {
+    res.status(403).json({ erro: 'No app só é possível assinar como contratante.' });
+    return;
+  }
+  if (!contratoId || !pngBase64) {
     res.status(400).json({ erro: 'Dados de assinatura incompletos.' });
     return;
   }
@@ -58,13 +64,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(400).json({ erro: 'Gere o PDF do contrato antes de assinar.' });
     return;
   }
+  // Caminho derivado no servidor (não confia no valor armazenado — evita que um
+  // pdf_path forjado faça o servidor escrever/ler em caminho arbitrário).
+  const pdfPath = `${c.org_id}/contrato-${c.id}.pdf`;
 
   try {
     const sb = serviceClient(); // escrita autoritativa da trilha
     await registrarAssinatura(sb, {
       contratoId: c.id,
       orgId: c.org_id,
-      pdfPath: c.pdf_path,
+      pdfPath,
       parte,
       nome,
       via: 'app',

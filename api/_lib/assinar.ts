@@ -22,6 +22,18 @@ export interface DadosAssinatura {
  * `sb` deve ser o cliente com service_role (escrita autoritativa da trilha).
  */
 export async function registrarAssinatura(sb: SupabaseClient, d: DadosAssinatura): Promise<void> {
+  // Recusa se esta parte já assinou (defesa; o fluxo por link já reivindica o
+  // token atomicamente antes de chamar aqui).
+  const { data: existente } = await sb
+    .from('assinaturas')
+    .select('assinado_em')
+    .eq('contrato_id', d.contratoId)
+    .eq('parte', d.parte)
+    .maybeSingle();
+  if ((existente as { assinado_em: string | null } | null)?.assinado_em) {
+    throw new Error('Esta parte já assinou.');
+  }
+
   // PDF atual do contrato.
   const baixado = await sb.storage.from('contratos').download(d.pdfPath);
   if (baixado.error || !baixado.data) throw new Error('PDF do contrato indisponível.');
