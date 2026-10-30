@@ -16,7 +16,7 @@ import { userClient } from '@bid/server';
  */
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function processar(req: VercelRequest, res: VercelResponse) {
   if (!requireMethod(req, res, 'POST')) return;
 
   const token = bearer(req);
@@ -98,5 +98,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Detalhe fica só no log do servidor; ao cliente, mensagem genérica.
     console.error('extract-proposal falhou:', e);
     res.status(502).json({ erro: 'Não foi possível extrair os dados da proposta.' });
+  }
+}
+
+/**
+ * Blindagem: captura QUALQUER erro do processamento (upload, stream, IA) para não
+ * virar FUNCTION_INVOCATION_FAILED. TEMPORÁRIO: devolve o motivo ao cliente para
+ * diagnosticar a extração (sem os logs do Vercel). Reverter para genérico depois.
+ */
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    await processar(req, res);
+  } catch (e) {
+    console.error('extract-proposal crash:', e);
+    if (!res.headersSent) {
+      const motivo = e instanceof Error ? e.message : String(e);
+      res.status(502).json({ erro: `Extração (diag): ${motivo}` });
+    }
   }
 }
