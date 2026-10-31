@@ -148,8 +148,9 @@ begin
        or new.emitido_em is distinct from old.emitido_em
        or new.emitido_por is distinct from old.emitido_por
        or new.dossie is distinct from old.dossie
-       or new.dossie_em is distinct from old.dossie_em then
-      raise exception 'status, número, hashes, PDF/DOCX, valor e dossiê do contrato são definidos pelo servidor';
+       or new.dossie_em is distinct from old.dossie_em
+       or new.modelo_id is distinct from old.modelo_id then
+      raise exception 'status, número, hashes, PDF/DOCX, valor, dossiê e modelo do contrato são definidos pelo servidor';
     end if;
     -- Conteúdo editável só em rascunho/devolvido/aprovado; aprovado volta a rascunho.
     if (new.parametros is distinct from old.parametros or new.partes is distinct from old.partes) then
@@ -389,3 +390,50 @@ revoke all on function public.salvar_contrato(uuid, jsonb) from public, anon;
 grant execute on function public.criar_contrato_v2(uuid) to authenticated;
 grant execute on function public.atualizar_dossie(uuid, jsonb) to authenticated, service_role;
 grant execute on function public.salvar_contrato(uuid, jsonb) to authenticated;
+
+
+-- ---------- itens de cláusula: padrão e "reduz proteção" vêm do MODELO, não do cliente ----------
+-- texto_padrao é sempre o do catálogo da versão do modelo (null para item extra);
+-- origem 'padrao' só vale se o texto for igual ao padrão; variante do catálogo
+-- herda reduz_protecao da biblioteca (o cliente não "desmarca" risco).
+create or replace function public.guard_item_clausula_origem()
+returns trigger language plpgsql as $$
+declare v_modelo uuid; v_padrao text; v_reduz boolean;
+begin
+  if auth.uid() is null or current_setting('bid.interno', true) = '1' then return new; end if;
+  select modelo_id into v_modelo from public.contratos where id = new.contrato_id;
+  if v_modelo is null then return new; end if; -- legado não usa esta tabela
+
+  select coalesce(
+    (select it->>'texto'
+       from public.contrato_modelos m,
+            jsonb_array_elements(m.catalogo->'clausulas') cl,
+            jsonb_array_elements(cl->'itens') it
+      where m.id = v_modelo and it->>'numero' = new.numero limit 1),
+    (select d->>'texto'
+       from public.contrato_modelos m, jsonb_array_elements(m.catalogo->'anexo_ii') d
+      where m.id = v_modelo and 'decl:' || (d->>'numero') = new.numero limit 1)
+  ) into v_padrao;
+  new.texto_padrao := v_padrao;
+
+  if new.variante_chave is not null then
+    select reduz_protecao into v_reduz from public.modelo_variantes
+     where modelo_id = v_modelo and chave = new.variante_chave;
+    if v_reduz is null then raise exception 'variante % não existe no modelo', new.variante_chave; end if;
+    new.origem := 'variante';
+    new.reduz_protecao := v_reduz;
+  elsif new.bloco_chave is not null then
+    new.origem := 'bloco';
+  elsif v_padrao is not null and new.texto = v_padrao and not new.suprimido then
+    new.origem := 'padrao';
+    new.reduz_protecao := false;
+    new.justificativa := null;
+  elsif new.origem = 'padrao' and (v_padrao is null or new.texto <> v_padrao) and not new.suprimido then
+    raise exception 'item % alterado precisa de origem (variante com justificativa, parâmetro ou proposta)', new.numero;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists trg_itens_clausula_origem on public.contrato_itens_clausula;
+create trigger trg_itens_clausula_origem before insert or update on public.contrato_itens_clausula
+  for each row execute function public.guard_item_clausula_origem();

@@ -2,7 +2,7 @@
 -- trava de edição por status, aprovado → rascunho ao editar, criar_contrato_v2
 -- idempotente, revisão/achados. Dados fictícios. `supabase test db`.
 begin;
-select plan(18);
+select plan(21);
 
 select has_column('public', 'contratos', 'dossie', 'contratos.dossie existe');
 select has_table('public', 'contrato_itens_clausula', 'itens de cláusula existem');
@@ -69,6 +69,16 @@ update public.contratos set status = 'aprovado' where id = (select id from fxc);
 select pg_temp.como('00000000-0000-4000-8000-00000000c001');
 select lives_ok($$ select public.salvar_contrato((select id from fxc), '{"parametros":{"q_prazo":"60 dias corridos"}}'::jsonb) $$, 'aprovado aceita edição…');
 select is((select status from public.contratos where id = (select id from fxc)), 'rascunho', '…mas volta a rascunho (RC-10)');
+select pg_temp.sair();
+
+-- itens de cláusula: padrão/origem vêm do modelo
+update public.contrato_modelos set catalogo = '{"versao":"1.0","clausulas":[{"itens":[{"numero":"3.1","texto":"Texto padrão do 3.1."}]}],"anexo_ii":[]}'::jsonb where id = (select modelo from fx3);
+insert into public.modelo_variantes (org_id, modelo_id, chave, numero, titulo, texto, reduz_protecao, explicacao)
+  select org, modelo, '3.1_variante', '3.1', 'V', 'Texto negociado.', true, 'perde x' from fx3;
+select pg_temp.como('00000000-0000-4000-8000-00000000c001');
+select throws_ok($$ select public.salvar_contrato((select id from fxc), '{"itens":[{"numero":"3.1","texto":"Texto mexido.","origem":"padrao"}]}'::jsonb) $$, 'P0001', null, 'texto alterado com origem padrao é recusado');
+select lives_ok($$ select public.salvar_contrato((select id from fxc), '{"itens":[{"numero":"3.1","texto":"Texto negociado.","origem":"padrao","varianteChave":"3.1_variante","reduzProtecao":false,"justificativa":"negociado em reunião com o fornecedor"}]}'::jsonb) $$, 'variante do catálogo entra');
+select is((select reduz_protecao from public.contrato_itens_clausula where contrato_id = (select id from fxc) and numero = '3.1'), true, 'reduz_protecao vem do catálogo, não do cliente');
 select pg_temp.sair();
 
 -- revisão/achados: só servidor grava; resolver exige justificativa no aceite

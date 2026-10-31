@@ -67,4 +67,5 @@ export const env = {
   // Sonnet lê PDF (inclusive escaneado) muito melhor que o Haiku na extração.
   modelExtract: () => process.env.ANTHROPIC_MODEL_EXTRACT ?? 'claude-sonnet-5-5',
   modelEqualize: () => process.env.ANTHROPIC_MODEL_EQUALIZE ?? 'claude-sonnet-5-5',
+  modelContrato: () => process.env.ANTHROPIC_MODEL_CONTRATO ?? process.env.ANTHROPIC_MODEL_EQUALIZE ?? 'claude-sonnet-5-5',
 };

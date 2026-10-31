@@ -54,7 +54,7 @@ export function detectarMidia(buf: Uint8Array, nomeOuPath?: string | null): Midi
  * documento, imagem como imagem e Word (.docx) vira texto extraído no servidor
  * (a API não lê .docx direto).
  */
-function blocoArquivo(base64: string, tipo: MidiaProposta): Anthropic.ContentBlockParam {
+export function blocoArquivo(base64: string, tipo: MidiaProposta): Anthropic.ContentBlockParam {
   if (tipo === 'application/pdf') return { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
   if (tipo === 'docx') {
     const texto = textoDeDocx(Buffer.from(base64, 'base64'));
