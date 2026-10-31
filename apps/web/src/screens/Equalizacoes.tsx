@@ -21,14 +21,17 @@ import {
   useEqualizarIA,
   useAnaliseEmAndamento,
   useAnalisesEmAndamento,
+  useApagarEqualizacao,
   useObra,
   useObras,
   usePropostasDoCertame,
   usePropostasPorCategoria,
   useSugestoes,
 } from '../data/hooks';
-import { desfazerVencedora } from '../data/mutations';
+import { desfazerVencedora, restaurarEqualizacao } from '../data/mutations';
 import { useToast } from '../app/Toast';
+import { Kebab } from '../app/Kebab';
+import { ConfirmDialog } from '../app/ConfirmDialog';
 
 /** Marca de um item de escopo na matriz: ✓ incluído, ✗ ausente, ~ parcial. */
 function MarcaEscopo({ status }: { status: 'incluido' | 'ausente' | 'parcial' | 'na' }) {
@@ -412,6 +415,8 @@ export function EqualizacaoScreen() {
   const andamento = useAnaliseEmAndamento(id, !!data?.resultadoIa);
   const gerando = andamento.emAndamento;
   useEffect(() => setSondar(andamento.porFlag), [andamento.porFlag]);
+  const apagar = useApagarEqualizacao();
+  const [confirmando, setConfirmando] = useState(false);
   const definir = useDefinirVencedora();
   const toast = useToast();
   const qc = useQueryClient();
@@ -452,6 +457,32 @@ export function EqualizacaoScreen() {
       await rodarIA.mutateAsync(id);
     } catch (err) {
       setErroIA(err instanceof Error ? err.message : 'Falha na análise por IA.');
+    }
+  }
+
+  async function apagarEsta() {
+    if (!id || !data) return;
+    const eqId = id;
+    const titulo = data.categoria;
+    try {
+      await apagar.mutateAsync(eqId);
+      setConfirmando(false);
+      navigate('/equalizacoes');
+      toast(`Equalização "${titulo}" excluída.`, {
+        actionLabel: 'Desfazer',
+        onAction: async () => {
+          try {
+            await restaurarEqualizacao(eqId);
+            qc.invalidateQueries({ queryKey: ['equalizacoes'] });
+            qc.invalidateQueries({ queryKey: ['equalizacao'] });
+          } catch {
+            toast('Não foi possível restaurar a equalização.');
+          }
+        },
+      });
+    } catch (e) {
+      setConfirmando(false);
+      toast(e instanceof Error ? e.message : 'Não foi possível apagar a equalização.');
     }
   }
 
@@ -497,19 +528,47 @@ export function EqualizacaoScreen() {
         <Icon name="chev" />
         <span>{data.categoria}</span>
       </div>
-      <div className="page-head">
-        <h1>{data.categoria}</h1>
-        <p className="lead">
-          {data.escopo === 'entre_obras' ? 'Entre obras' : (data.obraNome ?? 'Em uma obra')} ·{' '}
-          {data.propostas.length} propostas
-          {comp.economiaPotencial != null ? ` · economia até ${formatBRLCompact(comp.economiaPotencial)}` : ''}
-        </p>
-        {data.referencia && (
-          <p className="lead rep-regua">
-            <b>Régua do projeto:</b> {data.referencia}
+      <div className="page-head prop-head">
+        <div style={{ minWidth: 0 }}>
+          <h1>{data.categoria}</h1>
+          <p className="lead">
+            {data.escopo === 'entre_obras' ? 'Entre obras' : (data.obraNome ?? 'Em uma obra')} ·{' '}
+            {data.propostas.length} propostas
+            {comp.economiaPotencial != null ? ` · economia até ${formatBRLCompact(comp.economiaPotencial)}` : ''}
           </p>
-        )}
+          {data.referencia && (
+            <p className="lead rep-regua">
+              <b>Régua do projeto:</b> {data.referencia}
+            </p>
+          )}
+        </div>
+        <Kebab
+          itens={[
+            ...(ia
+              ? [{ label: 'Refazer relatório', icon: 'spark' as const, onClick: analisar, disabled: gerando }]
+              : []),
+            {
+              label: apagar.isPending ? 'Apagando…' : 'Apagar equalização',
+              icon: 'trash' as const,
+              danger: true,
+              disabled: apagar.isPending,
+              onClick: () => setConfirmando(true),
+            },
+          ]}
+        />
       </div>
+
+      <ConfirmDialog
+        aberto={confirmando}
+        titulo={`Apagar a equalização "${data.categoria}"?`}
+        confirmarLabel="Apagar equalização"
+        ocupado={apagar.isPending}
+        onConfirmar={apagarEsta}
+        onCancelar={() => setConfirmando(false)}
+      >
+        As propostas continuam no acervo; só a comparação e o relatório da IA saem. Você ainda pode desfazer por
+        alguns segundos.
+      </ConfirmDialog>
 
       {gerando && <AnaliseEmAndamento n={data.propostas.length} />}
 

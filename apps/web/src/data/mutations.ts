@@ -435,6 +435,25 @@ export async function restaurarProposta(propostaId: string): Promise<void> {
   if (error) throw error;
 }
 
+/* ---------- Apagar / restaurar equalização e contrato ---------- */
+
+export async function apagarEqualizacao(id: string): Promise<void> {
+  const { error } = await db().rpc('apagar_equalizacao', { p_eq: id });
+  if (error) throw error;
+}
+export async function restaurarEqualizacao(id: string): Promise<void> {
+  const { error } = await db().rpc('restaurar_equalizacao', { p_eq: id });
+  if (error) throw error;
+}
+export async function apagarContrato(id: string): Promise<void> {
+  const { error } = await db().rpc('apagar_contrato', { p_contrato: id });
+  if (error) throw error;
+}
+export async function restaurarContrato(id: string): Promise<void> {
+  const { error } = await db().rpc('restaurar_contrato', { p_contrato: id });
+  if (error) throw error;
+}
+
 /* ---------- Apagar / restaurar obra ---------- */
 
 /** Apaga a obra (exclusão lógica; gestor ou quem criou). */

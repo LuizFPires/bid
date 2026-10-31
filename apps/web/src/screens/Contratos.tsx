@@ -19,11 +19,15 @@ import {
   useEqualizacoes,
   useGerarPdf,
   useVencedoras,
+  useApagarContrato,
 } from '../data/hooks';
-import { gerarTokenAssinatura } from '../data/mutations';
+import { gerarTokenAssinatura, restaurarContrato } from '../data/mutations';
 import { urlContratoPdf } from '../data/queries';
 import { SignaturePad, type SignaturePadHandle } from '../components/SignaturePad';
 import { useToast } from '../app/Toast';
+import { Kebab } from '../app/Kebab';
+import { ConfirmDialog } from '../app/ConfirmDialog';
+import { useQueryClient } from '@tanstack/react-query';
 
 /* ---------- Lista ---------- */
 
@@ -182,6 +186,9 @@ export function ContratoScreen() {
   const gerarPdf = useGerarPdf(id ?? '');
   const { data: equalizacoes } = useEqualizacoes();
   const toast = useToast();
+  const apagarC = useApagarContrato();
+  const qcC = useQueryClient();
+  const [confirmandoApagar, setConfirmandoApagar] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
   const [rascunho, setRascunho] = useState('');
   const [pdfDefasado, setPdfDefasado] = useState(false);
@@ -254,10 +261,57 @@ export function ContratoScreen() {
         <Icon name="chev" />
         <span>{data.categoria}</span>
       </div>
-      <div className="page-head">
-        <h1>{data.categoria}</h1>
-        <p className="lead">{data.obraNome}</p>
+      <div className="page-head prop-head">
+        <div style={{ minWidth: 0 }}>
+          <h1>{data.categoria}</h1>
+          <p className="lead">{data.obraNome}</p>
+        </div>
+        <Kebab
+          itens={[
+            {
+              label: apagarC.isPending ? 'Apagando…' : 'Apagar contrato',
+              icon: 'trash',
+              danger: true,
+              disabled: apagarC.isPending || data.status === 'assinado',
+              onClick: () => setConfirmandoApagar(true),
+            },
+          ]}
+        />
       </div>
+
+      <ConfirmDialog
+        aberto={confirmandoApagar}
+        titulo={`Apagar o contrato de ${data.categoria}?`}
+        confirmarLabel="Apagar contrato"
+        ocupado={apagarC.isPending}
+        onConfirmar={async () => {
+          const cid = data.id;
+          try {
+            await apagarC.mutateAsync(cid);
+            setConfirmandoApagar(false);
+            navigate('/contratos');
+            toast('Contrato excluído.', {
+              actionLabel: 'Desfazer',
+              onAction: async () => {
+                try {
+                  await restaurarContrato(cid);
+                  qcC.invalidateQueries({ queryKey: ['contratos'] });
+                  qcC.invalidateQueries({ queryKey: ['contrato'] });
+                } catch {
+                  toast('Não foi possível restaurar o contrato.');
+                }
+              },
+            });
+          } catch (e) {
+            setConfirmandoApagar(false);
+            toast(e instanceof Error ? e.message : 'Não foi possível apagar o contrato.');
+          }
+        }}
+        onCancelar={() => setConfirmandoApagar(false)}
+      >
+        A proposta vencedora continua adjudicada; só o contrato (e seu PDF) sai da lista. Você ainda pode desfazer
+        por alguns segundos.
+      </ConfirmDialog>
 
       <div className="card" style={{ marginBottom: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>

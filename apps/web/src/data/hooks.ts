@@ -39,6 +39,8 @@ import {
   convidarParaObra,
   responderConvite,
   removerAcessoObra,
+  apagarEqualizacao,
+  apagarContrato,
 } from './mutations';
 
 export function useAcervo() {
@@ -302,6 +304,30 @@ export function useApagarProposta() {
     mutationFn: apagarProposta,
     // Apagar pode desadjudicar um certame: invalida o mesmo conjunto da vencedora.
     onSuccess: () => invalidarVencedora(qc),
+  });
+}
+
+export function useApagarEqualizacao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: apagarEqualizacao,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['equalizacoes'] });
+      qc.invalidateQueries({ queryKey: ['equalizacao'] });
+      qc.invalidateQueries({ queryKey: ['obra'] });
+    },
+  });
+}
+
+export function useApagarContrato() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: apagarContrato,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contratos'] });
+      qc.invalidateQueries({ queryKey: ['contrato'] });
+      qc.invalidateQueries({ queryKey: ['vencedoras'] });
+    },
   });
 }
 
