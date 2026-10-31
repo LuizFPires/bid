@@ -1,6 +1,10 @@
 -- Teste (pgTAP) do apagar/restaurar equalização e contrato. `supabase test db`.
 begin;
-select plan(8);
+select plan(10);
+select isnt((select count(*) from pg_trigger where tgname = 'trg_equalizacoes_chaves'), 0::bigint,
+  'equalizacoes: certame/propostas/criador imutáveis pelo cliente');
+select isnt((select count(*) from pg_trigger where tgname = 'trg_contratos_chaves'), 0::bigint,
+  'contratos: obra/certame/proposta imutáveis pelo cliente');
 
 select has_function('public', 'apagar_equalizacao', ARRAY['uuid'], 'apagar_equalizacao existe');
 select has_function('public', 'restaurar_equalizacao', ARRAY['uuid'], 'restaurar_equalizacao existe');
