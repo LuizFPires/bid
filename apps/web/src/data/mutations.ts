@@ -493,6 +493,22 @@ export async function restaurarProposta(propostaId: string): Promise<void> {
   if (error) throw error;
 }
 
+/* ---------- Categorias: renomear / mesclar ---------- */
+
+/**
+ * Move tudo de uma categoria para outra (RPC `mesclar_categoria`): renomeia os
+ * certames onde não há destino e migra as propostas onde há. Renomear = mesclar
+ * para um nome novo. Devolve quantas tomadas de preços foram alteradas.
+ */
+export async function mesclarCategoria(input: { de: string; para: string }): Promise<number> {
+  const de = input.de.trim();
+  const para = input.para.trim();
+  if (!de || !para) throw new Error('Informe a categoria.');
+  const { data, error } = await db().rpc('mesclar_categoria', { p_de: de, p_para: para });
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
 /* ---------- Apagar / restaurar equalização e contrato ---------- */
 
 export async function apagarEqualizacao(id: string): Promise<void> {

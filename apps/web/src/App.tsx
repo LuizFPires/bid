@@ -20,6 +20,7 @@ import {
   NovoContratoScreen,
   ContratoScreen,
   ConvitesScreen,
+  CategoriasScreen,
 } from './screens';
 import { SignScreen } from './screens/Sign';
 
@@ -75,6 +76,7 @@ function Conteudo() {
         <Route path="obras/nova" element={<NovaObraScreen />} />
         <Route path="obras/:id" element={<ObraScreen />} />
         <Route path="convites" element={<ConvitesScreen />} />
+        <Route path="categorias" element={<CategoriasScreen />} />
         <Route path="*" element={<Navigate to="/propostas" replace />} />
       </Route>
     </Routes>

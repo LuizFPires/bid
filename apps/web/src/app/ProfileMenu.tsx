@@ -161,6 +161,17 @@ export function ProfileMenu() {
                   ))}
                 </div>
               </div>
+              <button
+                className="pm-item"
+                type="button"
+                onClick={() => {
+                  fechar();
+                  navigate('/categorias');
+                }}
+              >
+                <Icon name="cat-estrutura" />
+                Categorias
+              </button>
               <button className="pm-item" type="button" onClick={() => setTrocando(true)}>
                 <Icon name="link" />
                 Trocar senha

@@ -7,3 +7,4 @@ export * from './extracao';
 export * from './equalizacao';
 export * from './clausulas';
 export * from './assinatura';
+export * from './categorias';

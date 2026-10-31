@@ -17,6 +17,7 @@ import {
   fetchMembros,
   fetchMeusConvites,
   fetchAcessoObra,
+  fetchCategorias,
 } from './queries';
 import {
   criarObra,
@@ -41,6 +42,7 @@ import {
   removerAcessoObra,
   apagarEqualizacao,
   apagarContrato,
+  mesclarCategoria,
 } from './mutations';
 
 export function useAcervo() {
@@ -304,6 +306,22 @@ export function useApagarProposta() {
     mutationFn: apagarProposta,
     // Apagar pode desadjudicar um certame: invalida o mesmo conjunto da vencedora.
     onSuccess: () => invalidarVencedora(qc),
+  });
+}
+
+export function useCategorias() {
+  return useQuery({ queryKey: ['categorias'], queryFn: fetchCategorias });
+}
+
+export function useMesclarCategoria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: mesclarCategoria,
+    // Mexe em certames, propostas e sugestões: recarrega o que depende deles.
+    onSuccess: () => {
+      for (const k of ['categorias', 'sugestoes', 'acervo', 'obras', 'obra', 'equalizacoes', 'equalizacao', 'proposta'])
+        qc.invalidateQueries({ queryKey: [k] });
+    },
   });
 }
 

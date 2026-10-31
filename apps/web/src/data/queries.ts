@@ -2,6 +2,7 @@ import {
   certameAtivo,
   nomeProposta,
   type AnaliseEqualizacao,
+  type CategoriaUso,
   type CertameStatus,
   type PropostaAcervo,
   type PropostaStatus,
@@ -237,6 +238,19 @@ export async function fetchAcessoObra(obraId: string): Promise<AcessoObra[]> {
     conviteId: r.convite_id,
     email: r.email,
     status: r.status as AcessoObra['status'],
+  }));
+}
+
+/* ---------- Categorias (organizar) ---------- */
+
+/** Categorias em uso (certames ativos) + sugestões sem uso, com contagens. */
+export async function fetchCategorias(): Promise<CategoriaUso[]> {
+  const { data, error } = await db().rpc('listar_categorias');
+  if (error) throw error;
+  return ((data ?? []) as { nome: string; propostas: number | string; obras: number | string }[]).map((r) => ({
+    nome: r.nome,
+    propostas: Number(r.propostas),
+    obras: Number(r.obras),
   }));
 }
 
