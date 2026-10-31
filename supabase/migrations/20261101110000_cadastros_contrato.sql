@@ -39,7 +39,9 @@ create trigger trg_partes_updated before update on public.partes
 create table if not exists public.parte_signatarios (
   id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizacoes(id) on delete cascade,
-  parte_id uuid not null references public.partes(id) on delete cascade,
+  parte_id uuid not null,
+  -- FK composta: signatário sempre da MESMA org da parte (isolamento entre inquilinos)
+  foreign key (parte_id, org_id) references public.partes(id, org_id) on delete cascade,
   nome text not null,
   cpf text check (cpf is null or cpf ~ '^[0-9]{11}$'),
   cargo text,
@@ -77,7 +79,8 @@ create trigger trg_fornecedores_updated before update on public.fornecedores
 create table if not exists public.fornecedor_signatarios (
   id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizacoes(id) on delete cascade,
-  fornecedor_id uuid not null references public.fornecedores(id) on delete cascade,
+  fornecedor_id uuid not null,
+  foreign key (fornecedor_id, org_id) references public.fornecedores(id, org_id) on delete cascade,
   nome text not null,
   cpf text check (cpf is null or cpf ~ '^[0-9]{11}$'),
   cargo text,
@@ -90,11 +93,12 @@ create index if not exists idx_forn_sign_forn on public.fornecedor_signatarios(f
 
 -- obras → partes (FKs depois de criar as tabelas)
 alter table public.obras drop constraint if exists obras_contratante_fk;
+-- FKs compostas com org_id: a obra só aponta para partes da PRÓPRIA org.
 alter table public.obras add constraint obras_contratante_fk
-  foreign key (contratante_id) references public.partes(id) on delete set null;
+  foreign key (contratante_id, org_id) references public.partes(id, org_id) on delete set null;
 alter table public.obras drop constraint if exists obras_construtora_fk;
 alter table public.obras add constraint obras_construtora_fk
-  foreign key (construtora_id) references public.partes(id) on delete set null;
+  foreign key (construtora_id, org_id) references public.partes(id, org_id) on delete set null;
 
 -- ---------- quem pode escrever cadastros ----------
 -- Partes (contratante/construtora) são o cadastro da EMPRESA: só membros reais
