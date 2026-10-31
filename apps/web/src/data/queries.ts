@@ -611,6 +611,8 @@ export interface ContratoDetalhe {
   pdfPath: string | null;
   paginas: number | null;
   clausulas: ClausulaRow[];
+  /** null = contrato legado (M6); preenchido = minuta padrão (v2). */
+  modeloId: string | null;
 }
 
 interface RawContratoRow {
@@ -646,7 +648,7 @@ export async function fetchContrato(id: string): Promise<ContratoDetalhe | null>
   const { data, error } = await db()
     .from('contratos')
     .select(
-      `id, categoria, valor, status, proposta_id, pdf_path, paginas,
+      `id, categoria, valor, status, proposta_id, pdf_path, paginas, modelo_id,
        obras ( nome ),
        propostas ( certame_id ),
        contrato_clausulas ( id, numero, titulo, texto, origem )`,
@@ -664,6 +666,7 @@ export async function fetchContrato(id: string): Promise<ContratoDetalhe | null>
     proposta_id: string;
     pdf_path: string | null;
     paginas: number | null;
+    modelo_id: string | null;
     obras: { nome: string } | { nome: string }[] | null;
     propostas: { certame_id: string | null } | { certame_id: string | null }[] | null;
     contrato_clausulas: ClausulaRow[] | null;
@@ -680,6 +683,7 @@ export async function fetchContrato(id: string): Promise<ContratoDetalhe | null>
     pdfPath: r.pdf_path,
     paginas: r.paginas,
     clausulas,
+    modeloId: r.modelo_id ?? null,
   };
 }
 

@@ -3265,3 +3265,48 @@ table.eq .nota-eq.warn {
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
 }
+
+/* ---------- Contrato v2 (assistente) ---------- */
+.chips.etapas { padding-top: 8px; }
+.chips.etapas .ch .n {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  margin-right: 2px;
+  vertical-align: -3px;
+}
+.chips.etapas .ch .n svg { width: 12px; height: 12px; }
+.chips.etapas .ch.feita .n { background: var(--ok-soft); color: var(--ok); }
+.chips.etapas .ch.on .n { background: var(--accent); color: #141b50; }
+.chips.etapas .ch.off { opacity: 0.5; cursor: default; }
+.card.doss .dl {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 11px var(--sp-card);
+  border-top: 1px solid var(--line-2);
+  font-size: 13px;
+}
+.card.doss .dl:first-child { border-top: 0; }
+.card.doss .dl .k { flex: 0 0 96px; color: var(--muted); font-weight: 700; }
+.card.doss .dl .v { flex: 1; min-width: 0; font-weight: 800; display: flex; flex-direction: column; gap: 2px; }
+.card.doss .dl .v small { font-size: 11px; color: var(--faint); font-weight: 700; }
+.card.doss .dl .chip { flex: 0 0 auto; }
+.card.achado { border-left: 3px solid var(--line); }
+.card.achado.sev-alta { border-left-color: var(--danger); }
+.card.achado.sev-media { border-left-color: var(--warn); }
+.card.achado.resolvido { opacity: 0.72; }
+.trecho {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-left: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-style: italic;
+  line-height: 1.45;
+}

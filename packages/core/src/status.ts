@@ -2,7 +2,7 @@
 
 export type CertameStatus = 'aberta' | 'analise' | 'adjudicada';
 export type PropostaStatus = 'recebida' | 'analise' | 'vencedora' | 'desclassificada';
-export type ContratoStatus = 'rascunho' | 'enviado' | 'assinado';
+export type ContratoStatus = 'rascunho' | 'em_validacao' | 'devolvido' | 'aprovado' | 'emitido' | 'enviado' | 'assinado' | 'cancelado';
 
 const CERTAME: Record<CertameStatus, CertameStatus[]> = {
   aberta: ['analise', 'adjudicada'], // adjudicada direto = vencedora sem equalizar
@@ -18,9 +18,14 @@ const PROPOSTA: Record<PropostaStatus, PropostaStatus[]> = {
 };
 
 const CONTRATO: Record<ContratoStatus, ContratoStatus[]> = {
-  rascunho: ['enviado'],
-  enviado: ['assinado', 'rascunho'],
+  rascunho: ['enviado', 'em_validacao'],
+  em_validacao: ['aprovado', 'devolvido'],
+  devolvido: ['em_validacao'],
+  aprovado: ['emitido', 'rascunho'],
+  emitido: ['enviado', 'cancelado'],
+  enviado: ['assinado', 'rascunho', 'cancelado'],
   assinado: [], // terminal
+  cancelado: [], // terminal
 };
 
 function can<T extends string>(mapa: Record<T, T[]>, de: T, para: T): boolean {
@@ -61,6 +66,11 @@ export const PROPOSTA_LABEL: Record<PropostaStatus, { texto: string; tom: Status
 
 export const CONTRATO_LABEL: Record<ContratoStatus, { texto: string; tom: StatusTone }> = {
   rascunho: { texto: 'Rascunho', tom: 'neutro' },
+  em_validacao: { texto: 'Aguardando validação', tom: 'analise' },
+  devolvido: { texto: 'Devolvido', tom: 'aberta' },
+  aprovado: { texto: 'Aprovado', tom: 'adjudicada' },
+  emitido: { texto: 'Emitido', tom: 'adjudicada' },
   enviado: { texto: 'Enviado para assinatura', tom: 'analise' },
   assinado: { texto: 'Assinado', tom: 'adjudicada' },
+  cancelado: { texto: 'Cancelado', tom: 'neutro' },
 };

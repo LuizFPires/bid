@@ -423,13 +423,26 @@ begin
     new.origem := 'variante';
     new.reduz_protecao := v_reduz;
   elsif new.bloco_chave is not null then
+    if not exists (select 1 from public.modelo_blocos b where b.modelo_id = v_modelo and b.chave = new.bloco_chave) then
+      raise exception 'bloco % não existe no modelo', new.bloco_chave;
+    end if;
     new.origem := 'bloco';
+    new.reduz_protecao := false;
   elsif v_padrao is not null and new.texto = v_padrao and not new.suprimido then
     new.origem := 'padrao';
     new.reduz_protecao := false;
     new.justificativa := null;
-  elsif new.origem = 'padrao' and (v_padrao is null or new.texto <> v_padrao) and not new.suprimido then
-    raise exception 'item % alterado precisa de origem (variante com justificativa, parâmetro ou proposta)', new.numero;
+  else
+    -- Texto diferente do padrão, item extra ou suprimido: precisa de origem
+    -- explícita; 'padrao' é recusado. Fora do catálogo de variantes, o cliente
+    -- não decide se reduz proteção (a revisão IA avalia): fica false.
+    if new.origem = 'padrao' then
+      raise exception 'item % alterado/suprimido precisa de origem (variante com justificativa, parâmetro ou proposta)', new.numero;
+    end if;
+    if new.origem = 'variante' and coalesce(length(trim(new.justificativa)), 0) < 10 then
+      raise exception 'item % como variante exige justificativa (mínimo 10 caracteres)', new.numero;
+    end if;
+    new.reduz_protecao := false;
   end if;
   return new;
 end;

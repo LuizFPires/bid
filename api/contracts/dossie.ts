@@ -154,7 +154,10 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   }
   if (Object.keys(patch).length) {
     const { error: sErr } = await sb.rpc('salvar_contrato', { p_contrato: c.id, p_patch: patch });
-    if (sErr) return void res.status(502).json({ erro: `Dossiê gravado, mas falhou ao semear o contrato: ${sErr.message}` });
+    if (sErr) {
+      console.error('contracts/dossie: salvar_contrato falhou', sErr);
+      return void res.status(502).json({ erro: 'Dossiê gravado, mas não foi possível preencher o contrato. Tente de novo.' });
+    }
   }
 
   res.status(200).json({ dossie, semeado: primeiraVez, partes: partesSnap, faltam: { contratante: !partesSnap.contratante, contratada: !partesSnap.contratada, construtora: !partesSnap.construtora } });

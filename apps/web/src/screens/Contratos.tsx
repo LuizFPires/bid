@@ -27,6 +27,7 @@ import { SignaturePad, type SignaturePadHandle } from '../components/SignaturePa
 import { useToast } from '../app/Toast';
 import { Kebab } from '../app/Kebab';
 import { SwipeRow } from '../components/SwipeRow';
+import { ContratoV2Screen } from './ContratoV2';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -261,6 +262,8 @@ export function ContratoScreen() {
       </>
     );
   }
+  // Minuta padrão (v2): assistente em etapas. Legado segue abaixo.
+  if (data.modeloId && id) return <ContratoV2Screen id={id} />;
 
   const label = CONTRATO_LABEL[data.status];
   const eqDoCertame = data.certameId

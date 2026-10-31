@@ -1,6 +1,7 @@
 import { gerarClausulas, type PropostaExtraida } from '@bid/core';
 import { supabase } from '../lib/supabase';
 import { fetchMinhaOrg, fetchProposta } from './queries';
+import { criarContratoV2 } from './contrato-v2';
 import type { Obra } from './types';
 
 function db() {
@@ -273,6 +274,13 @@ export async function desfazerVencedora(input: DesfazerVencedoraInput): Promise<
  * e grava tudo via RPC atômico `criar_contrato`. Devolve o id do contrato.
  */
 export async function criarContrato(propostaId: string): Promise<string> {
+  // Minuta padrão (v2) quando a organização tem modelo ativo; senão o fluxo legado.
+  try {
+    return await criarContratoV2(propostaId);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/sem modelo de minuta ativo/i.test(msg)) throw e;
+  }
   const prop = await fetchProposta(propostaId);
   if (!prop) throw new Error('Proposta não encontrada.');
   const clausulas = gerarClausulas({
