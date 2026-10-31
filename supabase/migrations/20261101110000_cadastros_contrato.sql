@@ -97,15 +97,14 @@ alter table public.obras add constraint obras_construtora_fk
   foreign key (construtora_id) references public.partes(id) on delete set null;
 
 -- ---------- quem pode escrever cadastros ----------
--- Partes (contratante/construtora) são administração: gestor da org ou quem
--- gerencia (dono/gestor) alguma obra da org. Fornecedores nascem da proposta:
--- qualquer colaborador da org cria/edita.
+-- Partes (contratante/construtora) são o cadastro da EMPRESA: só membros reais
+-- da organização (membros) editam — um gestor convidado para uma obra não mexe
+-- na construtora/contratante usadas pelas outras obras. Fornecedores nascem da
+-- proposta: qualquer colaborador da org cria/edita. (Desvio do SPEC §2.2,
+-- registrado em Decisões: lá previa "gerencia alguma obra".)
 create or replace function public.administra_cadastros(p_org uuid)
 returns boolean language sql stable security definer set search_path = public as $$
-  select public.is_gestor(p_org) or exists (
-    select 1 from public.obras o
-     where o.org_id = p_org and o.deleted_at is null and public.gerencia_obra(o.id)
-  );
+  select public.is_member(p_org);
 $$;
 revoke all on function public.administra_cadastros(uuid) from public, anon;
 grant execute on function public.administra_cadastros(uuid) to authenticated;
@@ -124,7 +123,8 @@ drop policy if exists "partes_update" on public.partes;
 create policy "partes_update" on public.partes for update using (public.administra_cadastros(org_id)) with check (public.administra_cadastros(org_id));
 
 drop policy if exists "parte_sign_select" on public.parte_signatarios;
-create policy "parte_sign_select" on public.parte_signatarios for select using (public.colabora_org(org_id));
+-- Signatários carregam CPF/telefone: leitura só por membros da org (dados pessoais).
+create policy "parte_sign_select" on public.parte_signatarios for select using (public.is_member(org_id));
 drop policy if exists "parte_sign_insert" on public.parte_signatarios;
 create policy "parte_sign_insert" on public.parte_signatarios for insert with check (public.administra_cadastros(org_id));
 drop policy if exists "parte_sign_update" on public.parte_signatarios;
@@ -140,7 +140,7 @@ drop policy if exists "fornecedores_update" on public.fornecedores;
 create policy "fornecedores_update" on public.fornecedores for update using (public.colabora_org(org_id)) with check (public.colabora_org(org_id));
 
 drop policy if exists "forn_sign_select" on public.fornecedor_signatarios;
-create policy "forn_sign_select" on public.fornecedor_signatarios for select using (public.colabora_org(org_id));
+create policy "forn_sign_select" on public.fornecedor_signatarios for select using (public.is_member(org_id));
 drop policy if exists "forn_sign_insert" on public.fornecedor_signatarios;
 create policy "forn_sign_insert" on public.fornecedor_signatarios for insert with check (public.colabora_org(org_id));
 drop policy if exists "forn_sign_update" on public.fornecedor_signatarios;
