@@ -15,7 +15,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await processar(req, res);
   } catch (e) {
     console.error('equalizacoes/pdf crash:', e);
-    if (!res.headersSent) res.status(502).json({ erro: 'Não foi possível gerar o PDF.' });
+    // Sem acesso aos logs da plataforma, a mensagem (curta, sem stack) é o único
+    // caminho de diagnóstico para o usuário reportar.
+    const msg = String((e as Error)?.message ?? e).replace(/\s+/g, ' ').slice(0, 160);
+    if (!res.headersSent) res.status(502).json({ erro: `Não foi possível gerar o PDF. (${msg})` });
   }
 }
 
