@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Icon } from '@bid/ui';
 
 /**
@@ -37,7 +38,10 @@ export function ConfirmDialog({
 
   if (!aberto) return null;
 
-  return (
+  // Portal para o quadro do aparelho (.device): fora da área rolável do
+  // conteúdo, que no iOS cria um contexto próprio e deixava o modal atrás das
+  // abas inferiores.
+  return createPortal(
     <div className="confirm-backdrop" onMouseDown={onCancelar}>
       <div
         className="confirm"
@@ -60,6 +64,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.querySelector('.device') ?? document.body,
   );
 }

@@ -49,6 +49,7 @@ h4 {
 }
 .device {
   position: relative;
+  isolation: isolate;
   width: 100%;
   max-width: 440px;
   height: 100%;
@@ -1668,7 +1669,7 @@ table.eq .nota-eq.warn {
 .drawer-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 70;
+  z-index: 90;
   background: rgba(10, 12, 30, 0.55);
   animation: confirm-fade 160ms ease-out;
 }
@@ -2411,7 +2412,7 @@ table.eq .nota-eq.warn {
 .confirm-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 70;
+  z-index: 90;
   display: flex;
   align-items: flex-end;
   justify-content: center;

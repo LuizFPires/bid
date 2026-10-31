@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@bid/ui';
 
 /**
@@ -56,7 +57,9 @@ export function Drawer({
     inicioY.current = null;
   }
 
-  return (
+  // Portal para o quadro do aparelho (.device), fora da área rolável do
+  // conteúdo (no iOS ela "prende" o overlay atrás das abas).
+  return createPortal(
     <div className="drawer-backdrop" onMouseDown={onFechar}>
       <div
         className="drawer"
@@ -82,6 +85,7 @@ export function Drawer({
         <div className="drawer-body">{children}</div>
         {rodape && <div className="drawer-foot">{rodape}</div>}
       </div>
-    </div>
+    </div>,
+    document.querySelector('.device') ?? document.body,
   );
 }
