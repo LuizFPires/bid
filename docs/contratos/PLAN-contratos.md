@@ -25,16 +25,16 @@
 
 ## M10 · Dossiê, assistente (partes e quadro) e revisão por IA obrigatória
 
-- [ ] Migration `contratos_v2` (SPEC §2.4): status novos, colunas, `contrato_itens_clausula`, `contrato_planilha`, `contrato_blocos`, `contrato_signatarios`, `contrato_numeracao`, triggers (campos do servidor, edição por status, invalidação de aprovação, valor = soma) + pgTAP `contratos_v2.test.sql`.
-- [ ] `core/contrato/tipos.ts`, `dossie.ts` (`montarDossie`), `parametros.ts` (`QUADRO` com os campos de `_privado/MODELO-MINUTA.md` §2 + `parametrosIniciais`) + testes com o caso fictício.
-- [ ] RPC `criar_contrato_v2` (idempotente) e `salvar_contrato` (patch em lote) + `atualizar_dossie` (service_role).
-- [ ] Rota `/api/contracts/dossie`: monta dossiê (proposta extraída + alertas + análise da equalização **só da vencedora**) e o estado inicial do contrato.
-- [ ] Botão "Gerar contrato" (proposta vencedora / "+ Contrato") cria v2 quando houver modelo ativo; senão legado.
-- [ ] Assistente — **Etapa 1 Dossiê** (o que veio da proposta e da equalização, alertas em destaque, "a proposta mudou: atualizar dossiê"), **Etapa 2 Partes** (qualificação gerada, escolher signatários, adicionar signatário avulso), **Etapa 3 Quadro-resumo** (campos com origem e ajuda).
-- [ ] Migration `contrato_revisao_validacao` (tabelas de revisão/achados/aprovações; só a parte de revisão neste milestone) + pgTAP.
-- [ ] `core/contrato/revisao.ts` (`normalizarRevisao`) + testes; `/api/ai/revisar-contrato` (SPEC §6) com cascata de tentativas e `BID_IA_MOCK`.
-- [ ] Tela **Revisão IA**: achados por severidade, aplicar sugestão (vira variante com justificativa pré-preenchida) ou aceitar com justificativa; estado "IA revisando…" que sobrevive à navegação; refazer quando o hash muda.
-- [ ] `core/contrato/hash.ts` + teste de igualdade cliente × servidor.
+- [x] Migration `contratos_v2` (SPEC §2.4): status novos, colunas, `contrato_itens_clausula`, `contrato_planilha`, `contrato_blocos`, `contrato_signatarios`, `contrato_numeracao`, triggers (campos do servidor, edição por status, invalidação de aprovação, valor = soma) + pgTAP `contratos_v2.test.sql`.
+- [x] `core/contrato/tipos.ts`, `dossie.ts` (`montarDossie`), `parametros.ts` (`QUADRO` com os campos de `_privado/MODELO-MINUTA.md` §2 + `parametrosIniciais`) + testes com o caso fictício.
+- [x] RPC `criar_contrato_v2` (idempotente) e `salvar_contrato` (patch em lote) + `atualizar_dossie` (service_role).
+- [x] Rota `/api/contracts/dossie`: monta dossiê (proposta extraída + alertas + análise da equalização **só da vencedora**) e o estado inicial do contrato.
+- [x] Botão "Gerar contrato" (proposta vencedora / "+ Contrato") cria v2 quando houver modelo ativo; senão legado.
+- [x] Assistente — **Etapa 1 Dossiê** (o que veio da proposta e da equalização, alertas em destaque, "a proposta mudou: atualizar dossiê"), **Etapa 2 Partes** (qualificação gerada, escolher signatários, adicionar signatário avulso), **Etapa 3 Quadro-resumo** (campos com origem e ajuda).
+- [x] Migration `contrato_revisao_validacao` (tabelas de revisão/achados/aprovações; só a parte de revisão neste milestone) + pgTAP.
+- [x] `core/contrato/revisao.ts` (`normalizarRevisao`) + testes; `/api/ai/revisar-contrato` (SPEC §6) com cascata de tentativas e `BID_IA_MOCK`.
+- [x] Tela **Revisão IA**: achados por severidade, aplicar sugestão (vira variante com justificativa pré-preenchida) ou aceitar com justificativa; estado "IA revisando…" que sobrevive à navegação; refazer quando o hash muda.
+- [x] `core/contrato/hash.ts` + teste de igualdade cliente × servidor.
 - **Aceite:** a partir de uma vencedora fictícia, o contrato v2 nasce com dossiê e quadro pré-preenchidos; a revisão IA roda e aponta, no caso fictício com prazo 60 × 90 dias, um **conflito alto** no `quadro.q_prazo`; resolver o achado funciona; mudar um campo exige nova revisão.
 
 ## M11 · Planilha, condições específicas (blocos) e Anexo III
