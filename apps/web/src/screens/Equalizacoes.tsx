@@ -455,7 +455,8 @@ export function EqualizacaoScreen() {
     if (!id) return;
     setErroIA(null);
     try {
-      await rodarIA.mutateAsync(id);
+      const { avisos } = await rodarIA.mutateAsync(id);
+      if (avisos[0]) toast(avisos[0], { duration: 8000 });
     } catch (err) {
       setErroIA(err instanceof Error ? err.message : 'Falha na análise por IA.');
     }

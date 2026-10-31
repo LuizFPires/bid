@@ -195,7 +195,7 @@ export async function criarEqualizacao(input: NovaEqualizacaoInput): Promise<str
  * Dispara a análise por IA (servidor) de uma equalização já criada. O servidor
  * carrega as propostas (RLS), chama a Claude e grava em `resultado_ia`.
  */
-export async function equalizarIA(equalizacaoId: string): Promise<void> {
+export async function equalizarIA(equalizacaoId: string): Promise<{ avisos: string[] }> {
   const { data: sessionData } = await db().auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) throw new Error('Sessão inválida.');
@@ -215,6 +215,8 @@ export async function equalizarIA(equalizacaoId: string): Promise<void> {
     }
     throw new Error(erro || `Análise falhou (HTTP ${resp.status}): ${raw.slice(0, 180) || 'sem corpo'}`);
   }
+  const corpo = (await resp.json().catch(() => ({}))) as { avisos?: string[] };
+  return { avisos: corpo.avisos ?? [] };
 }
 
 /* ---------- Vencedora (adjudicação) ---------- */

@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
 import { nomeProposta } from '@bid/core';
-import { analisarEqualizacao, type DocumentoProposta, type PropostaParaIA } from '@bid/server';
+import { IAErro, analisarEqualizacao, type DocumentoProposta, type PropostaParaIA } from '@bid/server';
 import { MissingEnvError, env } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';
 import { userClient } from '@bid/server';
@@ -137,9 +137,39 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // Tentativas, da mais rica à mais robusta: (1) PDFs + dados; (2) se a IA
+  // estourou o tamanho da resposta, de novo pedindo concisão; (3) se a API
+  // recusou a entrada (PDFs grandes/páginas demais), só com os dados extraídos.
+  const avisos: string[] = [];
+  async function gerar(client: Anthropic) {
+    let docs = documentos;
+    let conciso = false;
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      try {
+        return await analisarEqualizacao(client, propostas, { referencia, documentos: docs, conciso });
+      } catch (e) {
+        const st = (e as { status?: number }).status;
+        const msg = String((e as Error).message ?? '');
+        if (e instanceof IAErro && e.codigo === 'max_tokens' && !conciso) {
+          conciso = true;
+          avisos.push('Relatório resumido: a primeira versão ficou longa demais.');
+          continue;
+        }
+        if ((st === 400 || st === 413) && docs.length > 0) {
+          docs = [];
+          avisos.push('Os PDFs eram grandes demais para a IA ler de uma vez; a análise usou os dados extraídos.');
+          continue;
+        }
+        console.error('equalize: tentativa falhou', { tentativa, status: st, msg });
+        throw e;
+      }
+    }
+    throw new Error('sem tentativas');
+  }
+
   try {
     const client = new Anthropic({ apiKey: env.anthropicKey() });
-    const analise = await analisarEqualizacao(client, propostas, { referencia, documentos });
+    const analise = await gerar(client);
     const { data: eqRow, error: upErr } = await sb
       .from('equalizacoes')
       .update({ resultado_ia: analise })
@@ -158,13 +188,56 @@ async function processar(req: VercelRequest, res: VercelResponse) {
       tipo: 'equalizacao_analisada',
       payload: { recomendacao: analise.recomendacao.proposta_id, pdfs: documentos.length, com_referencia: !!referencia },
     });
-    res.status(200).json({ analise });
+    res.status(200).json({ analise, avisos });
   } catch (e) {
     if (e instanceof MissingEnvError) {
       res.status(503).json({ erro: 'Análise por IA não configurada no servidor.' });
       return;
     }
     console.error('equalize falhou:', e);
-    res.status(502).json({ erro: 'Não foi possível gerar a análise.' });
+    // Mensagem ao usuário por CATEGORIA (sem internals), para ele saber se é
+    // tamanho, limite da IA, instabilidade ou tempo — e o que fazer.
+    const st = (e as { status?: number }).status;
+    const msg = String((e as Error).message ?? '').toLowerCase();
+    let erro = 'Não foi possível gerar a análise.';
+    let codigo = 'desconhecido';
+    if (e instanceof IAErro) {
+      codigo = e.codigo;
+      erro =
+        e.codigo === 'max_tokens'
+          ? 'A IA não conseguiu fechar o relatório no tamanho permitido. Tente de novo.'
+          : 'A IA respondeu fora do formato esperado. Tente de novo.';
+    } else if (st === 429) {
+      codigo = 'limite';
+      erro = 'Limite de uso da IA atingido no momento. Tente de novo em alguns minutos.';
+    } else if (st === 529 || st === 503 || msg.includes('overloaded')) {
+      codigo = 'sobrecarga';
+      erro = 'A IA está sobrecarregada agora. Tente de novo em instantes.';
+    } else if (st === 400 || st === 413 || msg.includes('too long') || msg.includes('too large') || msg.includes('pages')) {
+      codigo = 'entrada';
+      erro = 'As propostas são grandes demais para a IA processar de uma vez (PDFs muito longos).';
+    } else if (st === 401 || st === 403) {
+      codigo = 'credencial';
+      erro = 'A chave da IA no servidor foi recusada.';
+    } else if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('aborted')) {
+      codigo = 'tempo';
+      erro = 'A análise demorou além do limite. Tente de novo (ou com menos propostas).';
+    }
+    // Trilha: a falha fica registrada (código, não detalhes) para diagnóstico.
+    try {
+      const { data: eqRow } = await sb.from('equalizacoes').select('org_id').eq('id', id).single();
+      if (eqRow) {
+        await sb.from('eventos').insert({
+          org_id: (eqRow as { org_id: string }).org_id,
+          entidade: 'equalizacao',
+          entidade_id: id,
+          tipo: 'equalizacao_falhou',
+          payload: { codigo, status: st ?? null, pdfs: documentos.length },
+        });
+      }
+    } catch {
+      /* best-effort */
+    }
+    res.status(502).json({ erro: `${erro} (código: ${codigo}${st ? ` · ${st}` : ''})`, codigo });
   }
 }
