@@ -31,6 +31,7 @@ import {
 import { desfazerVencedora, restaurarEqualizacao } from '../data/mutations';
 import { useToast } from '../app/Toast';
 import { Kebab } from '../app/Kebab';
+import { EsperaEqualizacao } from '../components/EsperaEqualizacao';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 
 /** Marca de um item de escopo na matriz: ✓ incluído, ✗ ausente, ~ parcial. */
@@ -570,7 +571,7 @@ export function EqualizacaoScreen() {
         alguns segundos.
       </ConfirmDialog>
 
-      {gerando && <AnaliseEmAndamento n={data.propostas.length} />}
+      {gerando && <EsperaEqualizacao nomes={data.propostas.map((p) => nomeProposta(p.fornecedor, p.opcao))} />}
 
       {/* Sem análise: comparativo básico (campos reais) + chamada para a IA. */}
       {!ia && !gerando && (
@@ -1057,35 +1058,3 @@ function Celula({ texto, status }: { texto: string | null; status: 'ok' | 'alert
     </span>
   );
 }
-
-/** Espera da análise: lê os PDFs e monta o relatório (pode levar 1–2 min). */
-function AnaliseEmAndamento({ n }: { n: number }) {
-  const etapas = [
-    `Lendo os PDFs das ${n} propostas…`,
-    'Identificando a base cotada de cada uma…',
-    'Colocando todas na mesma régua…',
-    'Separando o que está escrito do que está implícito…',
-    'Levantando forças, riscos e próximos passos…',
-    'Escrevendo o relatório…',
-  ];
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setI((v) => Math.min(v + 1, etapas.length - 1)), 9000);
-    return () => clearInterval(id);
-  }, [etapas.length]);
-  return (
-    <div className="card ler" role="status" aria-live="polite">
-      <span className="thinking" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-      </span>
-      <div className="ler-status" key={i}>
-        <div className="t">{etapas[i]}</div>
-        <div className="s">Relatório completo em 1 a 2 minutos. Pode continuar navegando.</div>
-      </div>
-    </div>
-  );
-}
-
-

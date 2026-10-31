@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bid · espera da equalização</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0e0f13;--surface:#17181f;--surface-2:#1c1e26;--ink:#f1f2f6;--muted:#9a9dab;--faint:#6e7180;--line:#262833;
+        --accent:#7c8af0;--accent-deep:#aeb7ff;--accent-soft:#1c2150;--ok:#7fc79e;--danger:#f08b8b;--warn:#e0a95c;--gold:#d9b45c}
+  body{margin:0;padding:24px;background:#e9eaef;font-family:'Nunito Sans',system-ui,sans-serif;color:#191a22}
+  h1{font-size:18px;margin:0 0 4px}
+  p.sub{margin:0 0 20px;color:#555;font-size:13px;max-width:760px}
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:22px;align-items:start}
+  .cap{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#666;margin:0 0 8px}
+  .note{font-size:12px;color:#555;margin:10px 0 0;line-height:1.5}
+  .phone{background:var(--bg);color:var(--ink);border-radius:26px;width:380px;box-sizing:border-box;padding:18px;min-height:420px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:26px 18px 22px;text-align:center}
+  .st{margin-top:18px}
+  .st .t{font-size:15px;font-weight:900}
+  .st .s{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:4px}
+  .bar{height:4px;border-radius:2px;background:var(--line);margin:16px auto 0;width:70%;overflow:hidden;position:relative}
+  .bar i{position:absolute;left:-40%;top:0;bottom:0;width:40%;border-radius:2px;background:var(--accent);animation:slide 1.6s ease-in-out infinite}
+  @keyframes slide{to{left:100%}}
+
+  /* ---------- A · Balança ---------- */
+  .bal{position:relative;height:190px;margin:0 auto;width:300px}
+  .bal .pole{position:absolute;left:50%;bottom:0;width:6px;height:120px;margin-left:-3px;background:var(--line);border-radius:3px}
+  .bal .base{position:absolute;left:50%;bottom:0;width:90px;height:8px;margin-left:-45px;background:var(--line);border-radius:4px}
+  .bal .beam{position:absolute;left:50%;top:56px;width:240px;height:6px;margin-left:-120px;background:var(--accent-deep);border-radius:3px;transform-origin:50% 50%;animation:tilt 4.8s ease-in-out infinite}
+  .bal .pan{position:absolute;top:6px;width:84px;transform-origin:50% 0}
+  .bal .pan.l{left:-6px;animation:panL 4.8s ease-in-out infinite}
+  .bal .pan.r{right:-6px;animation:panR 4.8s ease-in-out infinite}
+  .bal .wire{width:2px;height:52px;background:var(--faint);margin:0 auto}
+  .bal .dish{height:10px;border-radius:0 0 12px 12px;background:var(--accent-deep)}
+  .bal .doc{position:absolute;left:50%;top:14px;width:46px;height:56px;margin-left:-23px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;animation:drop 4.8s ease-in-out infinite}
+  .bal .doc b{font-size:9px;font-weight:900;color:var(--accent-deep)}
+  .bal .doc i{display:block;width:26px;height:3px;border-radius:2px;background:var(--line)}
+  .bal .pan.r .doc{animation-delay:.6s}
+  .bal .tag{position:absolute;left:50%;top:0;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);background:var(--accent-soft);padding:4px 10px;border-radius:999px;animation:tagcycle 4.8s steps(1) infinite}
+  @keyframes tilt{0%,10%{transform:rotate(0)}30%{transform:rotate(-7deg)}55%{transform:rotate(5deg)}80%,100%{transform:rotate(0)}}
+  @keyframes panL{0%,10%{transform:translateY(0)}30%{transform:translateY(14px)}55%{transform:translateY(-10px)}80%,100%{transform:translateY(0)}}
+  @keyframes panR{0%,10%{transform:translateY(0)}30%{transform:translateY(-14px)}55%{transform:translateY(10px)}80%,100%{transform:translateY(0)}}
+  @keyframes drop{0%{opacity:0;transform:translateY(-30px)}12%{opacity:1;transform:translateY(0)}85%{opacity:1}100%{opacity:0}}
+  .bal .tag:after{content:'valor'}
+  @keyframes tagcycle{0%{color:var(--gold)}}
+  .tags{display:flex;gap:6px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+  .tags span{font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--faint);border:1px solid var(--line);animation:lit 4.8s ease-in-out infinite}
+  .tags span:nth-child(2){animation-delay:.8s}.tags span:nth-child(3){animation-delay:1.6s}.tags span:nth-child(4){animation-delay:2.4s}.tags span:nth-child(5){animation-delay:3.2s}
+  @keyframes lit{0%,15%{color:var(--faint);background:var(--surface-2)}25%,40%{color:var(--accent-deep);background:var(--accent-soft);border-color:var(--accent)}50%,100%{color:var(--faint);background:var(--surface-2)}}
+
+  /* ---------- B · Régua ---------- */
+  .reg{position:relative;padding:8px 0 0}
+  .reg .row{display:grid;grid-template-columns:70px 1fr;gap:10px;align-items:center;margin:12px 0}
+  .reg .nm{font-size:11.5px;font-weight:800;text-align:right;color:var(--muted)}
+  .reg .trk{position:relative;height:22px;background:var(--surface-2);border-radius:7px;overflow:visible}
+  .reg .fill{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:var(--accent);animation:grow 5s ease-in-out infinite}
+  .reg .fill.a{--from:62%;--to:88%}
+  .reg .fill.b{--from:78%;--to:88%}
+  .reg .fill.c{--from:100%;--to:88%;background:var(--danger)}
+  .reg .fill:after{content:attr(data-v);position:absolute;right:8px;top:3px;font-size:11px;font-weight:900;color:#0e0f13}
+  .reg .ref{position:absolute;top:-6px;bottom:-6px;left:calc(70px + 10px + (100% - 80px) * .88);width:2px;background:var(--gold);box-shadow:0 0 10px var(--gold)}
+  .reg .ref span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+  @keyframes grow{0%,15%{width:var(--from)}45%,70%{width:var(--to)}100%{width:var(--from)}}
+  .reg .plus{position:absolute;right:-2px;top:-14px;font-size:10px;font-weight:900;color:var(--ok);opacity:0;animation:pop 5s ease-in-out infinite}
+  @keyframes pop{40%{opacity:0;transform:translateY(4px)}50%,70%{opacity:1;transform:none}80%{opacity:0}}
+
+  /* ---------- C · Duelo ---------- */
+  .duel{position:relative;height:200px;display:flex;align-items:center;justify-content:center;gap:34px}
+  .duel .c{width:96px;height:128px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);position:relative;display:flex;flex-direction:column;align-items:center;padding-top:14px;box-sizing:border-box;animation:breathe 3.6s ease-in-out infinite}
+  .duel .c.r{animation-delay:1.8s}
+  .duel .c b{font-size:10px;font-weight:900;color:var(--accent-deep);letter-spacing:.04em}
+  .duel .c i{display:block;width:60px;height:4px;border-radius:2px;background:var(--line);margin-top:8px}
+  .duel .c i:nth-child(3){width:44px}.duel .c i:nth-child(4){width:52px}
+  .duel .stamp{position:absolute;bottom:12px;left:50%;transform:translateX(-50%) scale(0);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:14px;animation:stamp 3.6s ease-in-out infinite}
+  .duel .c.l .stamp{background:#172a20;color:var(--ok)}
+  .duel .c.r .stamp{background:#331b1b;color:var(--danger);animation-delay:.25s}
+  @keyframes stamp{0%,25%{transform:translateX(-50%) scale(0)}35%{transform:translateX(-50%) scale(1.25)}42%,80%{transform:translateX(-50%) scale(1)}90%,100%{transform:translateX(-50%) scale(0)}}
+  @keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .duel .vs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;font-weight:900;font-size:12px;border:2px solid var(--accent)}
+  .duel .crit{position:absolute;left:50%;top:8px;transform:translateX(-50%);font-size:11px;font-weight:800;padding:5px 11px;border-radius:999px;background:var(--accent-soft);color:var(--accent-deep);white-space:nowrap;animation:crit 3.6s ease-in-out infinite}
+  @keyframes crit{0%{opacity:0;transform:translate(-50%,-6px)}15%,85%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
+  .ring{position:absolute;right:6px;top:6px;width:36px;height:36px;border-radius:50%;background:conic-gradient(var(--accent) var(--p,40%),var(--line) 0);display:grid;place-items:center;animation:ringp 12s linear infinite}
+  .ring:after{content:'';width:26px;height:26px;border-radius:50%;background:var(--surface)}
+  @keyframes ringp{from{--p:0%}to{--p:100%}}
+  @property --p{syntax:'<percentage>';inherits:false;initial-value:0%}
+  .score{display:flex;justify-content:center;gap:18px;margin-top:4px;font-size:11.5px;font-weight:800;color:var(--muted)}
+  .score b{color:var(--ink);font-size:13px}
+</style>
+</head>
+<body>
+<h1>Espera da equalização — três propostas animadas</h1>
+<p class="sub">Todas rodam em CSS puro (leves, respeitam "reduzir movimento"), com o texto de etapa trocando embaixo e a barra de progresso indeterminada. O ritmo é ilustrativo; o objetivo é mostrar o que está acontecendo e encurtar a espera percebida.</p>
+
+<div class="cols">
+  <div>
+    <p class="cap">A · Balança — as propostas pesadas uma contra a outra</p>
+    <div class="phone"><div class="card">
+      <div class="bal">
+        <span class="tag"></span>
+        <div class="beam">
+          <div class="pan l"><div class="wire"></div><div class="dish"></div><div class="doc"><b>PANAIR</b><i></i><i></i><i></i></div></div>
+          <div class="pan r"><div class="wire"></div><div class="dish"></div><div class="doc"><b>ARTEC</b><i></i><i></i><i></i></div></div>
+        </div>
+        <div class="pole"></div><div class="base"></div>
+      </div>
+      <div class="tags"><span>Valor</span><span>Prazo</span><span>Escopo</span><span>Pagamento</span><span>Garantia</span></div>
+      <div class="st"><div class="t">Pesando valor e escopo…</div><div class="s">Cada critério entra na balança, um de cada vez</div></div>
+      <div class="bar"><i></i></div>
+    </div></div>
+    <p class="note">A balança pende para um lado e para o outro enquanto os critérios (chips) vão acendendo em sequência. Fala direto com o ícone da aba Equalizar. Simples de ler, sem exigir atenção.</p>
+  </div>
+
+  <div>
+    <p class="cap">B · Mesma régua — agora varrendo todos os critérios</p>
+    <div class="phone"><div class="card">
+      <div class="tags" id="b-tags" style="margin:0 0 14px">
+        <span>Valor</span><span>Prazo</span><span>Escopo</span><span>Pagamento</span><span>Garantia</span><span>Validade</span>
+      </div>
+      <div class="reflg"><i></i><span id="b-reflbl">Régua do projeto</span></div>
+      <div class="reg" id="b-reg">
+        <div class="ref" id="b-ref"></div>
+        <div class="row"><span class="nm">PANAIR · 1</span><div class="trk"><div class="fill" id="b-f0"></div></div></div>
+        <div class="row"><span class="nm">PANAIR · 2</span><div class="trk"><div class="fill" id="b-f1"></div></div></div>
+        <div class="row"><span class="nm">ARTEC</span><div class="trk"><div class="fill" id="b-f2"></div></div></div>
+      </div>
+      <div class="st"><div class="t" id="b-t">Colocando todas na mesma régua…</div><div class="s" id="b-s">Quantidade do projeto × preço unitário de cada uma</div></div>
+      <div class="bar"><i></i></div>
+    </div></div>
+    <p class="note">A cada ~3,5 s a régua troca de critério: as barras deslizam para os novos valores, a linha dourada vira a referência daquele critério (régua do projeto, menor prazo, escopo completo, melhor condição, maior garantia, validade mais longa) e o texto embaixo explica o que está sendo nivelado. Barras em vermelho = fora da referência naquele critério.</p>
+    <style>
+      .reflg{display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin:4px 0 2px}
+      .reflg i{width:18px;height:2px;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+      #b-reg{padding-top:4px}
+      #b-reg .ref{top:-2px;bottom:-2px}
+      #b-reg .fill{animation:none;transition:width 1.1s cubic-bezier(.2,.8,.2,1),background .4s}
+      #b-reg .fill:after{transition:none}
+      #b-ref{transition:left 1.1s cubic-bezier(.2,.8,.2,1)}
+      #b-tags span{animation:none;transition:all .3s}
+      #b-tags span.on{color:var(--accent-deep);background:var(--accent-soft);border-color:var(--accent)}
+    </style>
+    <script>
+    (function(){
+      // Cada "lente" da equalização: referência (linha dourada), valores por proposta e textos.
+      var L=[
+        {tag:0,ref:'Régua do projeto',pos:.88,t:'Colocando todas na mesma régua…',s:'Quantidade do projeto × preço unitário de cada uma',
+         v:[{w:.62,l:'R$ 1,02 mi',bad:false},{w:.78,l:'R$ 0,98 mi',bad:false},{w:1,l:'R$ 1,45 mi',bad:true}]},
+        {tag:1,ref:'Menor prazo',pos:.42,t:'Comparando prazos de execução…',s:'Dias corridos, do material à instalação',
+         v:[{w:.42,l:'95 dias',bad:false},{w:.42,l:'95 dias',bad:false},{w:.56,l:'120 dias',bad:true}]},
+        {tag:2,ref:'Escopo completo',pos:.96,t:'Conferindo o escopo item a item…',s:'O que está incluído, parcial ou faltando',
+         v:[{w:.96,l:'12/12 itens',bad:false},{w:.8,l:'10/12 itens',bad:true},{w:.64,l:'8/12 itens',bad:true}]},
+        {tag:3,ref:'Melhor condição',pos:.3,t:'Nivelando as condições de pagamento…',s:'Sinal, parcelas e faturamento direto',
+         v:[{w:.3,l:'20% sinal',bad:false},{w:.3,l:'20% sinal',bad:false},{w:.6,l:'40% sinal',bad:true}]},
+        {tag:4,ref:'Maior garantia',pos:.9,t:'Comparando garantias…',s:'Meses, abrangência e o que fica de fora',
+         v:[{w:.9,l:'60 meses',bad:false},{w:.9,l:'60 meses',bad:false},{w:.2,l:'12 meses',bad:true}]},
+        {tag:5,ref:'Validade mais longa',pos:.7,t:'Checando validade e omissões…',s:'Separando o que está escrito do que está implícito',
+         v:[{w:.7,l:'30 dias',bad:false},{w:.25,l:'10 dias',bad:true},{w:.5,l:'20 dias',bad:false}]}
+      ];
+      var tags=document.querySelectorAll('#b-tags span'),ref=document.getElementById('b-ref'),lbl=document.getElementById('b-reflbl');
+      var fills=[0,1,2].map(function(i){return document.getElementById('b-f'+i)});
+      var T=document.getElementById('b-t'),S=document.getElementById('b-s'),i=0;
+      function aplicar(k){
+        var l=L[k];
+        tags.forEach(function(e,j){e.classList.toggle('on',j===l.tag)});
+        ref.style.left='calc(70px + 10px + (100% - 80px) * '+l.pos+')'; lbl.textContent=l.ref;
+        l.v.forEach(function(v,j){fills[j].style.width=(v.w*100)+'%';fills[j].setAttribute('data-v',v.l);fills[j].style.background=v.bad?'var(--danger)':'var(--accent)'});
+        T.textContent=l.t; S.textContent=l.s;
+      }
+      aplicar(0); setInterval(function(){i=(i+1)%L.length;aplicar(i)},3500);
+    })();
+    </script>
+  </div>
+
+  <div>
+    <p class="cap">C · Duelo — critério a critério, carimbo de ✓ e ✗</p>
+    <div class="phone"><div class="card" style="position:relative">
+      <div class="ring"></div>
+      <div class="duel">
+        <span class="crit">Garantia</span>
+        <div class="c l"><b>PANAIR</b><i></i><i></i><i></i><span class="stamp">✓</span></div>
+        <div class="vs">VS</div>
+        <div class="c r"><b>ARTEC</b><i></i><i></i><i></i><span class="stamp">✗</span></div>
+      </div>
+      <div class="score"><span>Critérios <b>4</b>/12</span><span>Propostas <b>3</b></span><span>PDFs lidos <b>2</b>/3</span></div>
+      <div class="st"><div class="t">Comparando garantia…</div><div class="s">Separando o que está escrito do que está implícito</div></div>
+      <div class="bar"><i></i></div>
+    </div></div>
+    <p class="note">Duas cartas "respiram", um critério desce entre elas e cada uma recebe o carimbo (✓ atende, ✗ não informa); troca de critério a cada ciclo e o placar sobe. É o mais gamificado — e o anel de progresso no canto dá sensação de avanço.</p>
+  </div>
+</div>
+</body>
+</html>
