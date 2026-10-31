@@ -31,6 +31,7 @@ import {
 import { baixarRelatorioEqualizacao, desfazerVencedora, restaurarEqualizacao } from '../data/mutations';
 import { useToast } from '../app/Toast';
 import { Kebab } from '../app/Kebab';
+import { SwipeRow } from '../components/SwipeRow';
 import { BarraAcao } from '../app/BarraAcao';
 import { EsperaEqualizacao } from '../components/EsperaEqualizacao';
 import { Matriz, type MatrizColuna, type MatrizLinha } from '../components/Matriz';
@@ -67,6 +68,32 @@ export function EqualizacoesScreen() {
   const eqs = data ?? [];
 
   const gerandoIds = useAnalisesEmAndamento(eqs.map((e) => e.id));
+  const apagarEq = useApagarEqualizacao();
+  const toastL = useToast();
+  const qcL = useQueryClient();
+  const [paraApagar, setParaApagar] = useState<(typeof eqs)[number] | null>(null);
+  async function confirmarApagarEq() {
+    if (!paraApagar) return;
+    const alvo = paraApagar;
+    try {
+      await apagarEq.mutateAsync(alvo.id);
+      setParaApagar(null);
+      toastL(`Equalização "${alvo.categoria}" excluída.`, {
+        actionLabel: 'Desfazer',
+        onAction: async () => {
+          try {
+            await restaurarEqualizacao(alvo.id);
+            qcL.invalidateQueries({ queryKey: ['equalizacoes'] });
+          } catch {
+            toastL('Não foi possível restaurar a equalização.');
+          }
+        },
+      });
+    } catch (e) {
+      setParaApagar(null);
+      toastL(e instanceof Error ? e.message : 'Não foi possível apagar a equalização.');
+    }
+  }
   const grupos = useMemo(() => {
     const concluida = eqs.filter((e) => e.certameStatus === 'adjudicada');
     const decisao = eqs.filter((e) => e.certameStatus !== 'adjudicada' && e.temAnalise);
@@ -114,8 +141,8 @@ export function EqualizacoesScreen() {
                 const adjudicada = e.certameStatus === 'adjudicada';
                 const tom = CERTAME_LABEL[(e.certameStatus ?? 'aberta') as CertameStatus].tom;
                 return (
+                  <SwipeRow key={e.id} onApagar={() => setParaApagar(e)}>
                   <div
-                    key={e.id}
                     className="row"
                     role="button"
                     tabIndex={0}
@@ -148,12 +175,24 @@ export function EqualizacoesScreen() {
                       <Icon name="chev" />
                     </span>
                   </div>
+                  </SwipeRow>
                 );
               })}
             </div>
           </div>
         ))
       )}
+      <ConfirmDialog
+        aberto={paraApagar !== null}
+        titulo={`Apagar a equalização "${paraApagar?.categoria ?? ''}"?`}
+        confirmarLabel="Apagar equalização"
+        ocupado={apagarEq.isPending}
+        onConfirmar={confirmarApagarEq}
+        onCancelar={() => setParaApagar(null)}
+      >
+        As propostas continuam no acervo; só a comparação e o relatório da IA saem. Você ainda pode desfazer por
+        alguns segundos.
+      </ConfirmDialog>
     </>
   );
 }

@@ -26,6 +26,7 @@ import { urlContratoPdf } from '../data/queries';
 import { SignaturePad, type SignaturePadHandle } from '../components/SignaturePad';
 import { useToast } from '../app/Toast';
 import { Kebab } from '../app/Kebab';
+import { SwipeRow } from '../components/SwipeRow';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -35,6 +36,34 @@ export function ContratosScreen() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useContratos();
   const contratos = data ?? [];
+
+  // Arrastar para o lado → lixeira → confirmação → Desfazer.
+  const apagarCt = useApagarContrato();
+  const toastCt = useToast();
+  const qcCt = useQueryClient();
+  const [paraApagar, setParaApagar] = useState<(typeof contratos)[number] | null>(null);
+  async function confirmarApagarCt() {
+    if (!paraApagar) return;
+    const alvo = paraApagar;
+    try {
+      await apagarCt.mutateAsync(alvo.id);
+      setParaApagar(null);
+      toastCt('Contrato excluído.', {
+        actionLabel: 'Desfazer',
+        onAction: async () => {
+          try {
+            await restaurarContrato(alvo.id);
+            qcCt.invalidateQueries({ queryKey: ['contratos'] });
+          } catch {
+            toastCt('Não foi possível restaurar o contrato.');
+          }
+        },
+      });
+    } catch (e) {
+      setParaApagar(null);
+      toastCt(e instanceof Error ? e.message : 'Não foi possível apagar o contrato.');
+    }
+  }
 
   return (
     <>
@@ -65,8 +94,8 @@ export function ContratosScreen() {
           {contratos.map((c) => {
             const label = CONTRATO_LABEL[c.status];
             return (
+              <SwipeRow key={c.id} onApagar={c.status === 'assinado' ? undefined : () => setParaApagar(c)}>
               <div
-                key={c.id}
                 className="row"
                 role="button"
                 tabIndex={0}
@@ -100,10 +129,22 @@ export function ContratosScreen() {
                   <Icon name="chev" />
                 </span>
               </div>
+              </SwipeRow>
             );
           })}
         </div>
       )}
+      <ConfirmDialog
+        aberto={paraApagar !== null}
+        titulo={`Apagar o contrato de ${paraApagar?.categoria ?? ''}?`}
+        confirmarLabel="Apagar contrato"
+        ocupado={apagarCt.isPending}
+        onConfirmar={confirmarApagarCt}
+        onCancelar={() => setParaApagar(null)}
+      >
+        A proposta vencedora continua adjudicada; só o contrato (e seu PDF) sai da lista. Você ainda pode desfazer
+        por alguns segundos.
+      </ConfirmDialog>
     </>
   );
 }

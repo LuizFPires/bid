@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bid · organizar categorias</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0e0f13;--surface:#17181f;--surface-2:#1c1e26;--ink:#f1f2f6;--muted:#9a9dab;--faint:#6e7180;--line:#262833;
+        --accent:#7c8af0;--accent-deep:#aeb7ff;--accent-soft:#1c2150;--ok:#7fc79e;--ok-soft:#172a20;--warn:#e0a95c;--warn-soft:#2e2414;--danger:#f08b8b;--gold:#d9b45c}
+  body{margin:0;padding:24px;background:#e9eaef;font-family:'Nunito Sans',system-ui,sans-serif;color:#191a22}
+  h1{font-size:18px;margin:0 0 4px}
+  p.sub{margin:0 0 20px;color:#555;font-size:13px;max-width:860px}
+  h2{font-size:14px;margin:26px 0 10px;font-weight:900}
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:22px;align-items:start}
+  .cap{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#666;margin:0 0 8px}
+  .note{font-size:12px;color:#555;margin:10px 0 0;line-height:1.5;max-width:860px}
+  .phone{background:var(--bg);color:var(--ink);border-radius:26px;width:380px;height:680px;box-sizing:border-box;position:relative;overflow:hidden;display:flex;flex-direction:column}
+  .top{display:flex;align-items:center;gap:11px;padding:14px 18px 10px}
+  .badge{width:32px;height:32px;border-radius:9px;background:#1c2150}
+  .wm{font-weight:800;font-size:21px;letter-spacing:-.4px}
+  .bell{margin-left:auto;width:38px;height:38px;border-radius:12px;background:var(--surface);color:var(--muted);display:grid;place-items:center}
+  .content{flex:1;min-height:0;overflow:hidden;padding:4px 18px 0}
+  .crumb{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px}
+  h3{font-size:22px;line-height:1.15;margin:0 0 4px;font-weight:900}
+  .lead{font-size:13px;color:var(--muted);font-weight:600;margin:0 0 14px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px}
+  .row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line)}
+  .row:first-child{border-top:0}
+  .ic{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;font-weight:900;font-size:12px;flex:0 0 auto}
+  .tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .t1{font-size:14px;font-weight:800}
+  .t2{font-size:12.5px;color:var(--muted);font-weight:600}
+  .chip{font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+  .chip.on{background:var(--accent-soft);color:var(--accent-deep);border-color:var(--accent)}
+  .chip.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border-radius:14px;font-weight:800;font-size:13.5px;background:var(--accent);color:#141b50}
+  .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+  .btn.soft{background:var(--accent-soft);color:var(--accent-deep)}
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+  .drawer{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:22px 22px 0 0;padding:10px 20px 20px;border-top:1px solid var(--line)}
+  .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px}
+  .drawer h4{margin:0 0 2px;font-size:16px;font-weight:900}
+  .drawer .s{font-size:12.5px;color:var(--muted);font-weight:600;margin:0 0 14px}
+  .field label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin-bottom:6px}
+  .field .sel{height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:0 13px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;box-sizing:border-box}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .hl{outline:2px dashed var(--gold);outline-offset:3px;border-radius:14px}
+  .tag{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:6px}
+  .tag.ok{background:var(--ok-soft);color:var(--ok)}
+  .kbd{font-size:12px;color:var(--faint);font-weight:700;margin-top:8px}
+  .seg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px}
+  .sug{display:flex;align-items:center;gap:10px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;font-weight:700}
+  .sug b{display:block;font-size:13px}
+  .mini{margin-left:auto;font-size:12px;font-weight:800;color:var(--accent-deep);background:var(--surface);padding:6px 10px;border-radius:999px;white-space:nowrap}
+</style>
+</head>
+<body>
+<h1>Organizar categorias de serviço</h1>
+<p class="sub">Problema: "Estrutura", "Estrutura pré-moldada" e "Pré-moldados" acabam virando três categorias — e as propostas não se encontram na equalização. A categoria continua campo livre (regra do produto), mas precisa de um jeito de <b>unificar</b> e <b>padronizar</b>. Três ideias.</p>
+
+<h2>A · Tela "Categorias" com mesclar e renomear (drawer) — recomendada</h2>
+<div class="cols">
+  <div>
+    <p class="cap">Lista (menu do perfil → Categorias)</p>
+    <div class="phone">
+      <div class="top"><span class="badge"></span><span class="wm">bid</span><span class="bell">●</span></div>
+      <div class="content">
+        <div class="crumb">Início › Categorias</div>
+        <h3>Categorias</h3>
+        <p class="lead">Toque para renomear ou mesclar. Arraste para o lado para apagar as sem uso.</p>
+        <div class="card">
+          <div class="row"><span class="ic">E</span><span class="tt"><span class="t1">Estrutura pré-moldada</span><span class="t2">7 propostas · 2 obras</span></span><span class="chip on">padrão</span></div>
+          <div class="row hl"><span class="ic">E</span><span class="tt"><span class="t1">Estrutura</span><span class="t2">2 propostas · 1 obra</span></span><span class="chip warn">parecida</span></div>
+          <div class="row"><span class="ic">P</span><span class="tt"><span class="t1">Pré-moldados</span><span class="t2">1 proposta</span></span><span class="chip warn">parecida</span></div>
+          <div class="row"><span class="ic">A</span><span class="tt"><span class="t1">Ar-condicionado</span><span class="t2">3 propostas · 1 obra</span></span><span class="chip on">padrão</span></div>
+          <div class="row"><span class="ic">A</span><span class="tt"><span class="t1">Ar3</span><span class="t2">3 propostas</span></span><span class="chip warn">parecida</span></div>
+          <div class="row"><span class="ic">R</span><span class="tt"><span class="t1">Revestimento em ACM</span><span class="t2">3 propostas · 1 obra</span></span><span class="chip">—</span></div>
+        </div>
+        <div class="kbd">Categorias "parecidas" são sugeridas por semelhança de nome; você decide.</div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="cap">Ao tocar em "Estrutura" → drawer</p>
+    <div class="phone">
+      <div class="top"><span class="badge"></span><span class="wm">bid</span><span class="bell">●</span></div>
+      <div class="content">
+        <div class="crumb">Início › Categorias</div>
+        <h3>Categorias</h3>
+        <div class="card"><div class="row"><span class="ic">E</span><span class="tt"><span class="t1">Estrutura pré-moldada</span><span class="t2">7 propostas</span></span></div><div class="row"><span class="ic">E</span><span class="tt"><span class="t1">Estrutura</span><span class="t2">2 propostas</span></span></div></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="drawer">
+        <div class="grab"></div>
+        <h4>Estrutura</h4>
+        <p class="s">2 propostas · 1 obra · usada pela última vez em 29/10</p>
+        <div class="field"><label>Renomear para</label><div class="sel">Estrutura <span>✎</span></div></div>
+        <div class="field" style="margin-top:12px"><label>Ou mesclar com</label><div class="sel hl">Estrutura pré-moldada · 7 propostas <span>⌄</span></div></div>
+        <div class="kbd">Ao mesclar, as 2 propostas passam para "Estrutura pré-moldada" e as tomadas de preços da mesma obra se juntam. "Estrutura" some das sugestões.</div>
+        <div class="pair"><span class="btn ghost">Cancelar</span><span class="btn">Mesclar 2 propostas</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="note"><b>A.</b> Uma tela de administração simples, no menu do perfil: lista as categorias com contagem de uso, marca as <b>parecidas</b> (semelhança de nome) e, ao tocar, abre o drawer com <b>Renomear</b> ou <b>Mesclar com…</b>. A mescla move as propostas (e junta tomadas de preços da mesma obra) com confirmação e Desfazer. É o lugar certo para "arrumar a casa" de vez em quando.</p>
+
+<h2>B · Aviso na hora do cadastro: "parece com…"</h2>
+<div class="cols">
+  <div>
+    <p class="cap">Nova proposta → ao digitar a categoria</p>
+    <div class="phone">
+      <div class="top"><span class="badge"></span><span class="wm">bid</span><span class="bell">●</span></div>
+      <div class="content">
+        <div class="crumb">Propostas › Nova proposta</div>
+        <h3>Nova proposta</h3>
+        <p class="lead">Diga a obra e a categoria e anexe o arquivo — a IA lê o resto.</p>
+        <div class="field"><label>Obra</label><div class="sel">SL Betim <span>⌄</span></div></div>
+        <div class="field" style="margin-top:12px"><label>Categoria de serviço</label><div class="sel">Estrutura<span>|</span></div></div>
+        <div class="sug hl"><div><b>Já existe "Estrutura pré-moldada" (7 propostas)</b>É a mesma coisa? Use a existente para equalizar junto.</div><span class="mini">Usar essa</span></div>
+        <div class="seg"><span class="chip on">Estrutura pré-moldada</span><span class="chip">Estrutura metálica</span><span class="chip">+ criar "Estrutura"</span></div>
+        <div class="field" style="margin-top:4px"><label>Arquivo da proposta</label><div class="sel" style="height:72px;justify-content:center;color:var(--faint)">Toque para anexar</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="note"><b>B.</b> Prevenção: ao digitar uma categoria nova, o app compara com as existentes (sem acento, por prefixo e palavras) e mostra <b>"Já existe 'Estrutura pré-moldada' — usar essa?"</b> com um toque. Criar uma nova passa a ser escolha explícita ("+ criar"). Evita a poluição na origem, mas não resolve o que já está duplicado.</p>
+
+<h2>C · Mesclar a partir da própria equalização</h2>
+<div class="cols">
+  <div>
+    <p class="cap">Iniciar equalização → categoria com "primas"</p>
+    <div class="phone">
+      <div class="top"><span class="badge"></span><span class="wm">bid</span><span class="bell">●</span></div>
+      <div class="content">
+        <div class="crumb">Equalizar › Iniciar</div>
+        <h3>Iniciar equalização</h3>
+        <div class="field"><label>Obra</label><div class="sel">Super Luna <span>⌄</span></div></div>
+        <div class="field" style="margin-top:12px"><label>Categoria (tomada de preços)</label><div class="sel">Estrutura pré-moldada · 1 proposta <span>⌄</span></div></div>
+        <div class="sug hl"><div><b>Há propostas parecidas em outra categoria</b>"Estrutura" (1 proposta · Precom) nesta mesma obra. Juntar para comparar?</div><span class="mini">Juntar</span></div>
+        <div class="card"><div class="row"><span class="ic">✓</span><span class="tt"><span class="t1">Incorpora</span><span class="t2">Estrutura pré-moldada</span></span></div><div class="row" style="opacity:.55"><span class="ic">+</span><span class="tt"><span class="t1">Precom</span><span class="t2">Estrutura · vem ao juntar</span></span></div></div>
+        <div class="kbd">"Juntar" move a proposta da Precom para "Estrutura pré-moldada" (com confirmação) e ela entra na comparação.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="note"><b>C.</b> Resolve no momento da dor: ao iniciar a equalização, se houver propostas da mesma obra em categorias de nome parecido, o app oferece <b>"Juntar"</b> — move para a categoria escolhida e já traz a proposta para a comparação. Pontual e contextual; não organiza o acervo como um todo.</p>
+<p class="note" style="margin-top:18px"><b>Combinação natural:</b> A como base (arrumar), B como prevenção (não sujar), C como atalho (quando a dor aparece). As três usam a mesma operação do banco: "mover propostas da categoria X para Y".</p>
+</body>
+</html>

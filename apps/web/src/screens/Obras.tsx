@@ -1,11 +1,47 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '@bid/ui';
-import { useObras } from '../data/hooks';
+import { useApagarObra, useObras } from '../data/hooks';
+import { restaurarObra } from '../data/mutations';
+import { useAuth } from '../auth/AuthProvider';
+import { useToast } from '../app/Toast';
+import { ConfirmDialog } from '../app/ConfirmDialog';
+import { SwipeRow } from '../components/SwipeRow';
 
 export function ObrasScreen() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useObras();
   const obras = data ?? [];
+  const { session } = useAuth();
+  const meuId = session?.user?.id;
+  // Só o dono apaga (regra #13); arrastar → lixeira → confirmação → Desfazer.
+  const apagar = useApagarObra();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [paraApagar, setParaApagar] = useState<(typeof obras)[number] | null>(null);
+  async function confirmarApagar() {
+    if (!paraApagar) return;
+    const alvo = paraApagar;
+    try {
+      await apagar.mutateAsync(alvo.id);
+      setParaApagar(null);
+      toast(`Obra "${alvo.nome}" excluída.`, {
+        actionLabel: 'Desfazer',
+        onAction: async () => {
+          try {
+            await restaurarObra(alvo.id);
+            qc.invalidateQueries({ queryKey: ['obras'] });
+          } catch {
+            toast('Não foi possível restaurar a obra.');
+          }
+        },
+      });
+    } catch (e) {
+      setParaApagar(null);
+      toast(e instanceof Error ? e.message : 'Não foi possível apagar a obra.');
+    }
+  }
 
   return (
     <>
@@ -33,7 +69,8 @@ export function ObrasScreen() {
         <div className="card empty">Nenhuma obra ainda.</div>
       ) : (
         obras.map((o) => (
-          <button key={o.id} className="ucard" onClick={() => navigate(`/obras/${o.id}`)}>
+          <SwipeRow key={o.id} className="ucard-wrap" onApagar={meuId && o.criado_por === meuId ? () => setParaApagar(o) : undefined}>
+          <button className="ucard" onClick={() => navigate(`/obras/${o.id}`)}>
             <div className="hd">
               <span className="cat-ic">
                 <Icon name="tab-obras" />
@@ -53,8 +90,19 @@ export function ObrasScreen() {
               </span>
             </div>
           </button>
+          </SwipeRow>
         ))
       )}
+      <ConfirmDialog
+        aberto={paraApagar !== null}
+        titulo={`Apagar a obra "${paraApagar?.nome ?? ''}"?`}
+        confirmarLabel="Apagar obra"
+        ocupado={apagar.isPending}
+        onConfirmar={confirmarApagar}
+        onCancelar={() => setParaApagar(null)}
+      >
+        A obra sai da lista para todas as pessoas com acesso. Você ainda pode desfazer por alguns segundos.
+      </ConfirmDialog>
     </>
   );
 }

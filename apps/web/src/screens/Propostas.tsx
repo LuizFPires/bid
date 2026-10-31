@@ -10,9 +10,41 @@ import {
 } from '@bid/core';
 import { useNavigate } from 'react-router-dom';
 import { Icon, iconeCategoria } from '@bid/ui';
-import { useAcervo } from '../data/hooks';
+import { useAcervo, useApagarProposta, invalidarVencedora } from '../data/hooks';
+import { restaurarProposta } from '../data/mutations';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../app/Toast';
+import { ConfirmDialog } from '../app/ConfirmDialog';
+import { SwipeRow } from '../components/SwipeRow';
 
 export function PropostasScreen() {
+  // Arrastar para o lado → lixeira → confirmação → Desfazer (regra #11).
+  const apagar = useApagarProposta();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [paraApagar, setParaApagar] = useState<PropostaAcervo | null>(null);
+  async function confirmarApagar() {
+    if (!paraApagar) return;
+    const alvo = paraApagar;
+    try {
+      await apagar.mutateAsync(alvo.id);
+      setParaApagar(null);
+      toast(`Proposta de ${nomeProposta(alvo.fornecedor, alvo.opcao)} excluída.`, {
+        actionLabel: 'Desfazer',
+        onAction: async () => {
+          try {
+            await restaurarProposta(alvo.id);
+            invalidarVencedora(qc);
+          } catch {
+            toast('Não foi possível restaurar a proposta.');
+          }
+        },
+      });
+    } catch (e) {
+      setParaApagar(null);
+      toast(e instanceof Error ? e.message : 'Não foi possível apagar a proposta.');
+    }
+  }
   const { data, isLoading, isError } = useAcervo();
   const props = useMemo(() => data ?? [], [data]);
 
@@ -113,11 +145,23 @@ export function PropostasScreen() {
           </div>
           <div className="card rowlist">
             {lista.map((p) => (
-              <AcervoRow key={p.id} p={p} />
+              <SwipeRow key={p.id} onApagar={() => setParaApagar(p)}>
+                <AcervoRow p={p} />
+              </SwipeRow>
             ))}
           </div>
         </>
       )}
+      <ConfirmDialog
+        aberto={paraApagar !== null}
+        titulo={`Apagar a proposta de ${paraApagar ? nomeProposta(paraApagar.fornecedor, paraApagar.opcao) : ''}?`}
+        confirmarLabel="Apagar proposta"
+        ocupado={apagar.isPending}
+        onConfirmar={confirmarApagar}
+        onCancelar={() => setParaApagar(null)}
+      >
+        Ela sai do acervo e da equalização. Você ainda pode desfazer por alguns segundos.
+      </ConfirmDialog>
     </>
   );
 }

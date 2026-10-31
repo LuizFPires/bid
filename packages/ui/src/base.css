@@ -1650,6 +1650,59 @@ table.eq .nota-eq.warn {
   }
 }
 
+
+/* ---------- Arrastar para o lado → lixeira (listas) ---------- */
+.swipe {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y; /* vertical continua com o navegador; horizontal é nosso */
+}
+.swipe-act {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 84px;
+  border: 0;
+  background: var(--danger);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.swipe-act svg {
+  width: 18px;
+  height: 18px;
+}
+.swipe-body {
+  position: relative;
+  z-index: 1;
+  background: var(--surface);
+  will-change: transform;
+}
+.swipe .row {
+  border-top: 0;
+}
+.swipe + .swipe .swipe-body,
+.rowlist .swipe + .swipe {
+  border-top: 1px solid var(--line-2);
+}
+.swipe .ucard {
+  margin: 0;
+  width: 100%;
+  border-radius: 0;
+}
+.swipe.ucard-wrap {
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+
 /* ---------- IA ---------- */
 .ai {
   border: 1px solid var(--accent);
