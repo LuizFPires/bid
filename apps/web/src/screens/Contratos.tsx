@@ -290,7 +290,7 @@ export function ContratoScreen() {
       <div className="section-title">
         <h2>Vínculo</h2>
       </div>
-      <div className="card" style={{ overflow: 'hidden', marginBottom: 16 }}>
+      <div className="card flush" style={{ overflow: 'hidden', marginBottom: 16 }}>
         <div className="annex">
           <span className="okic">
             <Icon name="check" />
@@ -422,7 +422,7 @@ function Assinaturas({ contratoId }: { contratoId: string }) {
       <div className="section-title">
         <h2>Assinaturas</h2>
       </div>
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card flush" style={{ overflow: 'hidden' }}>
         {PARTES.map((parte) => {
           const a = estado(parte);
           const assinado = Boolean(a?.assinadoEm);

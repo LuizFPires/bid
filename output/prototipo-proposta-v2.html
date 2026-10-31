@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bid · tela da proposta v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0e0f13;--surface:#17181f;--surface-2:#1c1e26;--ink:#f1f2f6;--muted:#9a9dab;--faint:#6e7180;--line:#262833;
+        --accent:#7c8af0;--accent-deep:#aeb7ff;--accent-soft:#1c2150;--ok:#7fc79e;--ok-soft:#172a20;--danger:#f08b8b}
+  body{margin:0;padding:24px;background:#e9eaef;font-family:'Nunito Sans',system-ui,sans-serif;color:#191a22}
+  h1{font-size:18px;margin:0 0 4px}
+  p.sub{margin:0 0 20px;color:#555;font-size:13px;max-width:760px}
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:22px;align-items:start}
+  .cap{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#666;margin:0 0 8px}
+  .note{font-size:12px;color:#555;margin:10px 0 0;line-height:1.5}
+  .phone{background:var(--bg);color:var(--ink);border-radius:26px;padding:0;width:380px;box-sizing:border-box;position:relative;overflow:hidden;min-height:700px}
+  .top{display:flex;align-items:center;gap:11px;padding:14px 18px 10px}
+  .badge{width:32px;height:32px;border-radius:9px;background:#1c2150;display:grid;place-items:center}
+  .badge svg{width:20px;height:20px}
+  .wm{font-weight:800;font-size:21px;letter-spacing:-.4px}
+  .cta{margin-left:auto;display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 13px 0 10px;border-radius:12px;font-size:13px;font-weight:800;background:var(--bg);color:#fff;border:1.5px solid #fff;box-sizing:border-box}
+  .bell{width:38px;height:38px;border-radius:12px;background:var(--surface);color:var(--muted);display:grid;place-items:center}
+  .content{padding:4px 18px 24px}
+  .crumb{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:10px}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  h2{font-size:22px;line-height:1.15;margin:0 0 6px;font-weight:900}
+  .lead{font-size:13px;color:var(--muted);font-weight:600;margin:0}
+  .kebab{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);font-weight:900;flex:0 0 auto}
+  .status{display:flex;align-items:center;gap:10px;margin:14px 0 18px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-deep)}
+  .pill i{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+  .pill.ok{background:var(--ok-soft);color:var(--ok)}
+  .status .val{margin-left:auto;font-size:15px;font-weight:900}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:14px;font-weight:800;font-size:14px;border:1px solid transparent;padding:0 16px}
+  .ghost{background:var(--surface);color:var(--ink);border-color:var(--line)}
+  .prim{background:var(--accent);color:#141b50}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .sec{display:flex;justify-content:space-between;align-items:baseline;margin:24px 0 10px}
+  .sec b{font-size:14px;font-weight:900}
+  .sec span{font-size:12px;color:var(--muted);font-weight:700}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px}
+  .row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line);cursor:pointer}
+  .row:first-child{border-top:0}
+  .row.sel{background:var(--surface-2)}
+  .vn{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;font-weight:900;font-size:13px;flex:0 0 auto}
+  .tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .t1{font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .t1 .tag{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent-deep)}
+  .t2{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+  .rt{text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex:0 0 auto}
+  .rt .v{font-size:14px;font-weight:900;white-space:nowrap}
+  .rt .d{font-size:11.5px;color:var(--danger);font-weight:800}
+  .rt .d.up{color:var(--ok)}
+  .chev{color:var(--faint);font-weight:900;margin-left:2px;flex:0 0 auto}
+  .cmp{padding:18px;margin-top:0}
+  .cmp .sel2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+  .cmp .sel2 div{border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;font-weight:700;background:var(--surface-2)}
+  .k{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  .v2{font-size:13.5px;font-weight:700;line-height:1.45}
+  .blk{padding:14px 0;border-top:1px solid var(--line)}
+  .blk:first-of-type{border-top:0;padding-top:0}
+  .old{color:var(--faint);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+  .delta{color:var(--danger);font-size:12.5px;font-weight:800;margin-top:6px}
+  /* drawer */
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+  .drawer{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:22px 22px 0 0;padding:10px 20px 24px;border-top:1px solid var(--line);max-height:86%;overflow:hidden}
+  .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px}
+  .drawer h3{font-size:16px;margin:0 0 2px;font-weight:900;display:flex;align-items:center;gap:8px}
+  .drawer .sub2{font-size:12.5px;color:var(--muted);font-weight:600;margin:0 0 16px}
+  .drawer .x{position:absolute;right:14px;top:14px;width:36px;height:36px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;color:var(--muted);font-weight:900}
+  .drawer .big{font-size:26px;font-weight:900;margin:0 0 2px;letter-spacing:-.3px}
+  .drawer .file{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:16px;background:var(--surface-2)}
+  .drawer .file .pdf{width:34px;height:34px;border-radius:9px;background:#331b1b;color:#f08b8b;display:grid;place-items:center;font-size:10px;font-weight:900}
+  .drawer .file .dl{margin-left:auto;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink)}
+  .drawer .foot{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;align-items:center}
+  .drawer .hint{font-size:11.5px;color:var(--muted);font-weight:600;text-align:center}
+  .sec .mini{font-size:12.5px;font-weight:800;color:var(--accent-deep);background:var(--accent-soft);padding:6px 10px;border-radius:999px}
+  .trof{font-size:15px;filter:grayscale(1);opacity:.55;margin-left:6px}
+</style>
+</head>
+<body>
+<h1>Tela da proposta — sem resumo no topo; versões abrem o drawer</h1>
+<p class="sub">O topo fica só com nome, opção · categoria · obra e uma linha de status com o valor atual — sem botões grandes. "Nova versão" é um atalho discreto no cabeçalho da seção Versões; "Definir vencedora" vive no drawer da versão atual. Tocar numa versão abre o drawer com todos os detalhes e o arquivo. Escala de respiro 18 / 14 / 6 / 24 aplicada.</p>
+
+<div class="cols">
+  <div>
+    <p class="cap">Tela</p>
+    <div class="phone">
+      <div class="top"><span class="badge"><svg viewBox="0 0 32 32"><rect x="9" y="6" width="13" height="17" rx="2" fill="#fff"/><rect x="12" y="9" width="13" height="17" rx="2" fill="#fff" stroke="#1c2150" stroke-width="1.5"/></svg></span><span class="wm">bid</span><span class="cta">+ Proposta</span><span class="bell">●</span></div>
+      <div class="content">
+        <div class="crumb">Propostas › PANAIR · Opção 2</div>
+        <div class="head">
+          <div><h2>PANAIR ENGENHARIA DE CLIMATIZAÇÃO</h2><p class="lead">Opção 2 (Splitão) · Ar3 · SL Betim</p></div>
+          <span class="kebab">⋮</span>
+        </div>
+        <div class="status"><span class="pill"><i></i>Recebida</span><span class="pill" style="background:var(--surface-2);color:var(--muted)">versão 2 · atual</span><span class="val">R$ 1.427.487,00</span></div>
+
+        <div class="sec"><b>Versões</b><span class="mini">+ Nova versão</span></div>
+        <div class="card">
+          <div class="row">
+            <span class="vn">v2</span>
+            <span class="tt"><span class="t1">Versão 2 <span class="tag">Atual</span></span><span class="t2">30/10/2026</span></span>
+            <span class="rt"><span class="v">R$ 1.427.487,00</span><span class="d">↑ +40,4%</span></span>
+                        <span class="chev">›</span>
+          </div>
+          <div class="row">
+            <span class="vn">v1</span>
+            <span class="tt"><span class="t1">Versão 1</span><span class="t2">30/10/2026</span></span>
+            <span class="rt"><span class="v">R$ 1.016.729,00</span></span>
+            <span class="chev">›</span>
+          </div>
+        </div>
+
+        <div class="sec"><b>Comparar versões</b></div>
+        <div class="card cmp">
+          <div class="sel2"><div>v1 · 30/10/2026</div><div>v2 · 30/10/2026</div></div>
+          <div class="blk"><div class="k">Valor</div><div class="v2"><span class="old">R$ 1.016.729,00</span> &nbsp;→&nbsp; R$ 1.427.487,00</div><div class="delta">↑ +410.758,00 · +40,4%</div></div>
+          <div class="blk"><div class="k">Pagamento</div><div class="v2" style="color:var(--faint)">Equipamentos e materiais (faturamento direto): boleto 28 ddl. Faturamento Panair: 20% na mobilização e 80% mediante medições…</div><div class="v2" style="margin-top:8px">Faturamento direto: boleto 28 ddl. Faturamento Panair: 20% na mobilização e 80% por medições…</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Sem o cartão de resumo e sem os dois botões grandes. "Nova versão" vira um atalho discreto no cabeçalho da seção Versões (também fica no menu ⋮). "Definir vencedora" passa a viver no drawer da versão atual. A linha da versão mostra só: número, nome + Atual, data, valor e variação.</p>
+  </div>
+
+  <div>
+    <p class="cap">Ao tocar em "Versão 2" (atual) — com "Definir vencedora" no drawer</p>
+    <div class="phone">
+      <div class="top"><span class="badge"><svg viewBox="0 0 32 32"><rect x="9" y="6" width="13" height="17" rx="2" fill="#fff"/><rect x="12" y="9" width="13" height="17" rx="2" fill="#fff" stroke="#1c2150" stroke-width="1.5"/></svg></span><span class="wm">bid</span><span class="cta">+ Proposta</span><span class="bell">●</span></div>
+      <div class="content">
+        <div class="crumb">Propostas › PANAIR · Opção 2</div>
+        <div class="head"><div><h2>PANAIR ENGENHARIA DE CLIMATIZAÇÃO</h2><p class="lead">Opção 2 (Splitão) · Ar3 · SL Betim</p></div><span class="kebab">⋮</span></div>
+        <div class="status"><span class="pill"><i></i>Recebida</span><span class="pill" style="background:var(--surface-2);color:var(--muted)">versão 2 · atual</span><span class="val">R$ 1.427.487,00</span></div>
+        <div class="sec"><b>Versões</b><span class="mini">+ Nova versão</span></div>
+        <div class="card">
+          <div class="row sel"><span class="vn">v2</span><span class="tt"><span class="t1">Versão 2 <span class="tag">Atual</span></span><span class="t2">30/10/2026</span></span><span class="rt"><span class="v">R$ 1.427.487,00</span></span><span class="chev">›</span></div>
+          <div class="row"><span class="vn">v1</span><span class="tt"><span class="t1">Versão 1</span><span class="t2">30/10/2026</span></span><span class="rt"><span class="v">R$ 1.016.729,00</span></span><span class="chev">›</span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="drawer">
+        <div class="grab"></div>
+        <span class="x">×</span>
+        <h3>Versão 2 <span class="tag" style="font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent-deep)">Atual</span></h3>
+        <p class="sub2">30/10/2026 · lida pela IA · ↑ +40,4% sobre a v1</p>
+        <p class="big">R$ 1.427.487,00</p>
+        <div class="blk" style="padding-top:14px;margin-top:10px"><div class="k">Prazo</div><div class="v2">—</div></div>
+        <div class="blk"><div class="k">Condição de pagamento</div><div class="v2">Faturamento direto (equipamentos e materiais): boleto bancário 28 ddl. Faturamento Panair: 20% na mobilização e 80% por medições, com prazos a acordar.</div></div>
+        <div class="blk"><div class="k">Garantia</div><div class="v2">12 meses após a entrega da obra em funcionamento (18 meses se a entrada em operação for adiada por motivos alheios à Panair).</div></div>
+        <div class="file"><span class="pdf">PDF</span><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:13px">Arquivo da versão 2</b><span style="font-size:12px;color:var(--muted);font-weight:600">PROPOSTA-JP-1094-26-R05.pdf</span></span><span class="dl">↓</span></div>
+        <div class="foot"><span class="btn prim" style="width:100%;box-sizing:border-box">🏆&nbsp; Definir como vencedora</span><span class="hint">Adjudica a tomada de preços e libera o contrato. Dá para desfazer.</span></div>
+      </div>
+    </div>
+    <p class="note">"Definir como vencedora" só aparece no drawer da versão atual (é ela que vale). Nas versões antigas o rodapé mostra "Revisar a partir desta versão". Puxador, X, fecha ao arrastar para baixo, tocar fora ou Esc.</p>
+  </div>
+</div>
+</body>
+</html>

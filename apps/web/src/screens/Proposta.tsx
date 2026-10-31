@@ -27,6 +27,7 @@ import { urlArquivoProposta, type PropostaDetalhe, type VersaoDetalhe } from '..
 import { LeituraIA } from '../components/LeituraIA';
 import { useToast } from '../app/Toast';
 import { ConfirmDialog } from '../app/ConfirmDialog';
+import { Drawer } from '../app/Drawer';
 
 /** Mostra a variação de um valor entre versões, com seta e sinal (não só cor). */
 function Delta({ v, money }: { v: Variacao; money?: boolean }) {
@@ -138,6 +139,8 @@ export function PropostaScreen() {
   const qc = useQueryClient();
   // Exclusão só depois de confirmar no modal (e ainda com Desfazer no toast).
   const [confirmando, setConfirmando] = useState(false);
+  // Versão aberta no drawer de detalhes (n), ou null.
+  const [versaoAberta, setVersaoAberta] = useState<number | null>(null);
 
   if (isLoading) {
     return (
@@ -172,6 +175,7 @@ export function PropostaScreen() {
     try {
       const anterior = await definir.mutateAsync(data.id);
       const propostaId = data.id;
+      setVersaoAberta(null);
       toast('Definida como vencedora — tomada de preços adjudicada.', {
         actionLabel: 'Desfazer',
         // Raw + invalidação pelo queryClient global: sobrevive à navegação.
@@ -261,51 +265,28 @@ export function PropostaScreen() {
         Ela sai do acervo e da equalização. Você ainda pode desfazer por alguns segundos.
       </ConfirmDialog>
 
-      <div className="card resumo-prop">
-        <div className="resumo-top">
-          <span className={`pill ${label.tom}`}>
-            <span className={`dot ${label.tom}`} />
-            {label.texto}
-          </span>
-          <span className="vbadge">versão {data.versaoAtual}</span>
-        </div>
-        <div className="resumo-valor">
-          {data.valorAtual != null ? formatBRL(data.valorAtual) : '—'}
-        </div>
-        <div className="resumo-grid">
-          <div>
-            <span className="rk">Prazo</span>
-            <span className="rv">{data.prazoAtual != null ? `${data.prazoAtual} dias` : '—'}</span>
-          </div>
-          <div>
-            <span className="rk">Pagamento</span>
-            <span className="rv">{data.condicaoPagamento || '—'}</span>
-          </div>
-          <div>
-            <span className="rk">Garantia</span>
-            <span className="rv">{data.garantia || '—'}</span>
-          </div>
-        </div>
+      {/* Linha de status: o essencial fica à vista sem cartão de resumo. */}
+      <div className="prop-status">
+        <span className={`pill ${label.tom}`}>
+          <span className={`dot ${label.tom}`} />
+          {label.texto}
+        </span>
+        <span className="vcur">versão {data.versaoAtual} · atual</span>
+        <span className="val">{data.valorAtual != null ? formatBRL(data.valorAtual) : '—'}</span>
       </div>
 
       {modo === 'ver' ? (
         <>
-          <div className="acoes-prop">
-            <Button block variant="soft" icon="upload" onClick={() => setModo('nova')}>
-              Nova versão
-            </Button>
-            {data.status !== 'vencedora' && (
-              <Button block icon="trophy" disabled={definir.isPending} onClick={marcarVencedora}>
-                {definir.isPending ? 'Definindo…' : 'Definir vencedora'}
-              </Button>
-            )}
-            {data.status === 'vencedora' && (
-              <Button block icon="tab-contratos" disabled={criarContrato.isPending} onClick={gerarContrato}>
-                {criarContrato.isPending ? 'Gerando…' : 'Gerar contrato'}
-              </Button>
-            )}
-          </div>
-          <Timeline versoes={data.versoes} />
+          <Versoes
+            proposta={data}
+            aberta={versaoAberta}
+            onAbrir={setVersaoAberta}
+            onNovaVersao={() => setModo('nova')}
+            onVencedora={marcarVencedora}
+            definindo={definir.isPending}
+            onContrato={gerarContrato}
+            gerando={criarContrato.isPending}
+          />
           {data.versoes.length >= 2 && <Comparar versoes={data.versoes} />}
         </>
       ) : modo === 'editar' ? (
@@ -325,74 +306,176 @@ export function PropostaScreen() {
   );
 }
 
-/* ---------- Linha do tempo das versões ---------- */
+/* ---------- Versões: lista clicável + drawer de detalhes ---------- */
 
-function Timeline({ versoes }: { versoes: VersaoDetalhe[] }) {
+/** Variação de valor de uma versão em relação à anterior (lista é desc). */
+function variacaoAnterior(versoes: VersaoDetalhe[], i: number): Variacao | null {
+  const v = versoes[i];
+  const ant = versoes[i + 1];
+  return v && ant && v.valor != null && ant.valor != null ? variacao(ant.valor, v.valor) : null;
+}
+
+function Versoes({
+  proposta,
+  aberta,
+  onAbrir,
+  onNovaVersao,
+  onVencedora,
+  definindo,
+  onContrato,
+  gerando,
+}: {
+  proposta: PropostaDetalhe;
+  aberta: number | null;
+  onAbrir: (n: number | null) => void;
+  onNovaVersao: () => void;
+  onVencedora: () => void;
+  definindo: boolean;
+  onContrato: () => void;
+  gerando: boolean;
+}) {
+  const { versoes } = proposta;
+  const idx = aberta === null ? -1 : versoes.findIndex((v) => v.n === aberta);
+  const v = idx >= 0 ? versoes[idx] : undefined;
+  const dv = idx >= 0 ? variacaoAnterior(versoes, idx) : null;
+  const ehAtual = idx === 0;
+
   return (
     <>
       <div className="section-title">
         <h2>Versões</h2>
-        <span className="c">
-          {versoes.length} {versoes.length > 1 ? 'revisões' : 'versão'}
-        </span>
+        <button type="button" className="mini" onClick={onNovaVersao}>
+          <Icon name="plus" />
+          Nova versão
+        </button>
       </div>
-      <div className="timeline">
-        {versoes.map((v, i) => {
-          const atual = i === 0; // lista é desc: a primeira é a mais nova
-          const anterior = versoes[i + 1]; // o próximo é o mais antigo
-          const dv =
-            anterior && v.valor != null && anterior.valor != null ? variacao(anterior.valor, v.valor) : null;
-          const ext = v.arquivo_path ? (v.arquivo_path.split('.').pop() || 'arq').toUpperCase().slice(0, 4) : '';
+      <div className="card rowlist">
+        {versoes.map((ver, i) => {
+          const d = variacaoAnterior(versoes, i);
           return (
-            <div key={v.id} className={`tl ${atual ? 'cur' : ''}`}>
-              <div className="tdot">v{v.n}</div>
-              <div className="tbody">
-                <div className="th">
-                  <b style={{ fontSize: 13.5 }}>Versão {v.n}</b>
-                  {atual && <span className="pill aberta">Atual</span>}
-                  <span className="d">{formatNumeric(v.data)}</span>
-                </div>
-                <div className="vls">
-                  <div className="v">
-                    Valor
-                    <b>
-                      {v.valor != null ? formatBRL(v.valor) : '—'}
-                      {dv && dv.dir !== 'flat' && (
-                        <span className={`delta ${dv.dir === 'up' ? 'up' : 'down'}`} style={{ fontSize: 11, marginLeft: 6 }}>
-                          {dv.dir === 'up' ? '▲' : '▼'}
-                          {formatBRL(Math.abs(dv.abs)).replace('R$', '').trim()}
-                        </span>
-                      )}
-                    </b>
-                  </div>
-                  <div className="v">
-                    Prazo<b>{v.prazo != null ? `${v.prazo} dias` : '—'}</b>
-                  </div>
-                </div>
-                {v.obs && <div className="obs">{v.obs}</div>}
-                {v.arquivo_path && (
-                  <div className="files">
-                    <div className="file">
-                      <span className="fi">{ext}</span>
-                      <span className="fn">
-                        Arquivo da versão {v.n}
-                        <small>{formatNumeric(v.data)}</small>
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon="dl"
-                        aria-label={`Baixar arquivo da versão ${v.n}`}
-                        onClick={() => baixar(v.arquivo_path as string)}
-                      />
-                    </div>
-                  </div>
+            <button
+              key={ver.id}
+              type="button"
+              className="row"
+              onClick={() => onAbrir(ver.n)}
+              aria-label={`Ver detalhes da versão ${ver.n}`}
+            >
+              <span className="vn">v{ver.n}</span>
+              <span className="tt">
+                <span className="t1">
+                  Versão {ver.n}
+                  {i === 0 && <span className="tag">Atual</span>}
+                </span>
+                <span className="t2">
+                  {formatNumeric(ver.data)}
+                  {ver.prazo != null ? ` · ${ver.prazo} dias` : ''}
+                </span>
+              </span>
+              <span className="rt">
+                <span className="v">{ver.valor != null ? formatBRL(ver.valor) : '—'}</span>
+                {d && d.dir !== 'flat' && (
+                  <span className={`d delta ${d.dir === 'up' ? 'up' : 'down'}`}>
+                    {d.dir === 'up' ? '↑ +' : '↓ −'}
+                    {formatNumber(Math.abs(d.pct), 1)}%
+                  </span>
                 )}
-              </div>
-            </div>
+              </span>
+              <span className="chev">
+                <Icon name="chev" />
+              </span>
+            </button>
           );
         })}
       </div>
+
+      <Drawer
+        aberto={v !== undefined}
+        onFechar={() => onAbrir(null)}
+        titulo={
+          <>
+            Versão {v?.n}
+            {ehAtual && <span className="tag" style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 800, padding: '2px 7px', borderRadius: 999, background: 'var(--accent-soft)', color: 'var(--accent-deep)', verticalAlign: 2 }}>Atual</span>}
+          </>
+        }
+        subtitulo={
+          v && (
+            <>
+              {formatNumeric(v.data)}
+              {dv && dv.dir !== 'flat' && (
+                <>
+                  {' · '}
+                  <span className={`delta ${dv.dir === 'up' ? 'up' : 'down'}`}>
+                    {dv.dir === 'up' ? '↑ +' : '↓ −'}
+                    {formatNumber(Math.abs(dv.pct), 1)}% sobre a v{versoes[idx + 1]?.n}
+                  </span>
+                </>
+              )}
+            </>
+          )
+        }
+        rodape={
+          ehAtual ? (
+            proposta.status !== 'vencedora' ? (
+              <>
+                <Button block icon="trophy" disabled={definindo} onClick={onVencedora}>
+                  {definindo ? 'Definindo…' : 'Definir como vencedora'}
+                </Button>
+                <span className="hint">Adjudica a tomada de preços e libera o contrato. Dá para desfazer.</span>
+              </>
+            ) : (
+              <Button block icon="tab-contratos" disabled={gerando} onClick={onContrato}>
+                {gerando ? 'Gerando…' : 'Gerar contrato'}
+              </Button>
+            )
+          ) : (
+            <span className="hint">Versão anterior — a que vale é a atual. Para revisar, use “Nova versão”.</span>
+          )
+        }
+      >
+        {v && (
+          <>
+            <p className="big">{v.valor != null ? formatBRL(v.valor) : '—'}</p>
+            <div className="blk">
+              <span className="k">Prazo</span>
+              <div className="v">{v.prazo != null ? `${v.prazo} dias` : '—'}</div>
+            </div>
+            <div className="blk">
+              <span className="k">Condição de pagamento</span>
+              <div className="v">{v.condicao_pagamento || '—'}</div>
+            </div>
+            <div className="blk">
+              <span className="k">Garantia</span>
+              <div className="v">{v.garantia || '—'}</div>
+            </div>
+            {v.obs && (
+              <div className="blk">
+                <span className="k">Observações</span>
+                <div className="v">{v.obs}</div>
+              </div>
+            )}
+            {v.arquivo_path && (
+              <div className="files">
+                <div className="file">
+                  <span className="fi">
+                    {(v.arquivo_path.split('.').pop() || 'arq').toUpperCase().slice(0, 4)}
+                  </span>
+                  <span className="fn">
+                    Arquivo da versão {v.n}
+                    <small>{formatNumeric(v.data)}</small>
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon="dl"
+                    aria-label={`Baixar arquivo da versão ${v.n}`}
+                    onClick={() => baixar(v.arquivo_path as string)}
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </Drawer>
     </>
   );
 }
@@ -414,7 +497,7 @@ function Comparar({ versoes }: { versoes: VersaoDetalhe[] }) {
         <h2>Comparar versões</h2>
       </div>
       <div className="card">
-        <div className="pair" style={{ marginBottom: 12 }}>
+        <div className="pair" style={{ marginBottom: 18 }}>
           <div className="field" style={{ margin: 0 }}>
             <label>De (base)</label>
             <select value={aN} onChange={(e) => setAN(Number(e.target.value))}>
@@ -438,12 +521,12 @@ function Comparar({ versoes }: { versoes: VersaoDetalhe[] }) {
         </div>
 
         {a && b && aN !== bN ? (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
+          <div>
             <LinhaDiff rotulo="Valor" de={a.valor != null ? formatBRL(a.valor) : '—'} para={b.valor != null ? formatBRL(b.valor) : '—'} delta={dv ? <Delta v={dv} money /> : null} />
             <LinhaDiff rotulo="Prazo" de={a.prazo != null ? `${a.prazo} dias` : '—'} para={b.prazo != null ? `${b.prazo} dias` : '—'} delta={dp ? <Delta v={dp} /> : null} />
             <LinhaDiff rotulo="Pagamento" de={a.condicao_pagamento ?? '—'} para={b.condicao_pagamento ?? '—'} />
             <LinhaDiff rotulo="Garantia" de={a.garantia ?? '—'} para={b.garantia ?? '—'} />
-          </ul>
+          </div>
         ) : (
           <p className="lead" style={{ margin: 0 }}>
             Escolha duas versões diferentes para comparar.
@@ -466,22 +549,27 @@ function LinhaDiff({
   delta?: React.ReactNode;
 }) {
   const mudou = de !== para;
+  // Textos curtos: "antigo → novo" na mesma linha; longos: antigo riscado e o novo abaixo.
+  const curto = de.length + para.length <= 44;
   return (
-    <li>
-      <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 3 }}>
-        {rotulo}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontWeight: 700, fontSize: 14 }}>
-        <span style={{ color: mudou ? 'var(--faint)' : 'var(--ink)' }}>{de}</span>
-        {mudou && (
-          <>
-            <Icon name="arrow" style={{ width: 14, height: 14, color: 'var(--faint)' }} />
-            <span>{para}</span>
-          </>
-        )}
-        {delta && <span style={{ marginLeft: 'auto' }}>{delta}</span>}
-      </div>
-    </li>
+    <div className="blk">
+      <span className="k">{rotulo}</span>
+      {!mudou ? (
+        <div className="v">{de}</div>
+      ) : curto ? (
+        <div className="v" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span className="old">{de}</span>
+          <Icon name="arrow" style={{ width: 14, height: 14, color: 'var(--faint)' }} />
+          <span>{para}</span>
+        </div>
+      ) : (
+        <>
+          <div className="v old">{de}</div>
+          <div className="v">{para}</div>
+        </>
+      )}
+      {delta && <div className="dlt">{delta}</div>}
+    </div>
   );
 }
 

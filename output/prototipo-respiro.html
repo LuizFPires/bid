@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bid · respiro e detalhes</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0e0f13;--surface:#17181f;--surface-2:#1c1e26;--ink:#f1f2f6;--muted:#9a9dab;--faint:#6e7180;--line:#262833;
+        --accent:#7c8af0;--accent-deep:#aeb7ff;--accent-soft:#1c2150;--ok:#7fc79e;--ok-soft:#172a20;--danger:#f08b8b}
+  body{margin:0;padding:24px;background:#e9eaef;font-family:'Nunito Sans',system-ui,sans-serif;color:#191a22}
+  h1{font-size:18px;margin:0 0 4px}
+  p.sub{margin:0 0 20px;color:#555;font-size:13px;max-width:720px}
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;align-items:start}
+  .cap{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#666;margin:0 0 8px}
+  .phone{background:var(--bg);color:var(--ink);border-radius:26px;padding:18px 18px 22px;max-width:380px;box-sizing:border-box;position:relative;overflow:hidden}
+  .crumb{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px}
+  h2{font-size:22px;line-height:1.15;margin:0 0 4px;font-weight:900}
+  .lead{font-size:13px;color:var(--muted);font-weight:600;margin:0 0 16px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent-deep)}
+  .pill i{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+  .vb{font-size:11px;font-weight:800;color:var(--muted);background:var(--surface-2);padding:4px 8px;border-radius:8px}
+  .k{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .v{font-size:13.5px;font-weight:700;line-height:1.45}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:14px;font-weight:800;font-size:14px;border:1px solid transparent;padding:0 16px}
+  .ghost{background:var(--surface);color:var(--ink);border-color:var(--line)}
+  .prim{background:var(--accent);color:#141b50}
+  .soft{background:var(--accent-soft);color:var(--accent-deep)}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .note{font-size:12px;color:#555;margin:10px 0 0;line-height:1.5}
+
+  /* ANTES */
+  .a .card{padding:12px}
+  .a .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .a .big{font-size:26px;font-weight:900;margin:0 0 8px}
+  .a .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .a .g3 .v{font-size:12px}
+  .a .cmp{margin-top:12px;padding:10px}
+  .a .cmp .k{margin-top:8px}
+  .a .cmp .v{font-size:12.5px}
+
+  /* DEPOIS — escala de respiro: 18 interno · 14 entre blocos · 6 rótulo→valor · 24 entre seções */
+  .b .card{padding:18px}
+  .b .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .b .big{font-size:28px;font-weight:900;margin:0;letter-spacing:-.3px}
+  .b .meta{display:flex;gap:18px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .b .meta .k{margin-bottom:6px}
+  .b .acoes{margin-top:18px}
+  .b .sec{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:24px 0 10px}
+  .b .cmp{padding:18px}
+  .b .cmp .sel{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+  .b .cmp .sel div{border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;font-weight:700;background:var(--surface-2)}
+  .b .cmp .blk{padding:14px 0;border-top:1px solid var(--line)}
+  .b .cmp .blk:first-of-type{border-top:0;padding-top:0}
+  .b .cmp .blk .k{margin-bottom:6px}
+  .b .cmp .old{color:var(--faint);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+  .b .cmp .delta{color:var(--danger);font-size:12.5px;font-weight:800;margin-top:6px}
+
+  /* Drawer */
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+  .drawer{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:22px 22px 0 0;padding:10px 20px 24px;border-top:1px solid var(--line)}
+  .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px}
+  .drawer h3{font-size:16px;margin:0 0 2px;font-weight:900}
+  .drawer .sub2{font-size:12.5px;color:var(--muted);font-weight:600;margin:0 0 18px}
+  .drawer .blk{padding:14px 0;border-top:1px solid var(--line)}
+  .drawer .blk .k{margin-bottom:6px}
+  .drawer .x{position:absolute;right:14px;top:14px;width:36px;height:36px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;color:var(--muted);font-weight:900}
+</style>
+</head>
+<body>
+<h1>Tela da proposta — respiro e detalhes</h1>
+<p class="sub">Esquerda: como está. Direita: resumo compacto (só o essencial), detalhes num drawer de baixo para cima e uma escala única de respiro — 18 px dentro dos cartões, 14 px entre blocos, 6 px entre rótulo e valor, 24 px entre seções. Essa escala vale para todo o app (listas, formulários, equalização, contratos).</p>
+
+<div class="cols">
+  <div>
+    <p class="cap">Antes</p>
+    <div class="phone a">
+      <div class="crumb">Propostas › PANAIR ENGENHARIA… · Opção 2 (Splitão)</div>
+      <h2>PANAIR ENGENHARIA DE CLIMATIZAÇÃO</h2>
+      <p class="lead">Opção 2 (Splitão) · Ar3 · SL Betim</p>
+      <div class="card">
+        <div class="top"><span class="pill"><i></i>Recebida</span><span class="vb">versão 1</span></div>
+        <p class="big">R$ 980.462,00</p>
+        <div class="g3">
+          <div><div class="k">Prazo</div><div class="v">—</div></div>
+          <div><div class="k">Pagamento</div><div class="v">Equipamentos e materiais (faturamento direto): boleto bancário 28 ddl. Faturamento Panair: 20% na mobilização e 80% mediante medições, conforme prazos a acordar.</div></div>
+          <div><div class="k">Garantia</div><div class="v">12 meses após a entrega da obra em funcionamento (18 meses se a entrada em operação for adiada por motivos alheios à Panair, com comunicação formal)</div></div>
+        </div>
+      </div>
+      <div class="pair" style="margin-top:12px"><span class="btn ghost">Nova versão</span><span class="btn prim">Definir vencedora</span></div>
+      <div class="card cmp">
+        <div class="k">Valor</div>
+        <div class="v"><span style="color:var(--faint)">R$ 1.016.729,00</span> → R$ 1.427.487,00</div>
+        <div class="k">Pagamento</div>
+        <div class="v" style="color:var(--faint)">Equipamentos e materiais (faturamento direto): boleto bancário 28 ddl. Faturamento Panair: 20% na mobilização e 80% mediante medições…</div>
+        <div class="v">→ Faturamento direto (equipamentos e materiais): boleto bancário 28 ddl. Faturamento Panair: 20% na mobilização e 80% por medições…</div>
+      </div>
+    </div>
+    <p class="note">Padding de 10–12 px, três colunas de texto corrido, rótulos encostados nos valores e nenhuma separação entre blocos.</p>
+  </div>
+
+  <div>
+    <p class="cap">Depois</p>
+    <div class="phone b">
+      <div class="crumb">Propostas › PANAIR · Opção 2</div>
+      <h2>PANAIR ENGENHARIA DE CLIMATIZAÇÃO</h2>
+      <p class="lead">Opção 2 (Splitão) · Ar3 · SL Betim</p>
+      <div class="card">
+        <div class="top"><span class="pill"><i></i>Recebida</span><span class="vb">versão 1</span></div>
+        <p class="big">R$ 980.462,00</p>
+        <div class="meta">
+          <div><div class="k">Prazo</div><div class="v">—</div></div>
+          <div><div class="k">Pagamento</div><div class="v">20% + 80% por medição</div></div>
+          <div><div class="k">Garantia</div><div class="v">12 meses</div></div>
+        </div>
+        <div class="acoes"><span class="btn soft" style="width:100%;box-sizing:border-box">Ver detalhes da proposta</span></div>
+      </div>
+      <div class="pair" style="margin-top:14px"><span class="btn ghost">Nova versão</span><span class="btn prim">Definir vencedora</span></div>
+
+      <div class="sec">Comparar versões</div>
+      <div class="card cmp">
+        <div class="sel"><div>v1 · 30/10/2026</div><div>v2 · 30/10/2026</div></div>
+        <div class="blk">
+          <div class="k">Valor</div>
+          <div class="v"><span class="old">R$ 1.016.729,00</span> &nbsp;→&nbsp; R$ 1.427.487,00</div>
+          <div class="delta">↑ +410.758,00 · +40,4%</div>
+        </div>
+        <div class="blk">
+          <div class="k">Pagamento</div>
+          <div class="v" style="color:var(--faint)">Equipamentos e materiais (faturamento direto): boleto bancário 28 ddl. Faturamento Panair: 20% na mobilização e 80% mediante medições…</div>
+          <div class="v" style="margin-top:8px">Faturamento direto (equipamentos e materiais): boleto bancário 28 ddl. Faturamento Panair: 20% na mobilização e 80% por medições…</div>
+        </div>
+        <div class="blk">
+          <div class="k">Garantia</div>
+          <div class="v">12 meses após a entrega da obra em funcionamento (18 meses se a entrada em operação for adiada…)</div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Resumo: só status, valor, versão e um resumo de uma linha por condição (a IA já gera o texto curto). Blocos separados por linha fina, 14 px acima e abaixo; rótulo 6 px acima do valor; 18 px de margem interna.</p>
+  </div>
+
+  <div>
+    <p class="cap">Drawer "Ver detalhes" (de baixo para cima)</p>
+    <div class="phone b" style="min-height:560px">
+      <div class="crumb">Propostas › PANAIR · Opção 2</div>
+      <h2>PANAIR ENGENHARIA DE CLIMATIZAÇÃO</h2>
+      <p class="lead">Opção 2 (Splitão) · Ar3 · SL Betim</p>
+      <div class="card"><div class="top"><span class="pill"><i></i>Recebida</span><span class="vb">versão 1</span></div><p class="big">R$ 980.462,00</p></div>
+      <div class="scrim"></div>
+      <div class="drawer">
+        <div class="grab"></div>
+        <span class="x">×</span>
+        <h3>Detalhes da proposta</h3>
+        <p class="sub2">Versão 1 · 30/10/2026</p>
+        <div class="blk" style="border-top:0;padding-top:0"><div class="k">Prazo</div><div class="v">—</div></div>
+        <div class="blk"><div class="k">Condição de pagamento</div><div class="v">Equipamentos e materiais (faturamento direto): boleto bancário 28 ddl. Faturamento Panair: 20% na mobilização e 80% mediante medições, conforme prazos a acordar.</div></div>
+        <div class="blk"><div class="k">Garantia</div><div class="v">12 meses após a entrega da obra em funcionamento (18 meses se a entrada em operação for adiada por motivos alheios à Panair, com comunicação formal).</div></div>
+        <div class="blk"><div class="k">Observações</div><div class="v">Projeto (R$ 10.000) + climatização com VRF Midea para salas e splitões Carrier para a loja. Há tributos incluídos, com ICMS do estado de origem.</div></div>
+      </div>
+    </div>
+    <p class="note">Abre ao tocar em "Ver detalhes" (ou no cartão). Puxador no topo, X à direita, fecha ao arrastar para baixo, tocar fora ou Esc. Mesmo componente serve para detalhes de contrato e de equalização.</p>
+  </div>
+</div>
+</body>
+</html>
