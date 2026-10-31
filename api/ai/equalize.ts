@@ -80,16 +80,16 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     .from('proposta_versoes')
     .select('proposta_id, n, dados_extraidos, arquivo_path')
     .in('proposta_id', ids);
-  const ultimaPorProposta = new Map<string, { n: number; itens: unknown; arquivo_path: string | null }>();
+  const ultimaPorProposta = new Map<string, { n: number; itens: unknown; alertas: unknown; arquivo_path: string | null }>();
   for (const v of (versoes ?? []) as {
     proposta_id: string;
     n: number;
-    dados_extraidos: { itens?: unknown } | null;
+    dados_extraidos: { itens?: unknown; alertas?: unknown } | null;
     arquivo_path: string | null;
   }[]) {
     const atual = ultimaPorProposta.get(v.proposta_id);
     if (!atual || v.n > atual.n) {
-      ultimaPorProposta.set(v.proposta_id, { n: v.n, itens: v.dados_extraidos?.itens ?? [], arquivo_path: v.arquivo_path });
+      ultimaPorProposta.set(v.proposta_id, { n: v.n, itens: v.dados_extraidos?.itens ?? [], alertas: v.dados_extraidos?.alertas ?? [], arquivo_path: v.arquivo_path });
     }
   }
 
@@ -112,6 +112,7 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     condicao_pagamento: p.condicao_pagamento,
     garantia: p.garantia,
     itens: ultimaPorProposta.get(p.id)?.itens ?? [],
+    alertas: ultimaPorProposta.get(p.id)?.alertas ?? [],
   }));
 
   // PDFs originais (última versão), lidos no contexto do usuário (RLS do

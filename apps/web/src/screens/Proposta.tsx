@@ -33,6 +33,7 @@ import {
 } from '../data/mutations';
 import { urlArquivoProposta, type PropostaDetalhe, type VersaoDetalhe } from '../data/queries';
 import { LeituraIA } from '../components/LeituraIA';
+import { AlertasLeitura } from '../components/AlertasLeitura';
 import { SelectCategoria } from '../components/SelectCategoria';
 import { useToast } from '../app/Toast';
 import { ConfirmDialog } from '../app/ConfirmDialog';
@@ -462,6 +463,12 @@ function Versoes({
                 <div className="v">{v.obs}</div>
               </div>
             )}
+            {(v.dados_extraidos?.alertas?.length ?? 0) > 0 && (
+              <div className="blk">
+                <span className="k">Alertas da leitura por IA</span>
+                <AlertasLeitura alertas={v.dados_extraidos!.alertas!} compacto />
+              </div>
+            )}
             {v.arquivo_path && (
               <div className="files">
                 <div className="file">
@@ -749,6 +756,7 @@ function NovaVersao({
   const [obs, setObs] = useState('');
   // Itens extraídos (não editáveis aqui, mas preservados em dados_extraidos).
   const [itens, setItens] = useState<PropostaExtraida['itens']>([]);
+  const [alertas, setAlertas] = useState<PropostaExtraida['alertas']>([]);
 
   const ehPdf = !!file && arquivoLegivelPelaIA(file);
 
@@ -759,6 +767,7 @@ function NovaVersao({
     setGarantia(d.garantia ?? '');
     setObs(d.observacoes ?? '');
     setItens(d.itens);
+    setAlertas(d.alertas);
   }
 
   async function anexar(e: FormEvent) {
@@ -800,6 +809,7 @@ function NovaVersao({
       garantia,
       observacoes: obs,
       itens,
+      alertas,
     });
     try {
       await criar.mutateAsync({ propostaId, dados: limpos, arquivoPath });
@@ -819,6 +829,7 @@ function NovaVersao({
         <div className="section-title">
           <h2>Conferir a nova versão</h2>
         </div>
+        <AlertasLeitura alertas={alertas} />
         <div className="pair">
           <div className="field">
             <label>Valor (R$)</label>

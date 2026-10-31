@@ -86,6 +86,8 @@ export interface PropostaParaIA {
   condicao_pagamento: string | null;
   garantia: string | null;
   itens: unknown;
+  /** Alertas levantados na leitura (texto oculto, inconsistências). */
+  alertas?: unknown;
 }
 
 /** PDF original de uma proposta (última versão), para a IA ler por inteiro. */

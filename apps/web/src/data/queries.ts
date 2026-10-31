@@ -3,6 +3,7 @@ import {
   nomeProposta,
   type AnaliseEqualizacao,
   type CategoriaUso,
+  type PropostaExtraida,
   type CertameStatus,
   type PropostaAcervo,
   type PropostaStatus,
@@ -266,6 +267,8 @@ export interface VersaoDetalhe {
   garantia: string | null;
   obs: string | null;
   arquivo_path: string | null;
+  /** Saída da IA gravada na versão (itens, alertas…). */
+  dados_extraidos: Partial<PropostaExtraida> | null;
 }
 
 export interface PropostaDetalhe {
@@ -316,7 +319,7 @@ export async function fetchProposta(id: string): Promise<PropostaDetalhe | null>
       .maybeSingle(),
     db()
       .from('proposta_versoes')
-      .select('id, n, data, valor, prazo, condicao_pagamento, garantia, obs, arquivo_path')
+      .select('id, n, data, valor, prazo, condicao_pagamento, garantia, obs, arquivo_path, dados_extraidos')
       .eq('proposta_id', id)
       .order('n', { ascending: false }),
   ]);

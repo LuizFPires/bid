@@ -13,6 +13,7 @@ import { useCriarProposta } from '../data/hooks';
 import { arquivoLegivelPelaIA, extrairProposta, uploadPropostaArquivo } from '../data/mutations';
 
 import { LeituraIA } from '../components/LeituraIA';
+import { AlertasLeitura } from '../components/AlertasLeitura';
 
 type Fase = 'form' | 'lendo' | 'conferir';
 
@@ -24,6 +25,7 @@ const VAZIO: PropostaExtraida = {
   garantia: null,
   itens: [],
   opcoes: [],
+  alertas: [],
   observacoes: null,
 };
 
@@ -86,6 +88,8 @@ export function NovaPropostaScreen() {
   // Cada opção marcada vira UMA proposta no acervo (mesmo fornecedor e arquivo).
   const [opcoes, setOpcoes] = useState<OpcaoExtraida[]>([]);
   const [opcoesMarcadas, setOpcoesMarcadas] = useState<boolean[]>([]);
+  // Alertas da leitura (texto oculto, inconsistências): mostrados e gravados com a proposta.
+  const [alertas, setAlertas] = useState<PropostaExtraida['alertas']>([]);
 
   const ehPdf = !!file && arquivoLegivelPelaIA(file);
   const podeProsseguir = Boolean(obraId && categoria.trim() && file);
@@ -100,6 +104,7 @@ export function NovaPropostaScreen() {
     setItens(d.itens);
     setOpcoes(d.opcoes);
     setOpcoesMarcadas(d.opcoes.map(() => true));
+    setAlertas(d.alertas);
   }
 
   /** Volta ao fluxo de preço único (o valor fica com a opção escolhida ou a 1ª). */
@@ -165,6 +170,7 @@ export function NovaPropostaScreen() {
       garantia,
       observacoes: obs,
       itens,
+      alertas,
     });
     const base = { ...limpos, fornecedor: fornecedor.trim() };
     const escolhidas = opcoes.filter((_, i) => opcoesMarcadas[i]);
@@ -302,6 +308,7 @@ export function NovaPropostaScreen() {
           </div>
 
           <form onSubmit={salvar}>
+            <AlertasLeitura alertas={alertas} />
             {comOpcoes && (
               <div className="card opcoes" role="group" aria-label="Opções de preço">
                 <div className="opcoes-head">

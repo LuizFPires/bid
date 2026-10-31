@@ -73,6 +73,22 @@ describe('normalizarExtracao', () => {
     expect(r.valor).toBe(1016729);
   });
 
+  it('mantém os alertas da leitura (texto oculto, inconsistência) e descarta lixo', () => {
+    const r = normalizarExtracao({
+      valor: 330000,
+      alertas: [
+        { tipo: 'texto_oculto', titulo: 'Texto oculto de versões anteriores', texto: 'R$ 255.000 e R$ 315.000 no texto; visível R$ 330.000' },
+        { tipo: 'xpto', titulo: 'Validade', texto: '5 dias' }, // tipo desconhecido → outro
+        { tipo: 'outro' }, // sem título nem texto → fora
+        'lixo',
+      ],
+    });
+    expect(r.alertas).toHaveLength(2);
+    expect(r.alertas[0]?.tipo).toBe('texto_oculto');
+    expect(r.alertas[1]).toEqual({ tipo: 'outro', titulo: 'Validade', texto: '5 dias' });
+    expect(normalizarExtracao({}).alertas).toEqual([]);
+  });
+
   it('uma única "opção" não é alternativa: lista vazia', () => {
     const r = normalizarExtracao({ valor: 100, opcoes: [{ rotulo: 'Única', valor: 100, descricao: null }] });
     expect(r.opcoes).toEqual([]);
@@ -107,5 +123,6 @@ describe('schema da tool', () => {
     expect(EXTRACAO_INPUT_SCHEMA.required).toContain('valor');
     expect(EXTRACAO_INPUT_SCHEMA.required).toContain('itens');
     expect(EXTRACAO_INPUT_SCHEMA.required).toContain('opcoes');
+    expect(EXTRACAO_INPUT_SCHEMA.required).toContain('alertas');
   });
 });

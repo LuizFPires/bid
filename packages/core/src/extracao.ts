@@ -27,6 +27,20 @@ export interface OpcaoExtraida {
   descricao: string | null;
 }
 
+/** Tipo do alerta que a IA levanta ao ler o documento. */
+export type TipoAlerta = 'texto_oculto' | 'inconsistencia' | 'validade' | 'outro';
+
+/**
+ * Alerta da leitura: algo que o usuário PRECISA ver (texto oculto de versão
+ * anterior, soma que não fecha, destinatário de outra obra, validade curta…).
+ * Fica gravado com a proposta e é mostrado na conferência e no detalhe.
+ */
+export interface AlertaExtraido {
+  tipo: TipoAlerta;
+  titulo: string;
+  texto: string;
+}
+
 /** Dados que a IA extrai do arquivo da proposta (antes da conferência). */
 export interface PropostaExtraida {
   fornecedor: string | null;
@@ -38,6 +52,8 @@ export interface PropostaExtraida {
   itens: ItemExtraido[];
   /** Alternativas de preço do documento; vazia quando há um único preço. */
   opcoes: OpcaoExtraida[];
+  /** Alertas da leitura (texto oculto, inconsistências…); vazia se nada chamou atenção. */
+  alertas: AlertaExtraido[];
   observacoes: string | null;
 }
 
@@ -87,9 +103,23 @@ export const EXTRACAO_INPUT_SCHEMA = {
         required: ['rotulo', 'valor', 'descricao'],
       },
     },
+    alertas: {
+      type: 'array',
+      description:
+        'OBRIGATÓRIO quando houver: texto oculto/versões sobrepostas (com os valores encontrados), somas que não fecham, destinatário/obra de outro cliente, validade curta, condições ausentes. Vazio se nada chamou atenção.',
+      items: {
+        type: 'object',
+        properties: {
+          tipo: { type: 'string', enum: ['texto_oculto', 'inconsistencia', 'validade', 'outro'] },
+          titulo: { type: 'string', description: 'Curto (ex.: "Texto oculto de versões anteriores").' },
+          texto: { type: 'string', description: 'O que foi encontrado, com números (ex.: "R$ 255.000 e R$ 315.000 no texto; visível R$ 330.000").' },
+        },
+        required: ['tipo', 'titulo', 'texto'],
+      },
+    },
     observacoes: { type: ['string', 'null'], description: 'Observações relevantes, exclusões ou ressalvas.' },
   },
-  required: ['fornecedor', 'valor', 'prazo_dias', 'condicao_pagamento', 'garantia', 'itens', 'opcoes', 'observacoes'],
+  required: ['fornecedor', 'valor', 'prazo_dias', 'condicao_pagamento', 'garantia', 'itens', 'opcoes', 'alertas', 'observacoes'],
 } as const;
 
 export const EXTRACAO_TOOL_NAME = 'registrar_proposta';
@@ -119,8 +149,12 @@ export const EXTRACAO_PROMPT = [
   '  com R$ 255.000, R$ 315.000 e R$ 330.000, sem rótulo de opção). Isso NÃO é',
   '  opção. Vale o que está VISÍVEL na página renderizada e, em dúvida, a ÚLTIMA',
   '  ocorrência / a frase "Valor total da proposta: R$ X". Use esse X em valor,',
-  '  deixe opcoes vazia e registre em observacoes: "O arquivo contém texto oculto',
-  '  de versão anterior (R$ …); considerado o valor visível R$ X".',
+  '  deixe opcoes vazia e REGISTRE UM ALERTA tipo "texto_oculto" listando os',
+  '  valores escondidos — é informação valiosa para a negociação; nunca omita.',
+  '- alertas: além de texto oculto, registre inconsistências (soma que não bate',
+  '  com o total, destinatário ou obra de outro cliente, datas incoerentes),',
+  '  validade muito curta e condições comerciais ausentes. Títulos curtos, textos',
+  '  com os números encontrados. Lista vazia só se nada chamou atenção.',
   '',
   'Responda SOMENTE chamando a ferramenta registrar_proposta com os dados. Não',
   'escreva texto fora da ferramenta.',
@@ -129,6 +163,7 @@ export const EXTRACAO_PROMPT = [
 const MAX_TEXTO = 2000;
 const MAX_ITENS = 200;
 const MAX_OPCOES = 10;
+const MAX_ALERTAS = 10;
 
 function texto(v: unknown): string | null {
   if (typeof v !== 'string') return null;
@@ -177,6 +212,17 @@ function opcao(v: unknown): OpcaoExtraida | null {
   return { rotulo, valor: numero(o.valor), descricao: texto(o.descricao) };
 }
 
+function alerta(v: unknown): AlertaExtraido | null {
+  if (typeof v !== 'object' || v === null) return null;
+  const o = v as Record<string, unknown>;
+  const titulo = texto(o.titulo);
+  const corpo = texto(o.texto);
+  if (!titulo && !corpo) return null;
+  const tipo: TipoAlerta =
+    o.tipo === 'texto_oculto' || o.tipo === 'inconsistencia' || o.tipo === 'validade' ? o.tipo : 'outro';
+  return { tipo, titulo: titulo ?? 'Atenção', texto: corpo ?? '' };
+}
+
 /**
  * Normaliza a saída (crua e não confiável) da IA para `PropostaExtraida`.
  * Nunca lança: entrada inválida vira campos null / lista vazia.
@@ -195,6 +241,10 @@ export function normalizarExtracao(raw: unknown): PropostaExtraida {
     .map(opcao)
     .filter((x): x is OpcaoExtraida => x !== null);
   if (opcoes.length < 2) opcoes = [];
+  const alertas = (Array.isArray(o.alertas) ? o.alertas : [])
+    .slice(0, MAX_ALERTAS)
+    .map(alerta)
+    .filter((x): x is AlertaExtraido => x !== null);
   return {
     fornecedor: texto(o.fornecedor),
     valor: numero(o.valor) ?? opcoes[0]?.valor ?? null,
@@ -203,6 +253,7 @@ export function normalizarExtracao(raw: unknown): PropostaExtraida {
     garantia: texto(o.garantia),
     itens,
     opcoes,
+    alertas,
     observacoes: texto(o.observacoes),
   };
 }
