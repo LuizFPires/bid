@@ -2476,8 +2476,10 @@ table.eq .nota-eq.warn {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  box-sizing: border-box; /* sem isso o padding empurrava o valor para fora do cartão */
   min-height: 44px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--bg);
@@ -2510,9 +2512,18 @@ table.eq .nota-eq.warn {
 }
 .opcao .v {
   flex: 0 0 auto;
+  margin-left: auto;
+  padding-left: 8px;
   font-size: 13px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.opcao .t2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .card.opcoes .link {
   display: block;
