@@ -348,10 +348,12 @@ export async function gerarPdfContrato(contratoId: string): Promise<void> {
 }
 
 /**
- * Baixa o relatório de equalização em PDF (gerado na hora pelo servidor).
- * Abre o compartilhar/salvar do aparelho via <a download>.
+ * Gera o relatório de equalização em PDF no servidor e devolve o arquivo.
+ * Quem chama decide como entregar (ver `entregarArquivo`): no iPhone instalado
+ * como PWA, compartilhar exige um toque do usuário DEPOIS do download — por
+ * isso a tela mostra "Relatório pronto · Compartilhar" em vez de disparar direto.
  */
-export async function baixarRelatorioEqualizacao(equalizacaoId: string): Promise<void> {
+export async function gerarRelatorioEqualizacaoPdf(equalizacaoId: string): Promise<File> {
   const { data: sessionData } = await db().auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) throw new Error('Sessão inválida.');
@@ -362,28 +364,38 @@ export async function baixarRelatorioEqualizacao(equalizacaoId: string): Promise
   });
   if (!resp.ok) {
     const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
-    throw new Error(corpo?.erro ?? 'Falha ao gerar o PDF.');
+    throw new Error(corpo?.erro ?? `Falha ao gerar o PDF (HTTP ${resp.status}).`);
   }
   const blob = await resp.blob();
   const nome = /filename="([^"]+)"/.exec(resp.headers.get('Content-Disposition') ?? '')?.[1] ?? 'equalizacao.pdf';
-  const arquivo = new File([blob], nome, { type: 'application/pdf' });
+  return new File([blob], nome, { type: 'application/pdf' });
+}
 
-  // iPhone (PWA instalado) ignora <a download> em silêncio: a folha de
-  // compartilhar é o caminho que funciona lá ("Salvar em Arquivos", WhatsApp…).
+/** O aparelho sabe compartilhar arquivos (iPhone/Android)? */
+export function podeCompartilharArquivo(arquivo: File): boolean {
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-  if (typeof nav.share === 'function' && nav.canShare?.({ files: [arquivo] })) {
+  return typeof nav.share === 'function' && !!nav.canShare?.({ files: [arquivo] });
+}
+
+/**
+ * Entrega o arquivo ao usuário. DEVE ser chamada dentro de um toque/clique:
+ * folha de compartilhar onde existe (iPhone PWA só aceita assim); senão,
+ * download por link.
+ */
+export async function entregarArquivo(arquivo: File): Promise<void> {
+  if (podeCompartilharArquivo(arquivo)) {
     try {
-      await nav.share({ files: [arquivo], title: nome });
+      await navigator.share({ files: [arquivo], title: arquivo.name });
       return;
     } catch (e) {
-      if ((e as { name?: string }).name === 'AbortError') return; // usuário cancelou
+      if ((e as { name?: string }).name === 'AbortError') return;
       // cai para o download comum
     }
   }
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(arquivo);
   const a = document.createElement('a');
   a.href = url;
-  a.download = nome;
+  a.download = arquivo.name;
   a.rel = 'noopener';
   a.target = '_blank';
   document.body.appendChild(a);

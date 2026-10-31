@@ -28,7 +28,13 @@ import {
   usePropostasPorCategoria,
   useSugestoes,
 } from '../data/hooks';
-import { baixarRelatorioEqualizacao, desfazerVencedora, restaurarEqualizacao } from '../data/mutations';
+import {
+  desfazerVencedora,
+  entregarArquivo,
+  gerarRelatorioEqualizacaoPdf,
+  podeCompartilharArquivo,
+  restaurarEqualizacao,
+} from '../data/mutations';
 import { useToast } from '../app/Toast';
 import { Kebab } from '../app/Kebab';
 import { SwipeRow } from '../components/SwipeRow';
@@ -471,7 +477,18 @@ export function EqualizacaoScreen() {
     if (!id) return;
     setBaixando(true);
     try {
-      await baixarRelatorioEqualizacao(id);
+      const arquivo = await gerarRelatorioEqualizacaoPdf(id);
+      if (podeCompartilharArquivo(arquivo)) {
+        // iPhone/Android: compartilhar só funciona num toque do usuário — o
+        // toast dá esse toque ("Compartilhar") depois que o PDF está pronto.
+        toast('Relatório em PDF pronto.', {
+          actionLabel: 'Compartilhar',
+          duration: 20000,
+          onAction: () => void entregarArquivo(arquivo),
+        });
+      } else {
+        await entregarArquivo(arquivo);
+      }
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Não foi possível gerar o PDF.');
     } finally {
