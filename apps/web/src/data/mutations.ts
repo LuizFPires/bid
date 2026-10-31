@@ -353,10 +353,20 @@ export async function gerarPdfContrato(contratoId: string): Promise<void> {
  * como PWA, compartilhar exige um toque do usuário DEPOIS do download — por
  * isso a tela mostra "Relatório pronto · Compartilhar" em vez de disparar direto.
  */
-export async function gerarRelatorioEqualizacaoPdf(equalizacaoId: string): Promise<File> {
+export interface ProgressoPdf {
+  fase: 'gerando' | 'baixando';
+  /** 0–1 quando o tamanho é conhecido; null = indeterminado. */
+  fracao: number | null;
+}
+
+export async function gerarRelatorioEqualizacaoPdf(
+  equalizacaoId: string,
+  onProgresso?: (p: ProgressoPdf) => void,
+): Promise<File> {
   const { data: sessionData } = await db().auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) throw new Error('Sessão inválida.');
+  onProgresso?.({ fase: 'gerando', fracao: null });
   const resp = await fetch('/api/equalizacoes/pdf', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -366,9 +376,28 @@ export async function gerarRelatorioEqualizacaoPdf(equalizacaoId: string): Promi
     const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
     throw new Error(corpo?.erro ?? `Falha ao gerar o PDF (HTTP ${resp.status}).`);
   }
-  const blob = await resp.blob();
+  const blob = await lerComProgresso(resp, (fracao) => onProgresso?.({ fase: 'baixando', fracao }));
   const nome = nomeDoContentDisposition(resp.headers.get('Content-Disposition')) ?? 'Equalização.pdf';
   return new File([blob], nome, { type: 'application/pdf' });
+}
+
+/** Lê o corpo da resposta avisando o avanço (fração quando há Content-Length; senão null). */
+async function lerComProgresso(resp: Response, aoAvancar: (fracao: number | null) => void): Promise<Blob> {
+  const tipo = resp.headers.get('Content-Type') ?? 'application/pdf';
+  const total = Number(resp.headers.get('Content-Length') ?? 0);
+  if (!resp.body) return resp.blob();
+  const leitor = resp.body.getReader();
+  const partes: BlobPart[] = [];
+  let lidos = 0;
+  aoAvancar(total > 0 ? 0 : null);
+  for (;;) {
+    const { done, value } = await leitor.read();
+    if (done) break;
+    partes.push(value);
+    lidos += value.byteLength;
+    aoAvancar(total > 0 ? Math.min(1, lidos / total) : null);
+  }
+  return new Blob(partes, { type: tipo });
 }
 
 /** Nome do arquivo do cabeçalho Content-Disposition: prefere `filename*` (UTF-8, com acentos). */

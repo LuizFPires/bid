@@ -161,8 +161,8 @@ export async function renderRelatorioEqualizacaoPdf(d: RelatorioPdfDados): Promi
     tdK: { fontWeight: 700, color: INK },
     trTotal: { backgroundColor: SOFT },
     tdTotal: { fontWeight: 700, color: INK, fontSize: 8.4 },
-    cell: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start' },
-    badge: { fontSize: 6.4, fontWeight: 700, letterSpacing: 0.5, paddingVertical: 2, paddingHorizontal: 5, borderRadius: 3, marginRight: 4, marginBottom: 2, lineHeight: 1.1 },
+    cell: { flexDirection: 'column', alignItems: 'flex-start' },
+    badge: { fontSize: 6.2, fontWeight: 700, letterSpacing: 0.5, paddingVertical: 2, paddingHorizontal: 5, borderRadius: 3, marginTop: 3, lineHeight: 1.1 },
     ref: { fontSize: 6.6, color: MUTED, lineHeight: 1.3 },
     best: { color: OK, fontWeight: 700 },
     high: { color: BAD, fontWeight: 700 },
@@ -213,9 +213,10 @@ export async function renderRelatorioEqualizacaoPdf(d: RelatorioPdfDados): Promi
     if (cel.status === 'neutro') return h(Text, null, cel.texto);
     const [bg, fg] = cel.status === 'ok' ? [OK_BG, OK] : cel.status === 'alerta' ? [WARN_BG, WARN] : [BAD_BG, BAD];
     const rotulo = cel.status === 'ok' ? 'OK' : cel.status === 'alerta' ? 'ATENÇÃO' : 'NÃO INFORMA';
+    // Texto sempre na primeira linha (alinhado com as outras colunas); o selo
+    // de situação vai embaixo, discreto.
     if (!cel.texto) return h(View, { style: s.cell }, Pill(rotulo, bg, fg));
-    if (cel.texto.length <= 18) return h(View, { style: s.cell }, Pill(cel.texto, bg, fg));
-    return h(View, { style: s.cell }, Pill(rotulo, bg, fg), h(Text, { style: { flex: 1, minWidth: 40 } }, cel.texto));
+    return h(View, { style: s.cell }, h(Text, null, cel.texto), Pill(rotulo, bg, fg));
   }
   function headRow(primeira: string, sub?: (pid: string) => string | null): El {
     return h(

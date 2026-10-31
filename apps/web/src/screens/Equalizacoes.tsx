@@ -44,6 +44,7 @@ import { SwipeRow } from '../components/SwipeRow';
 import { BarraAcao } from '../app/BarraAcao';
 import { EsperaEqualizacao } from '../components/EsperaEqualizacao';
 import { Matriz, type MatrizColuna, type MatrizLinha } from '../components/Matriz';
+import { BarraProgresso, type Progresso } from '../components/BarraProgresso';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 
 /** Marca de um item de escopo na matriz: ✓ incluído, ✗ ausente, ~ parcial. */
@@ -475,12 +476,17 @@ export function EqualizacaoScreen() {
   const apagar = useApagarEqualizacao();
   const [confirmando, setConfirmando] = useState(false);
   const [baixando, setBaixando] = useState(false);
+  const [progresso, setProgresso] = useState<Progresso | null>(null);
 
   async function baixarPdf() {
     if (!id) return;
     setBaixando(true);
+    setProgresso({ rotulo: 'Gerando o relatório em PDF…', fracao: null });
     try {
-      const arquivo = await gerarRelatorioEqualizacaoPdf(id);
+      const arquivo = await gerarRelatorioEqualizacaoPdf(id, (p) =>
+        setProgresso(p.fase === 'gerando' ? { rotulo: 'Gerando o relatório em PDF…', fracao: null } : { rotulo: 'Baixando o PDF…', fracao: p.fracao }),
+      );
+      setProgresso({ rotulo: 'PDF pronto.', fracao: 1 });
       if (podeCompartilharArquivo(arquivo)) {
         // iPhone/Android: compartilhar só funciona num toque do usuário — o
         // toast dá esse toque ("Compartilhar") depois que o PDF está pronto.
@@ -496,6 +502,8 @@ export function EqualizacaoScreen() {
       toast(e instanceof Error ? e.message : 'Não foi possível gerar o PDF.');
     } finally {
       setBaixando(false);
+      // Deixa o "pronto" visível um instante antes de recolher a barra.
+      setTimeout(() => setProgresso(null), 900);
     }
   }
   const definir = useDefinirVencedora();
@@ -706,6 +714,7 @@ export function EqualizacaoScreen() {
         />
       </div>
 
+      <BarraProgresso progresso={progresso} />
       <ConfirmDialog
         aberto={confirmando}
         titulo={`Apagar a equalização "${data.categoria}"?`}
