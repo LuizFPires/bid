@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   CERTAME_LABEL,
   compararPropostas,
@@ -8,7 +8,9 @@ import {
   formatBRLCompact,
   nomeProposta,
   pendenciasDaAnalise,
+  pedidosDeRevisao,
   textoPendencias,
+  type PedidoRevisao,
   type AnaliseEqualizacao,
   type CertameStatus,
   type PropostaComparavel,
@@ -30,6 +32,7 @@ import {
   usePropostasDoCertame,
   usePropostasPorCategoria,
   useSugestoes,
+  useMinhaOrg,
 } from '../data/hooks';
 import {
   desfazerVencedora,
@@ -45,6 +48,7 @@ import { BarraAcao } from '../app/BarraAcao';
 import { EsperaEqualizacao } from '../components/EsperaEqualizacao';
 import { Matriz, type MatrizColuna, type MatrizLinha } from '../components/Matriz';
 import { BarraProgresso, type Progresso } from '../components/BarraProgresso';
+import { DrawerRevisao, PedirRevisao } from '../components/PedirRevisao';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 
 /** Marca de um item de escopo na matriz: ✓ incluído, ✗ ausente, ~ parcial. */
@@ -510,8 +514,21 @@ export function EqualizacaoScreen() {
   const toast = useToast();
   const qc = useQueryClient();
   const [erroIA, setErroIA] = useState<string | null>(null);
+  const [pedidoAberto, setPedidoAberto] = useState<PedidoRevisao | null>(null);
+  const org = useMinhaOrg();
 
   const comp = useMemo(() => (data ? compararPropostas(data.propostas) : null), [data]);
+  // O que pedir a cada fornecedor (faltas e alertas da matriz), para o WhatsApp.
+  const pedidos = useMemo(
+    () =>
+      data?.resultadoIa
+        ? pedidosDeRevisao(
+            data.resultadoIa as Pick<AnaliseEqualizacao, 'matriz'>,
+            data.propostas.map((p) => ({ id: p.id, nome: nomeProposta(p.fornecedor, p.opcao), valor: p.valor })),
+          )
+        : [],
+    [data],
+  );
 
   if (isLoading) {
     return (
@@ -715,6 +732,13 @@ export function EqualizacaoScreen() {
       </div>
 
       <BarraProgresso progresso={progresso} />
+      <DrawerRevisao
+        pedido={pedidoAberto}
+        categoria={data.categoria}
+        obra={data.obraNome}
+        remetente={org.data?.nome ?? null}
+        onFechar={() => setPedidoAberto(null)}
+      />
       <ConfirmDialog
         aberto={confirmando}
         titulo={`Apagar a equalização "${data.categoria}"?`}
@@ -986,6 +1010,13 @@ export function EqualizacaoScreen() {
             </>
           )}
 
+          {pedidos.length > 0 && (
+            <>
+              <SecTitulo n="06" t="Pedir revisão" s="Toque no fornecedor: a mensagem sai pronta para o WhatsApp, com o que falta ou precisa ser confirmado." />
+              <PedirRevisao pedidos={pedidos} onEscolher={setPedidoAberto} />
+            </>
+          )}
+
           {(() => {
             const rec = data.propostas.find((p) => p.id === ia.recomendacao?.proposta_id);
             const pend = pendenciasDaAnalise(
@@ -1021,9 +1052,13 @@ export function EqualizacaoScreen() {
                   <ul className="rep-pend">
                     {pend.map((p) => (
                       <li key={p.proposta_id}>
-                        <Link to={`/propostas/${p.proposta_id}`}>
-                          <b>{p.nome}</b>
-                        </Link>
+                        <button
+                          type="button"
+                          className="linklike"
+                          onClick={() => setPedidoAberto(pedidos.find((x) => x.proposta_id === p.proposta_id) ?? { proposta_id: p.proposta_id, nome: p.nome, pontos: p.faltas.map((f) => ({ criterio: f, situacao: 'falta' as const, texto: null })) })}
+                        >
+                          <b>{p.nome}</b> <Icon name="chev" />
+                        </button>
                         <span>
                           {p.faltas.length > 1 ? 'faltam' : 'falta'} {p.faltas.map((f) => f.toLocaleLowerCase('pt-BR')).join(', ')}
                         </span>
