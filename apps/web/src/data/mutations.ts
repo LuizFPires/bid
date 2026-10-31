@@ -367,8 +367,22 @@ export async function gerarRelatorioEqualizacaoPdf(equalizacaoId: string): Promi
     throw new Error(corpo?.erro ?? `Falha ao gerar o PDF (HTTP ${resp.status}).`);
   }
   const blob = await resp.blob();
-  const nome = /filename="([^"]+)"/.exec(resp.headers.get('Content-Disposition') ?? '')?.[1] ?? 'equalizacao.pdf';
+  const nome = nomeDoContentDisposition(resp.headers.get('Content-Disposition')) ?? 'Equalização.pdf';
   return new File([blob], nome, { type: 'application/pdf' });
+}
+
+/** Nome do arquivo do cabeçalho Content-Disposition: prefere `filename*` (UTF-8, com acentos). */
+function nomeDoContentDisposition(cd: string | null): string | null {
+  if (!cd) return null;
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(cd)?.[1];
+  if (utf8) {
+    try {
+      return decodeURIComponent(utf8);
+    } catch {
+      /* cai para o filename simples */
+    }
+  }
+  return /filename="([^"]+)"/.exec(cd)?.[1] ?? null;
 }
 
 /** O aparelho sabe compartilhar arquivos (iPhone/Android)? */

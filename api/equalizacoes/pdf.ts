@@ -15,10 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await processar(req, res);
   } catch (e) {
     console.error('equalizacoes/pdf crash:', e);
-    // Sem acesso aos logs da plataforma, a mensagem (curta, sem stack) é o único
-    // caminho de diagnóstico para o usuário reportar.
-    const msg = String((e as Error)?.message ?? e).replace(/\s+/g, ' ').slice(0, 160);
-    if (!res.headersSent) res.status(502).json({ erro: `Não foi possível gerar o PDF. (${msg})` });
+    if (!res.headersSent) res.status(502).json({ erro: 'Não foi possível gerar o PDF. Tente de novo em instantes.' });
   }
 }
 
@@ -101,9 +98,12 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     analise: normalizarAnalise(r.resultado_ia, propostas.map((p) => p.id)),
   });
 
-  const nomeArq = `equalizacao-${r.categoria.normalize('NFD').replace(/[^\w]+/g, '-').toLowerCase()}.pdf`;
+  // Nome legível, com a categoria como o usuário escreveu (acentos preservados via
+  // filename*); o filename simples é o fallback ASCII para clientes antigos.
+  const base = `Equalização - ${r.categoria.trim()}${obra ? ` - ${obra.trim()}` : ''}`.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s{2,}/g, ' ');
+  const ascii = base.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '');
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="${nomeArq}"`);
+  res.setHeader('Content-Disposition', `attachment; filename="${ascii}.pdf"; filename*=UTF-8''${encodeURIComponent(base)}.pdf`);
   res.setHeader('Cache-Control', 'no-store');
   res.status(200).send(buffer);
 }
