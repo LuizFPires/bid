@@ -32,6 +32,8 @@ export interface ItemLote {
 
 export interface Lote {
   id: string;
+  /** Quem criou (o lote persistido no aparelho só vale para esse usuário). */
+  usuarioId: string | null;
   obraId: string;
   obraNome: string;
   categoria: string;

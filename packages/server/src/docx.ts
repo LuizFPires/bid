@@ -1,12 +1,20 @@
 import { unzipSync, strFromU8 } from 'fflate';
 
 const MAX_CHARS = 120_000;
+/** Teto do XML descomprimido (bomba de descompressão: 8 MB zipados podem virar GBs). */
+const MAX_XML_BYTES = 10 * 1024 * 1024;
+const MAX_XML_CHARS = 2_000_000;
+
+/** Só entradas de interesse e dentro do teto declarado são infladas. */
+function filtro(nomes: (n: string) => boolean) {
+  return (f: { name: string; originalSize: number }) => nomes(f.name) && f.originalSize <= MAX_XML_BYTES;
+}
 
 /** É um .docx? (zip com word/document.xml dentro) */
 export function ehDocx(buf: Uint8Array): boolean {
   if (buf.length < 4 || buf[0] !== 0x50 || buf[1] !== 0x4b) return false; // "PK"
   try {
-    const z = unzipSync(buf, { filter: (f) => f.name === 'word/document.xml' });
+    const z = unzipSync(buf, { filter: filtro((n) => n === 'word/document.xml') });
     return !!z['word/document.xml'];
   } catch {
     return false;
@@ -19,8 +27,8 @@ export function ehDocx(buf: Uint8Array): boolean {
  * e condições. Formatação, imagens e cabeçalhos/rodapés ficam de fora.
  */
 export function textoDeDocx(buf: Uint8Array): string {
-  const z = unzipSync(buf, { filter: (f) => f.name === 'word/document.xml' || f.name.startsWith('word/footnotes') });
-  const xml = z['word/document.xml'] ? strFromU8(z['word/document.xml']) : '';
+  const z = unzipSync(buf, { filter: filtro((n) => n === 'word/document.xml') });
+  const xml = (z['word/document.xml'] ? strFromU8(z['word/document.xml']) : '').slice(0, MAX_XML_CHARS);
   const texto = xml
     .replace(/<w:tab\b[^>]*\/>/g, '\t')
     .replace(/<w:br\b[^>]*\/>/g, '\n')

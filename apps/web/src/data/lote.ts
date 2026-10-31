@@ -25,6 +25,29 @@ const CHAVE = 'bid.lote.v1';
 const PARALELO = 3;
 
 let lote: Lote | null = carregar();
+/** Usuário da sessão atual (mantido pelo listener de auth). */
+let usuarioAtual: string | null = null;
+
+// O lote fica no localStorage do aparelho: só vale para quem o criou. Ao
+// trocar de conta ou sair, some — nada de uma conta vaza para outra.
+if (supabase) {
+  void supabase.auth.getSession().then(({ data }) => {
+    usuarioAtual = data.session?.user.id ?? null;
+    conferirDono();
+  });
+  supabase.auth.onAuthStateChange((_evento, sessao) => {
+    usuarioAtual = sessao?.user.id ?? null;
+    conferirDono();
+  });
+}
+
+function conferirDono() {
+  if (lote && (!usuarioAtual || lote.usuarioId !== usuarioAtual)) {
+    arquivos.clear();
+    emVoo.clear();
+    setLote(() => null);
+  }
+}
 const ouvintes = new Set<() => void>();
 /** Arquivos ainda em memória (não persistem): id do item → File. */
 const arquivos = new Map<string, File>();
@@ -89,6 +112,7 @@ export function loteAtual(): Lote | null {
 
 /** Começa um lote novo (substitui o anterior, se houver) e dispara upload + leitura. */
 export function iniciarLote(input: { obraId: string; obraNome: string; categoria: string; files: File[] }): Lote {
+  if (!usuarioAtual) throw new Error('Sessão inválida.');
   const files = input.files.slice(0, LOTE_MAX_ARQUIVOS);
   arquivos.clear();
   const itens: ItemLote[] = files.map((f) => {
@@ -107,7 +131,7 @@ export function iniciarLote(input: { obraId: string; obraNome: string; categoria
       erro: null,
     };
   });
-  setLote(() => ({ id: novoId(), obraId: input.obraId, obraNome: input.obraNome, categoria: input.categoria.trim(), criadoEm: new Date().toISOString(), itens }));
+  setLote(() => ({ id: novoId(), usuarioId: usuarioAtual, obraId: input.obraId, obraNome: input.obraNome, categoria: input.categoria.trim(), criadoEm: new Date().toISOString(), itens }));
   void bombear();
   return lote!;
 }
