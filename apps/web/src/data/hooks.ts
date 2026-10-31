@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchAcervo,
   fetchObras,
@@ -69,11 +69,13 @@ export function useEqualizacoes() {
   return useQuery({ queryKey: ['equalizacoes'], queryFn: fetchEqualizacoes });
 }
 
-export function useEqualizacao(id: string | undefined) {
+export function useEqualizacao(id: string | undefined, opts: { sondar?: boolean } = {}) {
   return useQuery({
     queryKey: ['equalizacao', id],
     queryFn: () => fetchEqualizacao(id as string),
     enabled: Boolean(id),
+    // Enquanto a IA gera (após recarga, sem a mutação viva), sonda o banco.
+    refetchInterval: opts.sondar ? 8000 : false,
   });
 }
 
@@ -352,13 +354,80 @@ export function useDesfazerVencedora() {
   });
 }
 
+/* ---------- Análise por IA em andamento (sobrevive à navegação) ---------- */
+
+const CHAVE_IA = 'equalizar-ia';
+const LS_PREFIXO = 'bid.eq.gerando.';
+const TTL_GERANDO_MS = 6 * 60 * 1000; // função tem 300 s; um pouco além disso = desistiu
+
+/** Marca/desmarca no localStorage (persiste a recarga da página). */
+function marcarGerando(id: string, on: boolean) {
+  try {
+    if (on) localStorage.setItem(LS_PREFIXO + id, String(Date.now()));
+    else localStorage.removeItem(LS_PREFIXO + id);
+  } catch {
+    /* sem storage */
+  }
+}
+function flagGerando(id: string): boolean {
+  try {
+    const t = Number(localStorage.getItem(LS_PREFIXO + id));
+    if (!t) return false;
+    if (Date.now() - t > TTL_GERANDO_MS) {
+      localStorage.removeItem(LS_PREFIXO + id);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function useEqualizarIA() {
   const qc = useQueryClient();
   return useMutation({
+    // Chave fixa: o estado fica no cache de mutações e pode ser lido de qualquer
+    // tela (useMutationState) — a espera não some ao navegar.
+    mutationKey: [CHAVE_IA],
     mutationFn: equalizarIA,
+    onMutate: (equalizacaoId) => marcarGerando(equalizacaoId, true),
+    onSettled: (_v, _e, equalizacaoId) => marcarGerando(equalizacaoId, false),
     onSuccess: (_v, equalizacaoId) => {
       qc.invalidateQueries({ queryKey: ['equalizacao', equalizacaoId] });
       qc.invalidateQueries({ queryKey: ['equalizacoes'] });
     },
   });
+}
+
+/** Ids de equalizações com análise em andamento (mutação pendente OU flag recente). */
+export function useAnalisesEmAndamento(ids: readonly string[] = []): Set<string> {
+  const pendentes = useMutationState({
+    filters: { mutationKey: [CHAVE_IA], status: 'pending' },
+    select: (m) => m.state.variables as string,
+  });
+  const set = new Set(pendentes);
+  for (const id of ids) if (flagGerando(id)) set.add(id);
+  return set;
+}
+
+/**
+ * Estado da análise de UMA equalização, visível de qualquer tela:
+ * em andamento (mutação pendente ou flag recente após recarga) e o erro da
+ * última tentativa (fica no cache de mutações até ser descartado).
+ */
+export function useAnaliseEmAndamento(id: string | undefined, temResultado: boolean) {
+  const pendentes = useMutationState({
+    filters: { mutationKey: [CHAVE_IA], status: 'pending' },
+    select: (m) => m.state.variables as string,
+  });
+  const erros = useMutationState({
+    filters: { mutationKey: [CHAVE_IA], status: 'error' },
+    select: (m) => ({ id: m.state.variables as string, erro: m.state.error as Error | null, em: m.state.submittedAt }),
+  });
+  const pendente = !!id && pendentes.includes(id);
+  // Após recarregar a página a mutação não existe mais; a flag cobre esse caso
+  // até o resultado chegar (ou o TTL vencer).
+  const porFlag = !!id && !pendente && !temResultado && flagGerando(id);
+  const ultimoErro = erros.filter((e) => e.id === id).sort((a, b) => b.em - a.em)[0]?.erro ?? null;
+  return { emAndamento: pendente || porFlag, porFlag, ultimoErro };
 }

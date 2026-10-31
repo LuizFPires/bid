@@ -19,6 +19,8 @@ import {
   useEqualizacao,
   useEqualizacoes,
   useEqualizarIA,
+  useAnaliseEmAndamento,
+  useAnalisesEmAndamento,
   useObra,
   useObras,
   usePropostasDoCertame,
@@ -58,6 +60,7 @@ export function EqualizacoesScreen() {
   const { data, isLoading, isError } = useEqualizacoes();
   const eqs = data ?? [];
 
+  const gerandoIds = useAnalisesEmAndamento(eqs.map((e) => e.id));
   const grupos = useMemo(() => {
     const concluida = eqs.filter((e) => e.certameStatus === 'adjudicada');
     const decisao = eqs.filter((e) => e.certameStatus !== 'adjudicada' && e.temAnalise);
@@ -129,7 +132,7 @@ export function EqualizacoesScreen() {
                       <span className="t1">{e.categoria}</span>
                       <span className="t2">
                         {e.escopo === 'entre_obras' ? 'Entre obras' : 'Em uma obra'} · {e.totalPropostas} propostas
-                        {e.temAnalise ? ' · com análise IA' : ''}
+                        {gerandoIds.has(e.id) ? ' · IA gerando o relatório…' : e.temAnalise ? ' · com relatório IA' : ''}
                       </span>
                     </span>
                     <span className="rt">
@@ -402,8 +405,13 @@ function SelecaoRow({
 export function EqualizacaoScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useEqualizacao(id);
   const rodarIA = useEqualizarIA();
+  const [sondar, setSondar] = useState(false);
+  const { data, isLoading, isError } = useEqualizacao(id, { sondar });
+  // Estado da análise sobrevive à navegação (cache de mutações + flag local).
+  const andamento = useAnaliseEmAndamento(id, !!data?.resultadoIa);
+  const gerando = andamento.emAndamento;
+  useEffect(() => setSondar(andamento.porFlag), [andamento.porFlag]);
   const definir = useDefinirVencedora();
   const toast = useToast();
   const qc = useQueryClient();
@@ -503,10 +511,10 @@ export function EqualizacaoScreen() {
         )}
       </div>
 
-      {rodarIA.isPending && <AnaliseEmAndamento n={data.propostas.length} />}
+      {gerando && <AnaliseEmAndamento n={data.propostas.length} />}
 
       {/* Sem análise: comparativo básico (campos reais) + chamada para a IA. */}
-      {!ia && !rodarIA.isPending && (
+      {!ia && !gerando && (
         <>
           <div className="tablewrap" style={{ marginBottom: 16 }}>
             <table className="eq">
@@ -569,7 +577,7 @@ export function EqualizacaoScreen() {
                 A IA lê os PDFs das propostas por inteiro, coloca todas na mesma régua e entrega o relatório:
                 lado a lado, composição equalizada, divergências, forças e riscos e próximos passos.
               </p>
-              <Button icon="spark" disabled={rodarIA.isPending} onClick={analisar}>
+              <Button icon="spark" disabled={gerando} onClick={analisar}>
                 Gerar relatório com IA
               </Button>
             </div>
@@ -577,7 +585,7 @@ export function EqualizacaoScreen() {
         </>
       )}
 
-      {ia && !rodarIA.isPending && (
+      {ia && !gerando && (
         <article className="rep">
           <div className="rep-kicker">
             <Icon name="spark" /> Relatório de equalização · Claude
@@ -910,7 +918,7 @@ export function EqualizacaoScreen() {
                 </p>
                 <small>A recomendação é apoio — a escolha da vencedora é sua, na tabela acima.</small>
                 <div>
-                  <Button variant="ghost" size="sm" icon="spark" disabled={rodarIA.isPending} onClick={analisar}>
+                  <Button variant="ghost" size="sm" icon="spark" disabled={gerando} onClick={analisar}>
                     Refazer relatório
                   </Button>
                 </div>
@@ -920,10 +928,12 @@ export function EqualizacaoScreen() {
         </article>
       )}
 
-      {erroIA && (
+      {(erroIA || (!gerando && andamento.ultimoErro)) && (
         <div className="banner warn" role="alert" style={{ marginTop: 14 }}>
           <Icon name="alert" />
-          <span>{erroIA}</span>
+          <span>
+            {erroIA ?? `A última geração falhou: ${andamento.ultimoErro?.message ?? 'erro desconhecido'}. Tente de novo.`}
+          </span>
         </div>
       )}
     </>
