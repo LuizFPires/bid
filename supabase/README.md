@@ -22,3 +22,14 @@ seed.sql       seed de homologação (fora de produção)
 1. Criar o projeto no Supabase e pegar `SUPABASE_URL`, `anon key` e `service_role key`.
 2. `supabase link --project-ref <ref>` e `supabase db push` para aplicar as migrations.
 3. Configurar o provedor de e-mail do Auth (link mágico) e as URLs de redirect.
+
+## Modelo da minuta de contrato (M9)
+
+O texto da minuta padrão **não fica no git** (repositório público). Ele mora em `docs/contratos/_privado/` (pasta ignorada) e sobe para o Supabase por um script local, com a chave `service_role` só no ambiente:
+
+```bash
+SUPABASE_URL=https://<ref>.supabase.co SUPABASE_SERVICE_ROLE_KEY=<chave> \
+node scripts/seed-modelo-contrato.mjs --org <uuid-da-organizacao>
+```
+
+O script sobe o `.docx` ao bucket privado `modelos` ({org}/empreitada-1.0.docx), grava `contrato_modelos` (catálogo de cláusulas) e a biblioteca (`modelo_blocos`, `modelo_variantes`, `modelo_parametros`). É idempotente: repetir atualiza. Opções: `--versao 1.1`, `--inativo`, `--logo-ampla caminho.png`. O cliente nunca baixa o modelo cru: só o servidor lê o bucket.
