@@ -9,5 +9,6 @@ export * from './respond';
 export * from './supabase';
 export * from './anthropic';
 export * from './pdf';
+export * from './relatorio-pdf';
 export * from './assinatura-pdf';
 export * from './assinar';

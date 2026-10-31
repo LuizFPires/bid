@@ -28,7 +28,7 @@ import {
   usePropostasPorCategoria,
   useSugestoes,
 } from '../data/hooks';
-import { desfazerVencedora, restaurarEqualizacao } from '../data/mutations';
+import { baixarRelatorioEqualizacao, desfazerVencedora, restaurarEqualizacao } from '../data/mutations';
 import { useToast } from '../app/Toast';
 import { Kebab } from '../app/Kebab';
 import { EsperaEqualizacao } from '../components/EsperaEqualizacao';
@@ -418,6 +418,19 @@ export function EqualizacaoScreen() {
   useEffect(() => setSondar(andamento.porFlag), [andamento.porFlag]);
   const apagar = useApagarEqualizacao();
   const [confirmando, setConfirmando] = useState(false);
+  const [baixando, setBaixando] = useState(false);
+
+  async function baixarPdf() {
+    if (!id) return;
+    setBaixando(true);
+    try {
+      await baixarRelatorioEqualizacao(id);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Não foi possível gerar o PDF.');
+    } finally {
+      setBaixando(false);
+    }
+  }
   const definir = useDefinirVencedora();
   const toast = useToast();
   const qc = useQueryClient();
@@ -547,7 +560,15 @@ export function EqualizacaoScreen() {
         <Kebab
           itens={[
             ...(ia
-              ? [{ label: 'Refazer relatório', icon: 'spark' as const, onClick: analisar, disabled: gerando }]
+              ? [
+                  {
+                    label: baixando ? 'Gerando PDF…' : 'Baixar relatório em PDF',
+                    icon: 'dl' as const,
+                    onClick: () => void baixarPdf(),
+                    disabled: baixando || gerando,
+                  },
+                  { label: 'Refazer relatório', icon: 'spark' as const, onClick: analisar, disabled: gerando },
+                ]
               : []),
             {
               label: apagar.isPending ? 'Apagando…' : 'Apagar equalização',

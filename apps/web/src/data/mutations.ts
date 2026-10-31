@@ -336,6 +336,36 @@ export async function gerarPdfContrato(contratoId: string): Promise<void> {
   }
 }
 
+/**
+ * Baixa o relatório de equalização em PDF (gerado na hora pelo servidor).
+ * Abre o compartilhar/salvar do aparelho via <a download>.
+ */
+export async function baixarRelatorioEqualizacao(equalizacaoId: string): Promise<void> {
+  const { data: sessionData } = await db().auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Sessão inválida.');
+  const resp = await fetch('/api/equalizacoes/pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ id: equalizacaoId }),
+  });
+  if (!resp.ok) {
+    const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
+    throw new Error(corpo?.erro ?? 'Falha ao gerar o PDF.');
+  }
+  const blob = await resp.blob();
+  const nome = /filename="([^"]+)"/.exec(resp.headers.get('Content-Disposition') ?? '')?.[1] ?? 'equalizacao.pdf';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export interface NovaVersaoInput {
   propostaId: string;
   /** Dados já conferidos/editados pelo usuário. */
