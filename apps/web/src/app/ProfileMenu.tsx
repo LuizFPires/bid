@@ -8,6 +8,14 @@ import { useMeusConvites } from '../data/hooks';
 import { useToast } from './Toast';
 import { lerTema, salvarTema, type Tema } from './theme';
 
+/** "30/10 23:05" a partir do ISO do build (horário local). */
+function formatarBuild(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 const TEMAS: { v: Tema; label: string }[] = [
   { v: 'auto', label: 'Auto' },
   { v: 'claro', label: 'Claro' },
@@ -116,6 +124,9 @@ export function ProfileMenu() {
               <div className="pm-k">Conectado como</div>
               <div className="pm-email" title={email}>
                 {email}
+              </div>
+              <div className="pm-k" style={{ marginTop: 4 }}>
+                Versão {formatarBuild(__BUILD_TIME__)}
               </div>
             </div>
           </div>

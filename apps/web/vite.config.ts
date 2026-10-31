@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // Carimbo do build: aparece no menu de perfil para o usuário saber qual versão está rodando.
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
   // .env fica na raiz do monorepo (um só para todo o projeto).
   envDir: '../..',
   plugins: [
