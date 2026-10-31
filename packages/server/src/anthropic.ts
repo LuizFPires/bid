@@ -62,9 +62,7 @@ export async function extrairPropostaDePdf(
               tipo === 'application/pdf'
                 ? EXTRACAO_PROMPT
                 : EXTRACAO_PROMPT +
-                  '
-
-O anexo é uma IMAGEM (print de conversa, foto de documento ou tela). Leia o texto visível: ' +
+                  '\n\nO anexo é uma IMAGEM (print de conversa, foto de documento ou tela). Leia o texto visível: ' +
                   'identifique quem propõe (nome do contato/empresa), o valor, prazo e condições que aparecerem; ' +
                   'o que não estiver legível fica null. Se for um print de WhatsApp, o fornecedor é quem enviou a mensagem com o preço.',
           },
