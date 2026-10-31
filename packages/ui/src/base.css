@@ -3087,12 +3087,3 @@ table.eq .nota-eq.warn {
   text-underline-offset: 2px;
 }
 .rep-pend li .linklike svg { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 2px; color: var(--muted); }
-.row .rt.whats {
-  flex-direction: row;
-  align-items: center;
-  gap: 2px;
-  font-size: 12px;
-  font-weight: 800;
-  color: #1f8f4e;
-}
-.row .rt.whats svg { width: 16px; height: 16px; }

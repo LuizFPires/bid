@@ -1,52 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { linkWhatsAppMensagem, mensagemRevisao, type PedidoRevisao } from '@bid/core';
-import { Icon } from '@bid/ui';
 import { Drawer } from '../app/Drawer';
 
-/**
- * Lista "pedir revisão": um fornecedor por linha com o que falta e um botão
- * que abre o drawer com a mensagem pronta para o WhatsApp (editável).
- */
-export function PedirRevisao({ pedidos, onEscolher }: { pedidos: PedidoRevisao[]; onEscolher: (p: PedidoRevisao) => void }) {
-  if (!pedidos.length) return null;
-  return (
-    <>
-      <div className="card rowlist">
-        {pedidos.map((p) => (
-          <div
-            key={p.proposta_id}
-            className="row"
-            role="button"
-            tabIndex={0}
-            style={{ cursor: 'pointer' }}
-            onClick={() => onEscolher(p)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onEscolher(p);
-              }
-            }}
-          >
-            <span className="ic">
-              <Icon name="alert" />
-            </span>
-            <span className="tt">
-              <span className="t1">{p.nome}</span>
-              <span className="t2">
-                {p.pontos.length === 1 ? '1 ponto' : `${p.pontos.length} pontos`} ·{' '}
-                {p.pontos.map((x) => x.criterio.toLocaleLowerCase('pt-BR')).join(', ')}
-              </span>
-            </span>
-            <span className="rt whats">
-              WhatsApp <Icon name="chev" />
-            </span>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
+/** Drawer com a mensagem de pedido de revisão pronta para o WhatsApp (editável). */
 export function DrawerRevisao({
   pedido,
   categoria,

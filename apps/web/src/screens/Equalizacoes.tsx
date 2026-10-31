@@ -47,7 +47,7 @@ import { BarraAcao } from '../app/BarraAcao';
 import { EsperaEqualizacao } from '../components/EsperaEqualizacao';
 import { Matriz, type MatrizColuna, type MatrizLinha } from '../components/Matriz';
 import { BarraProgresso, type Progresso } from '../components/BarraProgresso';
-import { DrawerRevisao, PedirRevisao } from '../components/PedirRevisao';
+import { DrawerRevisao } from '../components/PedirRevisao';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 
 /** Marca de um item de escopo na matriz: ✓ incluído, ✗ ausente, ~ parcial. */
@@ -1007,13 +1007,6 @@ export function EqualizacaoScreen() {
             </>
           )}
 
-          {pedidos.length > 0 && (
-            <>
-              <SecTitulo n="06" t="Pedir revisão" s="Toque no fornecedor: a mensagem sai pronta para o WhatsApp, com o que falta ou precisa ser confirmado." />
-              <PedirRevisao pedidos={pedidos} onEscolher={setPedidoAberto} />
-            </>
-          )}
-
           {(() => {
             const rec = data.propostas.find((p) => p.id === ia.recomendacao?.proposta_id);
             const pend = pendenciasDaAnalise(
@@ -1045,7 +1038,7 @@ export function EqualizacaoScreen() {
                     </>
                   )}
                 </p>
-                {!rec && pend.length > 0 && (
+                {pend.length > 0 && (
                   <ul className="rep-pend">
                     {pend.map((p) => (
                       <li key={p.proposta_id}>
