@@ -1,6 +1,13 @@
 -- Teste (pgTAP) dos RPCs de editar/apagar/restaurar proposta. `supabase test db`.
 begin;
-select plan(11);
+select plan(14);
+
+-- mover_proposta_categoria (20261030310000): existe, invoker, só authenticated.
+select has_function('public', 'mover_proposta_categoria', ARRAY['uuid', 'text'], 'mover_proposta_categoria existe');
+select is((select bool_or(prosecdef) from pg_proc where proname = 'mover_proposta_categoria'),
+  false, 'mover_proposta_categoria é SECURITY INVOKER');
+select function_privs_are('public', 'mover_proposta_categoria', ARRAY['uuid', 'text'],
+  'anon', ARRAY[]::text[], 'anon não executa mover_proposta_categoria');
 
 -- Existência.
 select has_function('public', 'editar_proposta',

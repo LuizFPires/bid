@@ -12,7 +12,7 @@ import {
   type Variacao,
 } from '@bid/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Icon } from '@bid/ui';
+import { Autocomplete, Button, Icon } from '@bid/ui';
 import {
   invalidarVencedora,
   useApagarProposta,
@@ -21,8 +21,15 @@ import {
   useDefinirVencedora,
   useEditarProposta,
   useProposta,
+  useSugestoes,
 } from '../data/hooks';
-import { desfazerVencedora, extrairProposta, restaurarProposta, uploadPropostaArquivo } from '../data/mutations';
+import {
+  desfazerVencedora,
+  extrairProposta,
+  moverPropostaCategoria,
+  restaurarProposta,
+  uploadPropostaArquivo,
+} from '../data/mutations';
 import { urlArquivoProposta, type PropostaDetalhe, type VersaoDetalhe } from '../data/queries';
 import { LeituraIA } from '../components/LeituraIA';
 import { useToast } from '../app/Toast';
@@ -588,6 +595,10 @@ function EditarProposta({
 }) {
   const editar = useEditarProposta(proposta.id);
   const toast = useToast();
+  const qc = useQueryClient();
+  const categoriasSug = useSugestoes('categoria');
+  const [categoria, setCategoria] = useState(proposta.categoria);
+  const [movendo, setMovendo] = useState(false);
   const [fornecedor, setFornecedor] = useState(proposta.fornecedor);
   const [valor, setValor] = useState(
     proposta.valorAtual != null ? formatBRL(proposta.valorAtual).replace('R$', '').trim() : '',
@@ -625,6 +636,22 @@ function EditarProposta({
         garantia: limpos.garantia,
         obs: limpos.observacoes,
       });
+      // Categoria mudou? Move para a tomada de preços dessa categoria na obra.
+      const novaCat = categoria.trim();
+      if (novaCat && novaCat !== proposta.categoria) {
+        setMovendo(true);
+        try {
+          await moverPropostaCategoria({ propostaId: proposta.id, categoria: novaCat });
+          qc.invalidateQueries({ queryKey: ['proposta', proposta.id] });
+          qc.invalidateQueries({ queryKey: ['acervo'] });
+          qc.invalidateQueries({ queryKey: ['obra'] });
+          qc.invalidateQueries({ queryKey: ['obras'] });
+          qc.invalidateQueries({ queryKey: ['equalizacoes'] });
+          qc.invalidateQueries({ queryKey: ['sugestoes'] });
+        } finally {
+          setMovendo(false);
+        }
+      }
       toast('Proposta atualizada.');
       onPronto();
     } catch (err) {
@@ -644,6 +671,19 @@ function EditarProposta({
         <label htmlFor="ed-forn">Fornecedor</label>
         <input id="ed-forn" value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} placeholder="Nome do fornecedor" />
       </div>
+      <Autocomplete
+        label="Categoria de serviço"
+        placeholder="Ex.: Climatização"
+        value={categoria}
+        onChange={setCategoria}
+        options={(categoriasSug.data ?? []).map((s) => s.texto)}
+      />
+      {categoria.trim() && categoria.trim() !== proposta.categoria && (
+        <p className="field-help" style={{ margin: '-6px 0 14px' }}>
+          A proposta vai para a tomada de preços “{categoria.trim()}” desta obra (criada se ainda não existir).
+          Só propostas da mesma categoria entram juntas na equalização.
+        </p>
+      )}
       <div className="pair">
         <div className="field">
           <label>Valor (R$)</label>
@@ -678,8 +718,8 @@ function EditarProposta({
         <Button type="button" variant="ghost" onClick={onCancelar}>
           Cancelar
         </Button>
-        <Button type="submit" icon="check" disabled={editar.isPending || !fornecedor.trim()}>
-          {editar.isPending ? 'Salvando…' : 'Salvar alterações'}
+        <Button type="submit" icon="check" disabled={editar.isPending || movendo || !fornecedor.trim()}>
+          {editar.isPending || movendo ? 'Salvando…' : 'Salvar alterações'}
         </Button>
       </div>
     </form>

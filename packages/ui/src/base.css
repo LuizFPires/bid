@@ -1368,6 +1368,28 @@ table.eq .nota-eq.warn {
   font-weight: 900;
   font-variant-numeric: tabular-nums;
 }
+/* Caixa de seleção nas linhas (equalização: escolher propostas). */
+.row .chk {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  flex: 0 0 auto;
+  margin: 0 6px;
+}
+.row .chk.on {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+}
+.row .chk svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+}
 /* Linha de versão (botão de lista). */
 .rowlist button.row {
   width: 100%;

@@ -171,6 +171,14 @@ export function IniciarEqualizacaoScreen() {
 
   const propostas = escopo === 'obra' ? (propsCertame.data ?? []) : (propsCategoria.data ?? []);
 
+  // Ao carregar a lista, todas entram marcadas: comparar tudo é o caso comum;
+  // o usuário desmarca o que não quiser (o botão só acende com 2+).
+  const chaveLista = propostas.map((p) => p.id).join('|');
+  useEffect(() => {
+    if (propostas.length > 0) setSel(new Set(propostas.map((p) => p.id)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveLista]);
+
   function toggle(id: string) {
     setSel((s) => {
       const n = new Set(s);
@@ -303,7 +311,7 @@ export function IniciarEqualizacaoScreen() {
         <>
           <div className="section-title">
             <h2>Propostas</h2>
-            <span className="c">{sel.size} selecionadas</span>
+            <span className="c">{sel.size} de {propostas.length} · toque para marcar</span>
           </div>
           <div className="card rowlist">
             {propostas.map((p) => (
@@ -372,11 +380,8 @@ function SelecaoRow({
         }
       }}
     >
-      <span
-        className="ic"
-        style={on ? { background: 'var(--accent-soft)', color: 'var(--accent-ink)' } : undefined}
-      >
-        <Icon name={on ? 'check' : 'doc'} />
+      <span className={`chk ${on ? 'on' : ''}`} aria-hidden="true">
+        {on && <Icon name="check" />}
       </span>
       <span className="tt">
         <span className="t1">{nomeProposta(p.fornecedor, p.opcao)}</span>

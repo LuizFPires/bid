@@ -402,6 +402,27 @@ export async function editarProposta(input: EditarPropostaInput): Promise<void> 
   }
 }
 
+/**
+ * Muda a categoria da proposta: move para o certame dessa categoria na mesma
+ * obra (criado se preciso). RPC `mover_proposta_categoria`. Devolve o certame.
+ */
+export async function moverPropostaCategoria(input: { propostaId: string; categoria: string }): Promise<string> {
+  const categoria = input.categoria.trim();
+  if (!categoria) throw new Error('Informe a categoria.');
+  const { data, error } = await db().rpc('mover_proposta_categoria', {
+    p_proposta: input.propostaId,
+    p_categoria: categoria,
+  });
+  if (error) throw error;
+  try {
+    const org = await fetchMinhaOrg();
+    if (org) await registrarSugestao(org.id, 'categoria', categoria);
+  } catch {
+    // sugestão é secundária
+  }
+  return data as string;
+}
+
 /** Apaga a proposta (exclusão LÓGICA via RPC `apagar_proposta`, só gestor). */
 export async function apagarProposta(propostaId: string): Promise<void> {
   const { error } = await db().rpc('apagar_proposta', { p_proposta: propostaId });
