@@ -76,9 +76,23 @@ export function resumoLote(lote: Pick<Lote, 'itens'>): ResumoLote {
   };
 }
 
-/** Só arquiva com tudo conferido: nenhum item lendo e nenhum sem confirmação. */
+/** Item que pode virar proposta: lido pela IA ou confirmado, com fornecedor. */
+export function itemArquivavel(i: ItemLote): boolean {
+  return (i.situacao === 'lida' || i.situacao === 'confirmada') && !!i.dados?.fornecedor?.trim();
+}
+
+/** Itens que ainda precisam da mão do usuário (erro/manual, ou lidos sem fornecedor). */
+export function itensPendentes(lote: Pick<Lote, 'itens'>): ItemLote[] {
+  return lote.itens.filter((i) => i.situacao !== 'fila' && i.situacao !== 'lendo' && !itemArquivavel(i));
+}
+
+/**
+ * Pode arquivar quando nada está em leitura e todo item tem fornecedor —
+ * conferir é opcional: o que a IA leu vale como está se o usuário preferir
+ * arquivar direto (ele confirma o lote inteiro com o botão).
+ */
 export function podeArquivarLote(lote: Pick<Lote, 'itens'>): boolean {
-  return lote.itens.length > 0 && lote.itens.every((i) => i.situacao === 'confirmada');
+  return lote.itens.length > 0 && lote.itens.every(itemArquivavel);
 }
 
 /** Próximo item a conferir depois de `atualId` (circular); null se não há pendente. */
@@ -91,10 +105,20 @@ export function proximoAConferir(lote: Pick<Lote, 'itens'>, atualId: string | nu
 
 /** Quantas propostas o lote vai gerar (opções marcadas contam uma cada). */
 export function totalPropostasDoLote(lote: Pick<Lote, 'itens'>): number {
-  return lote.itens.reduce((n, i) => {
+  return lote.itens.filter(itemArquivavel).reduce((n, i) => {
     const marcadas = (i.dados?.opcoes.length ?? 0) >= 2 ? i.opcoesMarcadas.filter(Boolean).length : 0;
     return n + (marcadas > 0 ? marcadas : 1);
   }, 0);
+}
+
+/** Itens com 2+ opções de preço marcadas (explicam por que N arquivos viram mais propostas). */
+export function itensComOpcoes(lote: Pick<Lote, 'itens'>): { nome: string; n: number }[] {
+  return lote.itens
+    .map((i) => ({
+      nome: i.dados?.fornecedor?.trim() || i.nomeArquivo,
+      n: (i.dados?.opcoes.length ?? 0) >= 2 ? i.opcoesMarcadas.filter(Boolean).length : 0,
+    }))
+    .filter((x) => x.n >= 2);
 }
 
 function chaveFornecedor(nome: string): string {
@@ -114,8 +138,10 @@ function chaveFornecedor(nome: string): string {
 export function fornecedoresRepetidos(
   lote: Pick<Lote, 'itens'>,
   existentes: { id: string; fornecedor: string }[],
-): { noLote: Set<string>; jaExiste: Map<string, { id: string; fornecedor: string }> } {
+): { noLote: Set<string>; mesmoQue: Map<string, string>; jaExiste: Map<string, { id: string; fornecedor: string }> } {
   const noLote = new Set<string>();
+  /** item → id do PRIMEIRO item do mesmo fornecedor no lote. */
+  const mesmoQue = new Map<string, string>();
   const jaExiste = new Map<string, { id: string; fornecedor: string }>();
   const vistos = new Map<string, string>();
   const mapaExist = new Map(existentes.map((e) => [chaveFornecedor(e.fornecedor), e] as const));
@@ -128,11 +154,12 @@ export function fornecedoresRepetidos(
     if (outro) {
       noLote.add(outro);
       noLote.add(it.id);
+      mesmoQue.set(it.id, outro);
     } else vistos.set(k, it.id);
     const ex = mapaExist.get(k);
     if (ex) jaExiste.set(it.id, ex);
   }
-  return { noLote, jaExiste };
+  return { noLote, mesmoQue, jaExiste };
 }
 
 /** Um item do lote pronto para a RPC de arquivamento (uma entrada por proposta a criar). */
@@ -153,10 +180,9 @@ export interface EntradaArquivamento {
 export function entradasDoLote(lote: Pick<Lote, 'itens'>): EntradaArquivamento[] {
   const out: EntradaArquivamento[] = [];
   for (const it of lote.itens) {
-    if (it.situacao !== 'confirmada' || !it.dados) continue;
+    if (!itemArquivavel(it) || !it.dados) continue;
     const d = it.dados;
     const fornecedor = (d.fornecedor ?? '').trim();
-    if (!fornecedor) continue;
     const comOpcoes = d.opcoes.length >= 2 ? d.opcoes.filter((_, i) => it.opcoesMarcadas[i]) : [];
     if (comOpcoes.length === 0) {
       out.push({

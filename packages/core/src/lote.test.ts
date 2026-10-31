@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   entradasDoLote,
   fornecedoresRepetidos,
+  itensComOpcoes,
+  itensPendentes,
   podeArquivarLote,
   proximoAConferir,
   resumoLote,
@@ -43,9 +45,13 @@ describe('resumoLote / podeArquivarLote', () => {
     expect(r.progressoLeitura).toBeCloseTo(0.6);
     expect(podeArquivarLote(lote)).toBe(false);
   });
-  it('só arquiva com todas confirmadas', () => {
-    expect(podeArquivarLote({ itens: [item('a', 'confirmada'), item('b', 'confirmada')] })).toBe(true);
+  it('arquiva com lidas e confirmadas (conferir é opcional); trava em leitura e sem fornecedor', () => {
+    expect(podeArquivarLote({ itens: [item('a', 'confirmada'), item('b', 'lida')] })).toBe(true);
+    expect(podeArquivarLote({ itens: [item('a', 'lida'), item('b', 'lendo')] })).toBe(false);
+    expect(podeArquivarLote({ itens: [item('a', 'lida'), item('b', 'erro')] })).toBe(false);
+    expect(podeArquivarLote({ itens: [item('a', 'lida', { dados: dados({ fornecedor: null }) })] })).toBe(false);
     expect(podeArquivarLote({ itens: [] })).toBe(false);
+    expect(itensPendentes({ itens: [item('a', 'lida'), item('b', 'erro'), item('c', 'lendo')] }).map((i) => i.id)).toEqual(['b']);
   });
 });
 
@@ -70,6 +76,7 @@ describe('fornecedoresRepetidos', () => {
     };
     const r = fornecedoresRepetidos(lote, [{ id: 'p9', fornecedor: 'CYRNE Oficina' }, { id: 'p1', fornecedor: 'Agape Montagem Ltda.' }]);
     expect([...r.noLote].sort()).toEqual(['a', 'b']);
+    expect(r.mesmoQue.get('b')).toBe('a');
     expect(r.jaExiste.get('a')?.id).toBe('p1');
     expect(r.jaExiste.has('c')).toBe(false);
   });
@@ -85,10 +92,13 @@ describe('entradasDoLote / totalPropostasDoLote', () => {
           opcoesMarcadas: [true, true],
         }),
         item('c', 'lida'),
+        item('d', 'erro'),
       ],
     };
     const e = entradasDoLote(lote);
-    expect(e).toHaveLength(3);
+    // "lida" entra (conferir é opcional); "erro" não.
+    expect(e).toHaveLength(4);
+    expect(itensComOpcoes(lote)).toEqual([{ nome: 'Panair', n: 2 }]);
     expect(e[0]).toMatchObject({ fornecedor: 'Construferro', proposta_id: 'p1', opcao: null });
     expect(e[1]).toMatchObject({ fornecedor: 'Panair', opcao: 'Opção 1', valor: 1427487, proposta_id: null, obs: 'Cassete' });
     expect(e[2]).toMatchObject({ opcao: 'Opção 2', valor: 980462 });

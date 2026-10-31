@@ -5,6 +5,8 @@ import {
   LOTE_MAX_ARQUIVOS,
   formatBRL,
   fornecedoresRepetidos,
+  itensComOpcoes,
+  itensPendentes,
   normalizarExtracao,
   podeArquivarLote,
   proximoAConferir,
@@ -59,7 +61,10 @@ export function LoteScreen() {
 
   const resumo = useMemo(() => (lote ? resumoLote(lote) : null), [lote]);
   const repetidos = useMemo(
-    () => (lote ? fornecedoresRepetidos(lote, existentes.data ?? []) : { noLote: new Set<string>(), jaExiste: new Map() }),
+    () =>
+      lote
+        ? fornecedoresRepetidos(lote, existentes.data ?? [])
+        : { noLote: new Set<string>(), mesmoQue: new Map<string, string>(), jaExiste: new Map<string, { id: string; fornecedor: string }>() },
     [lote, existentes.data],
   );
 
@@ -89,6 +94,8 @@ export function LoteScreen() {
   const pronto = podeArquivarLote(lote);
   const totalPropostas = totalPropostasDoLote(lote);
   const lendo = resumo.emAndamento > 0;
+  const pendentes = itensPendentes(lote);
+  const comOpcoes = itensComOpcoes(lote);
 
   async function arquivar() {
     if (!lote || !pronto) return;
@@ -128,7 +135,7 @@ export function LoteScreen() {
           {lote.categoria} · {lote.obraNome}.{' '}
           {lendo
             ? 'A IA lê os arquivos ao mesmo tempo; você pode ir conferindo as que já ficaram prontas.'
-            : 'Toque em cada uma, confira os dados que a IA leu e confirme. Só as confirmadas são arquivadas.'}
+            : 'Toque numa proposta para conferir o que a IA leu, ou arquive direto como está.'}
         </p>
       </div>
 
@@ -137,10 +144,21 @@ export function LoteScreen() {
           <span className="prog-fill" style={{ width: `${Math.round(resumo.progressoLeitura * 100)}%` }} />
         </div>
         <small>
-          {resumo.confirmadas} de {resumo.total} confirmadas
-          {lendo ? ` · ${resumo.emAndamento} em leitura` : ''}
+          {lendo
+            ? `${resumo.total - resumo.emAndamento} de ${resumo.total} lidas · ${resumo.emAndamento} em leitura`
+            : `${resumo.confirmadas} de ${resumo.total} conferidas`}
         </small>
       </div>
+
+      {comOpcoes.length > 0 && (
+        <div className="banner" style={{ marginBottom: 'var(--sp-block)' }}>
+          <Icon name="layers" />
+          <span>
+            {comOpcoes.map((x) => `${x.nome} tem ${x.n} opções de preço`).join('; ')}: cada opção vira uma proposta.{' '}
+            {resumo.total} {resumo.total === 1 ? 'arquivo gera' : 'arquivos geram'} <b>{totalPropostas} propostas</b>.
+          </span>
+        </div>
+      )}
 
       <div className="card rowlist">
         {lote.itens.map((it, idx) => (
@@ -148,7 +166,11 @@ export function LoteScreen() {
             key={it.id}
             item={it}
             n={idx + 1}
-            repetidoNoLote={repetidos.noLote.has(it.id)}
+            mesmoQue={(() => {
+              const outro = repetidos.mesmoQue.get(it.id);
+              const pos = outro ? lote.itens.findIndex((x) => x.id === outro) + 1 : 0;
+              return pos > 0 ? pos : null;
+            })()}
             jaExiste={repetidos.jaExiste.get(it.id)?.fornecedor ?? null}
             onAbrir={() => {
               if (it.situacao === 'fila' || it.situacao === 'lendo') return;
@@ -201,7 +223,7 @@ export function LoteScreen() {
               ? `Arquivar ${totalPropostas} ${totalPropostas === 1 ? 'proposta' : 'propostas'}`
               : lendo
                 ? 'Aguardando a leitura…'
-                : `Confira ${resumo.total - resumo.confirmadas} para arquivar`}
+                : `Informe o fornecedor de ${pendentes.length} ${pendentes.length === 1 ? 'item' : 'itens'}`}
         </Button>
       </BarraAcao>
 
@@ -237,7 +259,7 @@ export function LoteScreen() {
 function LinhaItem({
   item,
   n,
-  repetidoNoLote,
+  mesmoQue,
   jaExiste,
   onAbrir,
   onRemover,
@@ -245,7 +267,8 @@ function LinhaItem({
 }: {
   item: ItemLote;
   n: number;
-  repetidoNoLote: boolean;
+  /** Número do primeiro item do lote com o mesmo fornecedor (null se é o primeiro/único). */
+  mesmoQue: number | null;
   jaExiste: string | null;
   onAbrir: () => void;
   onRemover: () => void;
@@ -275,9 +298,9 @@ function LinhaItem({
 
   const chip =
     st === 'confirmada' ? (
-      <span className="chip ok">confirmada</span>
+      <span className="chip ok">conferida</span>
     ) : st === 'lida' ? (
-      <span className="chip on">conferir</span>
+      <span className="chip on">lida</span>
     ) : st === 'erro' ? (
       <span className="chip bad">erro</span>
     ) : st === 'manual' ? (
@@ -310,9 +333,14 @@ function LinhaItem({
       <span className="tt">
         <span className="t1">{nome}</span>
         <span className="t2">{sub}</span>
-        {(repetidoNoLote || jaExiste) && (
+        {mesmoQue && (
+          <span className="t2" style={{ color: 'var(--muted)' }}>
+            mesmo fornecedor do item {mesmoQue} · entram como propostas separadas
+          </span>
+        )}
+        {!mesmoQue && jaExiste && (
           <span className="t2" style={{ color: 'var(--warn)' }}>
-            {repetidoNoLote ? 'repetido no lote' : `já existe "${jaExiste}" nesta categoria`}
+            já existe "{jaExiste}" nesta categoria · toque para decidir
           </span>
         )}
       </span>
