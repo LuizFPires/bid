@@ -408,9 +408,9 @@ export function ContratoScreen() {
               <Icon name="check" />
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: 13 }}>Anexo II — Equalização</div>
+              <div style={{ fontWeight: 800, fontSize: 13 }}>Equalização do certame</div>
               <small className="sub" style={{ fontSize: 11 }}>
-                Comparativo do certame
+                Uso interno — não vai no contrato (sigilo entre concorrentes)
               </small>
             </div>
             <Button size="sm" variant="ghost" onClick={() => navigate(`/equalizacoes/${eqDoCertame.id}`)}>

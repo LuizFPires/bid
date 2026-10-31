@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { formatBRL, nomeProposta, normalizarAnalise } from '@bid/core';
+import { formatBRL } from '@bid/core';
 import { MissingEnvError } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';
 import { renderContratoPdf } from '@bid/server';
@@ -84,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     throw e;
   }
 
-  // Anexos: I = proposta vencedora; II = equalização do certame (se houver relatório).
+  // Anexo I = proposta vencedora. A equalização não vai para o contrato (RC-15).
   const anexos = await carregarAnexos(sb, c.proposta_id);
 
   let buffer: Buffer;
@@ -133,9 +133,9 @@ type Anexos = NonNullable<Parameters<typeof renderContratoPdf>[0]['anexos']>;
 const dias = (n: number | null) => (n == null ? '—' : `${n} dias`);
 const txt = (s: string | null | undefined) => (s && s.trim() ? s.trim() : '—');
 
-/** Vencedora (Anexo I) e comparativo do certame (Anexo II), no contexto do usuário (RLS). */
+/** Vencedora (Anexo I), no contexto do usuário (RLS). */
 async function carregarAnexos(sb: Cliente, propostaId: string | null): Promise<Anexos> {
-  const vazio: Anexos = { vencedora: null, equalizacao: null };
+  const vazio: Anexos = { vencedora: null };
   if (!propostaId) return vazio;
   const { data: p } = await sb
     .from('propostas')
@@ -152,45 +152,5 @@ async function carregarAnexos(sb: Cliente, propostaId: string | null): Promise<A
     pagamento: txt(prop.condicao_pagamento),
     garantia: txt(prop.garantia),
   };
-  if (!prop.certame_id) return { vencedora, equalizacao: null };
-
-  const [{ data: eqs }, { data: todas }] = await Promise.all([
-    sb
-      .from('equalizacoes')
-      .select('id, referencia, resultado_ia, proposta_ids, created_at')
-      .eq('certame_id', prop.certame_id)
-      .is('deleted_at', null)
-      .not('resultado_ia', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(1),
-    sb
-      .from('propostas')
-      .select('id, fornecedor, opcao, valor_atual, prazo_atual')
-      .eq('certame_id', prop.certame_id)
-      .is('deleted_at', null),
-  ]);
-  const eq = (eqs as { id: string; referencia: string | null; resultado_ia: unknown; proposta_ids: string[] }[] | null)?.[0] ?? null;
-  const lista = (todas ?? []) as { id: string; fornecedor: string; opcao: string | null; valor_atual: number | null; prazo_atual: number | null }[];
-  if (!eq || lista.length < 2) return { vencedora, equalizacao: null };
-
-  const analise = normalizarAnalise(eq.resultado_ia, lista.map((x) => x.id));
-  const equalizado = new Map<string, number | null>();
-  for (const c of analise.cards) equalizado.set(c.proposta_id, c.equalizado);
-  for (const t of analise.equalizacao.totais) if (!equalizado.has(t.proposta_id)) equalizado.set(t.proposta_id, t.total);
-  const ordem = [...lista].sort((x, y) => (equalizado.get(x.id) ?? x.valor_atual ?? Infinity) - (equalizado.get(y.id) ?? y.valor_atual ?? Infinity));
-  return {
-    vencedora,
-    equalizacao: {
-      titulo: analise.titulo,
-      conclusao: analise.conclusao ?? analise.recomendacao.justificativa,
-      referencia: eq.referencia,
-      propostas: ordem.map((x) => ({
-        nome: nomeProposta(x.fornecedor, x.opcao),
-        apresentado: x.valor_atual != null ? formatBRL(x.valor_atual) : '—',
-        equalizado: equalizado.get(x.id) != null ? formatBRL(equalizado.get(x.id)!) : '—',
-        prazo: dias(x.prazo_atual),
-        vencedora: x.id === prop.id,
-      })),
-    },
-  };
+  return { vencedora };
 }
