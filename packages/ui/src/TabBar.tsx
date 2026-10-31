@@ -19,9 +19,11 @@ export const TABS: readonly TabDef[] = [
 export interface TabBarProps {
   active: TabKey;
   onNavigate: (key: TabKey) => void;
+  /** Contadores de pendência por aba (ex.: equalizações com IA em andamento). */
+  badges?: Partial<Record<TabKey, number>>;
 }
 
-export function TabBar({ active, onNavigate }: TabBarProps) {
+export function TabBar({ active, onNavigate, badges }: TabBarProps) {
   return (
     <nav className="tabbar" aria-label="Navegação principal">
       {TABS.map((t) => (
@@ -34,6 +36,11 @@ export function TabBar({ active, onNavigate }: TabBarProps) {
         >
           <span className="tb">
             <Icon name={t.icon} />
+            {(badges?.[t.key] ?? 0) > 0 && (
+              <span className="tb-badge" aria-label={`${badges?.[t.key]} em andamento`}>
+                {(badges?.[t.key] ?? 0) > 9 ? '9+' : badges?.[t.key]}
+              </span>
+            )}
           </span>
           {t.label}
         </button>

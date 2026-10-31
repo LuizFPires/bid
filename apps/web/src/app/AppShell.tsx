@@ -3,6 +3,7 @@ import { BrandLogo, Icon, TabBar, type TabKey } from '@bid/ui';
 import { ToastProvider } from './Toast';
 import { ProfileMenu } from './ProfileMenu';
 import { AtualizacaoApp } from './AtualizacaoApp';
+import { useAnalisesEmAndamento, useEqualizacoes } from '../data/hooks';
 
 /** Ação principal de cada aba: rótulo curto no botão, nome completo no aria-label. */
 const CTA: Partial<Record<TabKey, { label: string; aria: string; to: string }>> = {
@@ -19,6 +20,9 @@ export function AppShell() {
 
   const active = (location.pathname.split('/')[1] || 'propostas') as TabKey;
   const cta = CTA[active];
+  // Pendência na aba Equalizar: quantas análises por IA estão em andamento.
+  const eqs = useEqualizacoes();
+  const gerando = useAnalisesEmAndamento((eqs.data ?? []).map((e) => e.id));
 
   return (
     <div className="stage">
@@ -40,7 +44,11 @@ export function AppShell() {
         </main>
 
           <AtualizacaoApp />
-          <TabBar active={active} onNavigate={(key) => navigate(`/${key}`)} />
+          <TabBar
+            active={active}
+            onNavigate={(key) => navigate(`/${key}`)}
+            badges={{ equalizacoes: gerando.size }}
+          />
         </ToastProvider>
       </div>
     </div>
