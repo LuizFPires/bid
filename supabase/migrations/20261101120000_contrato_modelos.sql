@@ -21,7 +21,9 @@ create unique index if not exists uq_modelo_ativo on public.contrato_modelos(org
 create table if not exists public.modelo_blocos (
   id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizacoes(id) on delete cascade,
-  modelo_id uuid not null references public.contrato_modelos(id) on delete cascade,
+  modelo_id uuid not null,
+  -- FK composta: filho sempre da MESMA org do modelo (isolamento entre inquilinos)
+  foreign key (modelo_id, org_id) references public.contrato_modelos(id, org_id) on delete cascade,
   chave text not null,                  -- 'escavacao_escoramento'
   titulo text not null,
   categorias text[] not null default '{}',   -- sugere por categoria do certame; '*' = sempre oferecer
@@ -35,7 +37,9 @@ create table if not exists public.modelo_blocos (
 create table if not exists public.modelo_variantes (
   id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizacoes(id) on delete cascade,
-  modelo_id uuid not null references public.contrato_modelos(id) on delete cascade,
+  modelo_id uuid not null,
+  -- FK composta: filho sempre da MESMA org do modelo (isolamento entre inquilinos)
+  foreign key (modelo_id, org_id) references public.contrato_modelos(id, org_id) on delete cascade,
   chave text not null,                  -- '19.4_indenizacao_legal'
   numero text not null,                 -- item afetado: '19.4'
   titulo text not null,
@@ -49,7 +53,9 @@ create table if not exists public.modelo_variantes (
 create table if not exists public.modelo_parametros (
   id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizacoes(id) on delete cascade,
-  modelo_id uuid not null references public.contrato_modelos(id) on delete cascade,
+  modelo_id uuid not null,
+  -- FK composta: filho sempre da MESMA org do modelo (isolamento entre inquilinos)
+  foreign key (modelo_id, org_id) references public.contrato_modelos(id, org_id) on delete cascade,
   numero text not null,                 -- '3.1'
   parametro text not null,              -- 'inicio_anterior'
   rotulo text not null,
@@ -72,6 +78,9 @@ update storage.buckets
 -- Nenhuma policy em storage.objects para `modelos`: o cliente não baixa o modelo cru.
 
 -- ---------- RLS ----------
+-- Leitura por colabora_org (membro da org OU convidado aceito em alguma obra dela):
+-- colaborador monta contrato e precisa do texto do catálogo no app (PRD §3).
+-- Escrita só gestor da org. O .docx cru fica só no servidor (bucket sem policy).
 alter table public.contrato_modelos enable row level security;
 alter table public.modelo_blocos enable row level security;
 alter table public.modelo_variantes enable row level security;
@@ -106,8 +115,8 @@ create or replace function public.modelo_contrato_ativo(p_org uuid)
 returns table (id uuid, codigo text, versao text, blocos int, variantes int)
 language sql stable security invoker set search_path = public as $$
   select m.id, m.codigo, m.versao,
-         (select count(*)::int from public.modelo_blocos b where b.modelo_id = m.id),
-         (select count(*)::int from public.modelo_variantes v where v.modelo_id = m.id)
+         (select count(*)::int from public.modelo_blocos b where b.modelo_id = m.id and b.org_id = m.org_id),
+         (select count(*)::int from public.modelo_variantes v where v.modelo_id = m.id and v.org_id = m.org_id)
     from public.contrato_modelos m
    where m.org_id = p_org and m.ativo
    limit 1;
