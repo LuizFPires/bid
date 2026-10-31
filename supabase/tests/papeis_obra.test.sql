@@ -2,7 +2,7 @@
 -- (PRD-contratos §3). Simula usuários autenticados via request.jwt.claims +
 -- role authenticated (RLS e guards valem de verdade). `supabase test db`.
 begin;
-select plan(26);
+select plan(28);
 
 -- ---------- estrutura ----------
 select has_column('public', 'obra_convites', 'papel', 'obra_convites.papel existe');
@@ -93,6 +93,13 @@ select lives_ok($$ select public.apagar_proposta((select p2 from fx)) $$, 'gesto
 select lives_ok($$ select public.apagar_equalizacao((select eq from fx)) $$, 'gestor apaga equalização');
 select throws_ok($$ select public.apagar_obra((select obra from fx)) $$, 'P0001', 'Só quem criou a obra pode apagá-la.', 'gestor não apaga a obra (Q1)');
 select lives_ok($$ select public.remover_acesso_obra((select id from public.obra_convites where email = 'outro.gestor@teste.local')) $$, 'gestor remove acesso');
+reset role;
+
+-- ---------- contrato assinado não se apaga, nem pelo dono, nem por update direto ----------
+update public.contratos set status = 'assinado' where id = (select contrato from fx);
+select pg_temp.como('00000000-0000-4000-8000-00000000d001');
+select throws_ok($$ update public.contratos set deleted_at = now() where id = (select contrato from fx) $$, 'P0001', 'Contrato assinado não pode ser excluído.', 'assinado não se apaga por update direto');
+select throws_ok($$ select public.apagar_contrato((select contrato from fx)) $$, 'P0001', 'Contrato assinado não pode ser excluído.', 'assinado não se apaga pela RPC');
 reset role;
 
 -- ---------- listar_acesso_obra traz o papel ----------

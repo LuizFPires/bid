@@ -120,10 +120,14 @@ create trigger trg_equalizacoes_guard_del before update on public.equalizacoes
 create or replace function public.guard_contrato_soft_delete()
 returns trigger language plpgsql as $$
 begin
-  if auth.uid() is not null
-     and (new.deleted_at is distinct from old.deleted_at)
-     and not public.gerencia_obra(old.obra_id) then
-    raise exception 'Só o dono ou um gestor da obra pode excluir o contrato.';
+  if new.deleted_at is distinct from old.deleted_at then
+    -- Assinado nunca se apaga, nem por update direto (regra 10 / RC-17).
+    if new.deleted_at is not null and old.status = 'assinado' then
+      raise exception 'Contrato assinado não pode ser excluído.';
+    end if;
+    if auth.uid() is not null and not public.gerencia_obra(old.obra_id) then
+      raise exception 'Só o dono ou um gestor da obra pode excluir o contrato.';
+    end if;
   end if;
   return new;
 end;
@@ -131,6 +135,28 @@ $$;
 drop trigger if exists trg_contratos_guard_del on public.contratos;
 create trigger trg_contratos_guard_del before update on public.contratos
   for each row execute function public.guard_contrato_soft_delete();
+
+-- Proposta não troca de OBRA pela mão de quem não gerencia as duas (o gate de
+-- exclusão lê o pai original; isto impede mover para uma obra onde se é gestor
+-- e apagar lá). Trocar de categoria dentro da mesma obra continua livre.
+create or replace function public.guard_proposta_certame_change()
+returns trigger language plpgsql as $$
+declare v_de uuid; v_para uuid;
+begin
+  if auth.uid() is not null and new.certame_id is distinct from old.certame_id then
+    select obra_id into v_de from public.certames where id = old.certame_id;
+    select obra_id into v_para from public.certames where id = new.certame_id;
+    if v_de is distinct from v_para
+       and not (public.gerencia_obra(v_de) and public.gerencia_obra(v_para)) then
+      raise exception 'Só o dono ou um gestor das duas obras pode mover a proposta de obra.';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists trg_propostas_guard_certame on public.propostas;
+create trigger trg_propostas_guard_certame before update on public.propostas
+  for each row execute function public.guard_proposta_certame_change();
 
 -- ---------- RPCs de acesso (SECURITY DEFINER; gates explícitos) ----------
 drop function if exists public.convidar_para_obra(uuid, text);
