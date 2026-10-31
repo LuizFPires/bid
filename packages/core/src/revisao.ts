@@ -60,15 +60,16 @@ function pedidoDoCriterio(criterio: string, situacao: PontoRevisao['situacao']):
 }
 
 export interface MensagemRevisaoDados {
-  fornecedor: string;
   categoria: string;
   obra: string | null;
   pontos: PontoRevisao[];
-  /** Quem assina (nome da pessoa ou da empresa). */
-  remetente: string | null;
 }
 
-/** Texto pronto para o WhatsApp: curto, educado, um ponto por linha. */
+/**
+ * Texto pronto para o WhatsApp: direto ao ponto, um item por linha. Sem
+ * saudação nem assinatura — a conversa já está aberta e quem manda cumprimenta
+ * do seu jeito; termina no "obrigado".
+ */
 export function mensagemRevisao(d: MensagemRevisaoDados): string {
   const onde = d.obra ? `${d.categoria} da obra ${d.obra}` : d.categoria;
   const linhas = d.pontos.map((p) => {
@@ -77,23 +78,15 @@ export function mensagemRevisao(d: MensagemRevisaoDados): string {
     return `• ${p.criterio}: ${pedido}${contexto}.`;
   });
   return [
-    `Olá, ${d.fornecedor}! Tudo bem?`,
-    '',
     `Estamos equalizando as propostas de ${onde} e precisamos de uma revisão da sua proposta nos pontos abaixo:`,
     '',
     ...linhas,
     '',
     'Pode nos enviar a proposta revisada com esses itens? Assim conseguimos comparar na mesma base. Obrigado!',
-    ...(d.remetente ? ['', d.remetente] : []),
   ].join('\n');
 }
 
-/**
- * Link do WhatsApp com a mensagem pronta. Com telefone, abre a conversa direto
- * (DDI 55 se vier só DDD+número); sem telefone, o WhatsApp pede o contato.
- */
-export function linkWhatsAppMensagem(mensagem: string, telefone?: string | null): string {
-  const digitos = (telefone ?? '').replace(/\D/g, '');
-  const numero = !digitos ? '' : digitos.length <= 11 ? `55${digitos}` : digitos;
-  return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+/** Link do WhatsApp com a mensagem pronta; o WhatsApp pede o contato ao abrir. */
+export function linkWhatsAppMensagem(mensagem: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
 }

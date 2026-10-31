@@ -31,29 +31,22 @@ describe('pedidosDeRevisao', () => {
 describe('mensagemRevisao', () => {
   it('monta o texto com um ponto por linha, em linguagem de obra', () => {
     const m = mensagemRevisao({
-      fornecedor: 'Construferro',
       categoria: 'Estrutura Metálica',
       obra: 'RAFLog',
-      remetente: 'Clássica Engenharia',
       pontos: [
         { criterio: 'Tributos', situacao: 'alerta', texto: 'Não inclusos: ISS 5%' },
         { criterio: 'Garantia', situacao: 'falta', texto: null },
       ],
     });
-    expect(m).toContain('Olá, Construferro!');
-    expect(m).toContain('Estrutura Metálica da obra RAFLog');
+    expect(m.startsWith('Estamos equalizando as propostas de Estrutura Metálica da obra RAFLog')).toBe(true);
     expect(m).toContain('• Tributos: confirmar por escrito que os tributos estão incluídos no preço final (a proposta traz: "Não inclusos: ISS 5%").');
     expect(m).toContain('• Garantia: incluir a garantia (prazo e cobertura).');
-    expect(m.trim().endsWith('Clássica Engenharia')).toBe(true);
+    expect(m.trim().endsWith('Obrigado!')).toBe(true);
   });
 });
 
 describe('linkWhatsAppMensagem', () => {
-  it('sem telefone deixa o WhatsApp escolher o contato', () => {
-    expect(linkWhatsAppMensagem('oi')).toBe('https://wa.me/?text=oi');
-  });
-  it('com DDD+número acrescenta o DDI 55; com DDI, mantém', () => {
-    expect(linkWhatsAppMensagem('oi', '(31) 99999-0000')).toBe('https://wa.me/5531999990000?text=oi');
-    expect(linkWhatsAppMensagem('oi', '+55 31 99999-0000')).toBe('https://wa.me/5531999990000?text=oi');
+  it('deixa o WhatsApp escolher o contato e codifica o texto', () => {
+    expect(linkWhatsAppMensagem('oi, tudo bem?')).toBe('https://wa.me/?text=oi%2C%20tudo%20bem%3F');
   });
 });

@@ -32,7 +32,6 @@ import {
   usePropostasDoCertame,
   usePropostasPorCategoria,
   useSugestoes,
-  useMinhaOrg,
 } from '../data/hooks';
 import {
   desfazerVencedora,
@@ -515,7 +514,6 @@ export function EqualizacaoScreen() {
   const qc = useQueryClient();
   const [erroIA, setErroIA] = useState<string | null>(null);
   const [pedidoAberto, setPedidoAberto] = useState<PedidoRevisao | null>(null);
-  const org = useMinhaOrg();
 
   const comp = useMemo(() => (data ? compararPropostas(data.propostas) : null), [data]);
   // O que pedir a cada fornecedor (faltas e alertas da matriz), para o WhatsApp.
@@ -736,7 +734,6 @@ export function EqualizacaoScreen() {
         pedido={pedidoAberto}
         categoria={data.categoria}
         obra={data.obraNome}
-        remetente={org.data?.nome ?? null}
         onFechar={() => setPedidoAberto(null)}
       />
       <ConfirmDialog
