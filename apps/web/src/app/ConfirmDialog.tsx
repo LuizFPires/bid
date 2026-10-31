@@ -26,15 +26,18 @@ export function ConfirmDialog({
 }) {
   const cancelarRef = useRef<HTMLButtonElement>(null);
 
+  // Mesma precaução do Drawer: foca só ao abrir, não a cada render.
+  const onCancelarRef = useRef(onCancelar);
+  onCancelarRef.current = onCancelar;
   useEffect(() => {
     if (!aberto) return;
     cancelarRef.current?.focus();
     function onEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onCancelar();
+      if (e.key === 'Escape') onCancelarRef.current();
     }
     document.addEventListener('keydown', onEsc);
     return () => document.removeEventListener('keydown', onEsc);
-  }, [aberto, onCancelar]);
+  }, [aberto]);
 
   if (!aberto) return null;
 

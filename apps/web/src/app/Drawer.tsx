@@ -26,15 +26,19 @@ export function Drawer({
   const [arrasto, setArrasto] = useState(0);
   const inicioY = useRef<number | null>(null);
 
+  // `onFechar` costuma ser uma arrow nova a cada render; se o efeito dependesse
+  // dela, rodaria a cada tecla digitada e roubaria o foco do input para o X.
+  const onFecharRef = useRef(onFechar);
+  onFecharRef.current = onFechar;
   useEffect(() => {
     if (!aberto) return;
     fecharRef.current?.focus();
     function onEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') onFechar();
+      if (e.key === 'Escape') onFecharRef.current();
     }
     document.addEventListener('keydown', onEsc);
     return () => document.removeEventListener('keydown', onEsc);
-  }, [aberto, onFechar]);
+  }, [aberto]);
 
   useEffect(() => {
     if (!aberto) setArrasto(0);
