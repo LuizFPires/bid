@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   CERTAME_LABEL,
   compararPropostas,
@@ -7,6 +7,9 @@ import {
   formatNumber,
   formatBRLCompact,
   nomeProposta,
+  pendenciasDaAnalise,
+  textoPendencias,
+  type AnaliseEqualizacao,
   type CertameStatus,
   type PropostaComparavel,
 } from '@bid/core';
@@ -976,6 +979,11 @@ export function EqualizacaoScreen() {
 
           {(() => {
             const rec = data.propostas.find((p) => p.id === ia.recomendacao?.proposta_id);
+            const pend = pendenciasDaAnalise(
+              ia as Pick<AnaliseEqualizacao, 'matriz'>,
+              data.propostas.map((p) => ({ id: p.id, nome: nomeProposta(p.fornecedor, p.opcao), valor: p.valor })),
+            );
+            const textoPend = textoPendencias(pend);
             return (
               <div className="rep-rec">
                 <div className="k">
@@ -994,11 +1002,26 @@ export function EqualizacaoScreen() {
                     <>
                       <b>A IA não indicou uma vencedora.</b>{' '}
                       {ia.recomendacao?.justificativa ??
+                        textoPend ??
                         ia.conclusao ??
-                        'Faltam dados em pelo menos uma proposta para comparar com segurança (valor, escopo ou condições). Complete a proposta — por exemplo, lendo o arquivo ou editando os dados — e refaça o relatório.'}
+                        'Complete os dados das propostas (valor, escopo ou condições) e refaça o relatório.'}
                     </>
                   )}
                 </p>
+                {!rec && pend.length > 0 && (
+                  <ul className="rep-pend">
+                    {pend.map((p) => (
+                      <li key={p.proposta_id}>
+                        <Link to={`/propostas/${p.proposta_id}`}>
+                          <b>{p.nome}</b>
+                        </Link>
+                        <span>
+                          {p.faltas.length > 1 ? 'faltam' : 'falta'} {p.faltas.map((f) => f.toLocaleLowerCase('pt-BR')).join(', ')}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <small>
                   A recomendação é apoio — a escolha da vencedora é sua, na tabela acima.
                   {rec ? '' : ' "Refazer relatório" só muda o resultado se os dados das propostas mudarem.'}

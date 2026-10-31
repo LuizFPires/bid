@@ -8,3 +8,4 @@ export * from './equalizacao';
 export * from './clausulas';
 export * from './assinatura';
 export * from './categorias';
+export * from './pendencias';
