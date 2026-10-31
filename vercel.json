@@ -5,7 +5,8 @@
   "outputDirectory": "apps/web/dist",
   "functions": {
     "api/**/*.ts": {
-      "maxDuration": 300
+      "maxDuration": 300,
+      "includeFiles": "node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/**"
     }
   },
   "rewrites": [
