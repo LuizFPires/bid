@@ -12,7 +12,7 @@ import {
   type Variacao,
 } from '@bid/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { Autocomplete, Button, Icon } from '@bid/ui';
+import { Button, Icon } from '@bid/ui';
 import {
   invalidarVencedora,
   useApagarProposta,
@@ -32,6 +32,7 @@ import {
 } from '../data/mutations';
 import { urlArquivoProposta, type PropostaDetalhe, type VersaoDetalhe } from '../data/queries';
 import { LeituraIA } from '../components/LeituraIA';
+import { SelectCategoria } from '../components/SelectCategoria';
 import { useToast } from '../app/Toast';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 import { Drawer } from '../app/Drawer';
@@ -671,12 +672,10 @@ function EditarProposta({
         <label htmlFor="ed-forn">Fornecedor</label>
         <input id="ed-forn" value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} placeholder="Nome do fornecedor" />
       </div>
-      <Autocomplete
-        label="Categoria de serviço"
-        placeholder="Ex.: Climatização"
+      <SelectCategoria
         value={categoria}
         onChange={setCategoria}
-        options={(categoriasSug.data ?? []).map((s) => s.texto)}
+        opcoes={(categoriasSug.data ?? []).map((s) => s.texto)}
       />
       {categoria.trim() && categoria.trim() !== proposta.categoria && (
         <p className="field-help" style={{ margin: '-6px 0 14px' }}>
