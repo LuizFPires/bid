@@ -172,6 +172,17 @@ export function ProfileMenu() {
                 <Icon name="cat-estrutura" />
                 Categorias
               </button>
+              <button
+                className="pm-item"
+                type="button"
+                onClick={() => {
+                  fechar();
+                  navigate('/cadastros');
+                }}
+              >
+                <Icon name="bldg" />
+                Cadastros
+              </button>
               <button className="pm-item" type="button" onClick={() => setTrocando(true)}>
                 <Icon name="link" />
                 Trocar senha

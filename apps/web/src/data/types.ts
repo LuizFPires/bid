@@ -24,8 +24,15 @@ export interface Obra {
   cidade: string | null;
   fase: string | null;
   fase_pill: 'aberta' | 'analise' | 'adjudicada' | 'neutro';
-  /** Dono da obra (quem criou): único que pode apagá-la e convidar pessoas. */
+  /** Dono da obra (quem criou): único que pode apagá-la. */
   criado_por: string | null;
+  /** Dados que a minuta de contrato precisa (M9). */
+  endereco: string | null;
+  cep: string | null;
+  cno: string | null;
+  foro: string | null;
+  contratante_id: string | null;
+  construtora_id: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

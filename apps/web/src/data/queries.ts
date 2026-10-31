@@ -89,7 +89,7 @@ export async function fetchObras(): Promise<ObraResumo[]> {
   const { data, error } = await db()
     .from('obras')
     .select(
-      `id, org_id, nome, cidade, fase, fase_pill, criado_por, created_at, updated_at, deleted_at,
+      `id, org_id, nome, cidade, fase, fase_pill, criado_por, endereco, cep, cno, foro, contratante_id, construtora_id, created_at, updated_at, deleted_at,
        certames ( id, status )`,
     )
     .is('deleted_at', null)
@@ -145,7 +145,7 @@ export async function fetchObra(id: string): Promise<ObraDetalhe | null> {
   const { data, error } = await db()
     .from('obras')
     .select(
-      `id, org_id, nome, cidade, fase, fase_pill, criado_por, created_at, updated_at, deleted_at,
+      `id, org_id, nome, cidade, fase, fase_pill, criado_por, endereco, cep, cno, foro, contratante_id, construtora_id, created_at, updated_at, deleted_at,
        certames ( id, categoria, titulo, status, vencedora_proposta_id )`,
     )
     .eq('id', id)

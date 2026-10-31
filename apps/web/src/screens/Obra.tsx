@@ -13,7 +13,11 @@ import {
   useRemoverAcessoObra,
 } from '../data/hooks';
 import { restaurarObra } from '../data/mutations';
+import { useAtualizarObraContrato, usePartes } from '../data/cadastros';
+import { Drawer } from '../app/Drawer';
+import { cnoValido, formatarCep, formatarCno, gerencia } from '@bid/core';
 import type { AcessoObra } from '../data/queries';
+import type { Obra } from '../data/types';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../app/Toast';
 import { ConfirmDialog } from '../app/ConfirmDialog';
@@ -239,6 +243,135 @@ function Pessoas({ obraId, gerencia }: { obraId: string; gerencia: boolean }) {
   );
 }
 
+/**
+ * Dados que a minuta de contrato precisa da obra: endereço, CEP, CNO, foro e as
+ * partes CONTRATANTE e CONSTRUTORA (cadastros). Só dono/gestor edita.
+ */
+function DadosContrato({ obra, podeEditar }: { obra: Obra; podeEditar: boolean }) {
+  const partes = usePartes();
+  const salvar = useAtualizarObraContrato(obra.id);
+  const toast = useToast();
+  const [aberto, setAberto] = useState(false);
+  const [f, setF] = useState({ endereco: '', cep: '', cno: '', foro: '', contratante_id: '', construtora_id: '' });
+  const [erro, setErro] = useState<string | null>(null);
+  useEffect(() => {
+    if (aberto) {
+      setF({ endereco: obra.endereco ?? '', cep: obra.cep ?? '', cno: obra.cno ?? '', foro: obra.foro ?? '', contratante_id: obra.contratante_id ?? '', construtora_id: obra.construtora_id ?? '' });
+      setErro(null);
+    }
+  }, [aberto, obra]);
+  const lista = partes.data ?? [];
+  const contratante = lista.find((p) => p.id === obra.contratante_id) ?? null;
+  const construtora = lista.find((p) => p.id === obra.construtora_id) ?? null;
+  const pendentes = [!obra.endereco && 'endereço', !obra.cno && 'CNO', !obra.contratante_id && 'contratante', !obra.construtora_id && 'construtora'].filter(Boolean) as string[];
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    if (f.cno.trim() && !cnoValido(f.cno)) return setErro('CNO deve ter 12 dígitos.');
+    try {
+      await salvar.mutateAsync({ endereco: f.endereco, cep: f.cep, cno: f.cno, foro: f.foro, contratante_id: f.contratante_id || null, construtora_id: f.construtora_id || null });
+      toast('Dados de contrato da obra salvos.');
+      setAberto(false);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível salvar.');
+    }
+  }
+
+  return (
+    <section style={{ marginTop: 18 }}>
+      <div className="page-head" style={{ marginBottom: 10 }}>
+        <h2 style={{ fontSize: 15, margin: 0 }}>Dados para contrato</h2>
+        <p className="lead" style={{ marginTop: 2 }}>
+          {pendentes.length ? `Falta: ${pendentes.join(', ')}. ` : 'Completo. '}
+          Entram na qualificação e no quadro-resumo da minuta.
+        </p>
+      </div>
+      <div className="card" style={{ display: 'grid', gap: 8 }}>
+        <Linha k="Endereço" v={obra.endereco ? `${obra.endereco}${obra.cep ? ` · CEP ${formatarCep(obra.cep)}` : ''}` : null} />
+        <Linha k="CNO" v={obra.cno ? formatarCno(obra.cno) : null} />
+        <Linha k="Foro" v={obra.foro} />
+        <Linha k="Contratante" v={contratante ? (contratante.nome_curto || contratante.razao_social) : null} />
+        <Linha k="Construtora" v={construtora ? `${construtora.nome_curto || construtora.razao_social}${construtora.marca ? ` · ${construtora.marca === 'ampla' ? 'AMPLA' : 'Clássica'}` : ''}` : null} />
+        {podeEditar && (
+          <Button variant="soft" icon="pencil" onClick={() => setAberto(true)} style={{ marginTop: 4 }}>
+            Editar dados
+          </Button>
+        )}
+      </div>
+
+      <Drawer
+        aberto={aberto}
+        onFechar={() => setAberto(false)}
+        titulo="Dados para contrato"
+        subtitulo={obra.nome}
+        rodape={
+          <Button block icon="check" disabled={salvar.isPending} onClick={(e) => void enviar(e as unknown as FormEvent)}>
+            {salvar.isPending ? 'Salvando…' : 'Salvar'}
+          </Button>
+        }
+      >
+        <form onSubmit={enviar}>
+          <div className="field">
+            <label>Endereço da obra</label>
+            <input value={f.endereco} onChange={(e) => setF({ ...f, endereco: e.target.value })} placeholder="Rua, nº, bairro, Cidade/UF" />
+          </div>
+          <div className="pair">
+            <div className="field">
+              <label>CEP</label>
+              <input value={f.cep} inputMode="numeric" onChange={(e) => setF({ ...f, cep: e.target.value })} placeholder="00000-000" />
+            </div>
+            <div className="field">
+              <label>CNO</label>
+              <input value={f.cno} inputMode="numeric" onChange={(e) => setF({ ...f, cno: e.target.value })} placeholder="00.000.00000/00" />
+            </div>
+          </div>
+          <div className="field">
+            <label>Foro</label>
+            <input value={f.foro} onChange={(e) => setF({ ...f, foro: e.target.value })} placeholder="Cidade/UF (padrão: a cidade da obra)" />
+          </div>
+          <div className="field">
+            <label>Contratante (dono do empreendimento)</label>
+            <select value={f.contratante_id} onChange={(e) => setF({ ...f, contratante_id: e.target.value })}>
+              <option value="">Selecione…</option>
+              {lista.filter((p) => p.tipo === 'contratante').map((p) => (
+                <option key={p.id} value={p.id}>{p.nome_curto || p.razao_social}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Construtora (administra a obra)</label>
+            <select value={f.construtora_id} onChange={(e) => setF({ ...f, construtora_id: e.target.value })}>
+              <option value="">Selecione…</option>
+              {lista.filter((p) => p.tipo === 'construtora').map((p) => (
+                <option key={p.id} value={p.id}>{p.nome_curto || p.razao_social}{p.marca ? ` · ${p.marca === 'ampla' ? 'AMPLA' : 'Clássica'}` : ''}</option>
+              ))}
+            </select>
+          </div>
+          <p className="lead" style={{ fontSize: 12 }}>
+            Falta alguma parte? Cadastre em <Link to="/cadastros">Cadastros</Link> (menu do perfil).
+          </p>
+          {erro && (
+            <div className="banner warn" role="alert">
+              <Icon name="alert" />
+              <span>{erro}</span>
+            </div>
+          )}
+          <button type="submit" hidden />
+        </form>
+      </Drawer>
+    </section>
+  );
+}
+
+function Linha({ k, v }: { k: string; v: string | null | undefined }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13 }}>
+      <span style={{ color: 'var(--muted)', fontWeight: 700 }}>{k}</span>
+      <span style={{ fontWeight: 800, textAlign: 'right', color: v ? 'inherit' : 'var(--faint)' }}>{v || '—'}</span>
+    </div>
+  );
+}
+
 export function ObraScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -368,6 +501,7 @@ export function ObraScreen() {
         </div>
       )}
 
+      <DadosContrato obra={obra} podeEditar={gerencia(papelAqui) || ehDono} />
       <Pessoas obraId={obra.id} gerencia={ehDono || papelAqui === 'gestor'} />
     </>
   );
