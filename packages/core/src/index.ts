@@ -10,3 +10,4 @@ export * from './assinatura';
 export * from './categorias';
 export * from './pendencias';
 export * from './revisao';
+export * from './lote';

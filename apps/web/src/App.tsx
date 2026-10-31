@@ -14,6 +14,8 @@ import {
   ObraScreen,
   NovaObraScreen,
   NovaPropostaScreen,
+  LoteScreen,
+  LoteConcluidoScreen,
   PropostaScreen,
   IniciarEqualizacaoScreen,
   EqualizacaoScreen,
@@ -65,6 +67,8 @@ function Conteudo() {
         <Route index element={<Navigate to="/propostas" replace />} />
         <Route path="propostas" element={<PropostasScreen />} />
         <Route path="propostas/nova" element={<NovaPropostaScreen />} />
+        <Route path="propostas/lote" element={<LoteScreen />} />
+        <Route path="propostas/lote/concluido" element={<LoteConcluidoScreen />} />
         <Route path="propostas/:id" element={<PropostaScreen />} />
         <Route path="equalizacoes" element={<EqualizacoesScreen />} />
         <Route path="equalizacoes/nova" element={<IniciarEqualizacaoScreen />} />

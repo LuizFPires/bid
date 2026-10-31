@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   CERTAME_LABEL,
   compararPropostas,
@@ -218,8 +218,10 @@ export function IniciarEqualizacaoScreen() {
   const obras = useObras();
   const categoriasSug = useSugestoes('categoria');
 
+  // Vindo do lote ("Equalizar agora"): obra e categoria já escolhidas.
+  const pre = (useLocation().state ?? null) as { obraId?: string; categoria?: string } | null;
   const [escopo, setEscopo] = useState<'obra' | 'entre_obras'>('obra');
-  const [obraId, setObraId] = useState('');
+  const [obraId, setObraId] = useState(pre?.obraId ?? '');
   const [certameId, setCertameId] = useState('');
   const [categoria, setCategoria] = useState('');
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -275,6 +277,13 @@ export function IniciarEqualizacaoScreen() {
   }
 
   const certames = obraDetalhe.data?.certames ?? [];
+  useEffect(() => {
+    if (pre?.categoria && !certameId) {
+      const c = certames.find((x) => x.categoria === pre.categoria);
+      if (c) setCertameId(c.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [certames.length]);
 
   return (
     <>

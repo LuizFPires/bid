@@ -517,6 +517,18 @@ export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe |
 }
 
 /** Propostas de um certame (para iniciar equalização de escopo obra). */
+/** Propostas já arquivadas nessa categoria da obra (para o lote avisar fornecedor repetido). */
+export async function fetchPropostasDaCategoriaNaObra(obraId: string, categoria: string): Promise<{ id: string; fornecedor: string }[]> {
+  const { data, error } = await db()
+    .from('propostas')
+    .select('id, fornecedor, certames!inner ( obra_id, categoria )')
+    .eq('certames.obra_id', obraId)
+    .eq('certames.categoria', categoria)
+    .is('deleted_at', null);
+  if (error) throw error;
+  return ((data ?? []) as unknown as { id: string; fornecedor: string }[]).map((p) => ({ id: p.id, fornecedor: p.fornecedor }));
+}
+
 export async function fetchPropostasDoCertame(
   certameId: string,
 ): Promise<(PropostaComparavel & { obraNome: string })[]> {

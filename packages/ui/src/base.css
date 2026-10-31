@@ -3087,3 +3087,130 @@ table.eq .nota-eq.warn {
   text-underline-offset: 2px;
 }
 .rep-pend li .linklike svg { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 2px; color: var(--muted); }
+
+/* ---------- Lote de propostas ---------- */
+.lote-files {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lote-files li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 8px 8px 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  min-width: 0;
+}
+.lote-files .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lote-files button { border: 0; background: none; color: var(--faint); padding: 6px; display: grid; place-items: center; cursor: pointer; }
+.lote-files button svg { width: 14px; height: 14px; }
+.ext {
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  flex: 0 0 auto;
+}
+.ext.manual { background: var(--warn-soft); color: var(--warn); }
+.lote-prog { margin: 0 0 var(--sp-block); }
+.lote-prog .prog-bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.lote-prog .prog-fill { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width 240ms ease-out; }
+.lote-prog small { display: block; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.lote-row.clicavel { cursor: pointer; }
+.lote-row .rt { gap: 6px; }
+.lote-row .ic.ok { background: var(--ok-soft); color: var(--ok); }
+.lote-row .ic.warn { background: var(--warn-soft); color: var(--warn); }
+.lote-mini { display: flex; gap: 10px; }
+.chip {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chip.on { background: var(--accent-soft); color: var(--accent-deep); border-color: var(--accent); }
+.chip.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.chip.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.chip.bad { background: var(--danger-soft, rgba(240, 139, 139, 0.14)); color: var(--danger); border-color: transparent; }
+.spin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2.5px solid var(--line);
+  border-top-color: var(--accent);
+  animation: lote-spin 1s linear infinite;
+  display: inline-block;
+}
+@keyframes lote-spin { to { transform: rotate(360deg); } }
+.lote-acoes { display: flex; justify-content: space-between; gap: 12px; margin-top: var(--sp-label); padding: 0 4px; }
+.link {
+  border: 0;
+  background: none;
+  padding: 8px 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.link svg { width: 15px; height: 15px; }
+.link.danger { color: var(--danger); }
+.lote-versao {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--warn-soft);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: var(--sp-block);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.lote-versao input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); }
+.lote-faixa {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-bottom: var(--sp-block);
+  font: inherit;
+  cursor: pointer;
+}
+.lote-faixa .ic { width: 36px; height: 36px; border-radius: 11px; background: var(--surface); color: var(--accent-deep); display: grid; place-items: center; flex: 0 0 auto; }
+.lote-faixa .ic svg { width: 18px; height: 18px; }
+.lote-faixa .tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lote-faixa .t1 { font-weight: 800; font-size: 14px; }
+.lote-faixa .t2 { font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.lote-faixa > svg { width: 18px; height: 18px; color: var(--faint); }
+.lote-done { text-align: center; padding: 28px 8px 8px; display: flex; flex-direction: column; gap: 10px; }
+.lote-done .big { width: 68px; height: 68px; border-radius: 50%; background: var(--ok-soft); color: var(--ok); display: grid; place-items: center; margin: 0 auto 6px; }
+.lote-done .big svg { width: 30px; height: 30px; }
+.lote-done h1 { margin: 0; font-size: 22px; }
+.lote-done .lead { margin: 0 0 12px; color: var(--muted); font-weight: 600; }

@@ -16,12 +16,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../app/Toast';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 import { SwipeRow } from '../components/SwipeRow';
+import { useLote } from '../data/lote';
+import { resumoLote } from '@bid/core';
 
 export function PropostasScreen() {
   // Arrastar para o lado → lixeira → confirmação → Desfazer (regra #11).
   const apagar = useApagarProposta();
   const toast = useToast();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [paraApagar, setParaApagar] = useState<PropostaAcervo | null>(null);
   async function confirmarApagar() {
     if (!paraApagar) return;
@@ -47,6 +50,8 @@ export function PropostasScreen() {
   }
   const { data, isLoading, isError } = useAcervo();
   const props = useMemo(() => data ?? [], [data]);
+  const lote = useLote();
+  const loteResumo = lote ? resumoLote(lote) : null;
 
   const [categoria, setCategoria] = useState<string | null>(null);
   const [obraId, setObraId] = useState<string | null>(null);
@@ -71,6 +76,23 @@ export function PropostasScreen() {
         <h1>Propostas</h1>
         <p className="lead">O acervo de propostas de obra.</p>
       </div>
+
+      {lote && loteResumo && (
+        <button type="button" className="lote-faixa" onClick={() => navigate('/propostas/lote')}>
+          <span className="ic">
+            {loteResumo.emAndamento > 0 ? <span className="spin" aria-hidden="true" /> : <Icon name="doc" />}
+          </span>
+          <span className="tt">
+            <span className="t1">Lote em andamento · {lote.categoria}</span>
+            <span className="t2">
+              {loteResumo.emAndamento > 0
+                ? `${loteResumo.total - loteResumo.emAndamento} de ${loteResumo.total} lidas · toque para conferir`
+                : `${loteResumo.confirmadas} de ${loteResumo.total} confirmadas · toque para continuar`}
+            </span>
+          </span>
+          <Icon name="chev" />
+        </button>
+      )}
 
       <div className="searchbar">
         <Icon name="search" />

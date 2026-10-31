@@ -10,7 +10,9 @@ import {
 import { Autocomplete, Button, Icon } from '@bid/ui';
 import { useObras, useSugestoes } from '../data/hooks';
 import { useCriarProposta } from '../data/hooks';
-import { arquivoLegivelPelaIA, extrairProposta, uploadPropostaArquivo } from '../data/mutations';
+import { ACCEPT_PROPOSTA, arquivoLegivelPelaIA, extrairProposta, uploadPropostaArquivo } from '../data/mutations';
+import { iniciarLote } from '../data/lote';
+import { LOTE_MAX_ARQUIVOS } from '@bid/core';
 
 import { LeituraIA } from '../components/LeituraIA';
 import { AlertasLeitura } from '../components/AlertasLeitura';
@@ -72,7 +74,10 @@ export function NovaPropostaScreen() {
   const [fase, setFase] = useState<Fase>('form');
   const [obraId, setObraId] = useState('');
   const [categoria, setCategoria] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  // Com 1 arquivo o fluxo é o de sempre; com vários vira um lote (tela própria).
+  const file = files.length === 1 ? files[0]! : null;
+  const varios = files.length > 1;
   const [arquivoPath, setArquivoPath] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -92,7 +97,7 @@ export function NovaPropostaScreen() {
   const [alertas, setAlertas] = useState<PropostaExtraida['alertas']>([]);
 
   const ehPdf = !!file && arquivoLegivelPelaIA(file);
-  const podeProsseguir = Boolean(obraId && categoria.trim() && file);
+  const podeProsseguir = Boolean(obraId && categoria.trim() && files.length > 0);
 
   function preencher(d: PropostaExtraida) {
     setFornecedor(d.fornecedor ?? '');
@@ -117,8 +122,15 @@ export function NovaPropostaScreen() {
 
   async function prosseguir(e: FormEvent) {
     e.preventDefault();
-    if (!file || !obraId || !categoria.trim()) return;
+    if (!obraId || !categoria.trim() || files.length === 0) return;
     setErro(null);
+    if (varios) {
+      const obraNome = listaObras.find((o) => o.id === obraId)?.nome ?? '';
+      iniciarLote({ obraId, obraNome, categoria: categoria.trim(), files });
+      navigate('/propostas/lote', { replace: true });
+      return;
+    }
+    if (!file) return;
     // Feedback IMEDIATO ao tocar (o upload + leitura levam alguns segundos).
     setFase('lendo');
 
@@ -264,23 +276,53 @@ export function NovaPropostaScreen() {
                   className="dropzone"
                   onClick={() => fileRef.current?.click()}
                 >
-                  <Icon name={file ? 'doc' : 'upload'} />
-                  {file ? file.name : 'Toque para anexar (PDF, print/foto ou planilha)'}
+                  <Icon name={files.length ? 'doc' : 'upload'} />
+                  {varios
+                    ? `${files.length} arquivos · toque para incluir mais`
+                    : file
+                      ? file.name
+                      : 'Toque para anexar um ou vários arquivos'}
                   <small>
-                    {file
-                      ? ehPdf
-                        ? 'A IA vai ler e preencher os dados'
-                        : 'A IA lê PDF e imagens; planilha você preenche à mão'
-                      : 'Máx. 8 MB'}
+                    {varios
+                      ? `Mesma obra e categoria para todos · até ${LOTE_MAX_ARQUIVOS} por vez · 8 MB cada`
+                      : file
+                        ? ehPdf
+                          ? 'A IA vai ler e preencher os dados'
+                          : 'A IA lê PDF, Word e imagens; planilha você preenche à mão'
+                        : 'PDF, Word, print/foto ou planilha · até 8 MB cada'}
                   </small>
                 </button>
                 <input
                   ref={fileRef}
                   type="file"
-                  accept=".pdf,.xlsx,.xls,.csv,image/png,image/jpeg"
+                  multiple
+                  accept={ACCEPT_PROPOSTA}
                   style={{ display: 'none' }}
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => {
+                    const novos = Array.from(e.target.files ?? []);
+                    // Selecionar de novo acrescenta (até o limite), em vez de substituir.
+                    setFiles((fs) => {
+                      const juntos = [...fs, ...novos.filter((n) => !fs.some((f) => f.name === n.name && f.size === n.size))];
+                      return juntos.slice(0, LOTE_MAX_ARQUIVOS);
+                    });
+                    e.target.value = '';
+                  }}
                 />
+                {varios && (
+                  <ul className="lote-files">
+                    {files.map((f) => (
+                      <li key={`${f.name}-${f.size}`}>
+                        <span className={`ext${arquivoLegivelPelaIA(f) ? '' : ' manual'}`}>
+                          {(f.name.split('.').pop() ?? 'arq').toUpperCase().slice(0, 4)}
+                        </span>
+                        <span className="nm">{f.name}</span>
+                        <button type="button" aria-label={`Remover ${f.name}`} onClick={() => setFiles((fs) => fs.filter((x) => x !== f))}>
+                          <Icon name="x" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {erro && (
@@ -291,7 +333,7 @@ export function NovaPropostaScreen() {
               )}
 
               <Button type="submit" block icon="spark" disabled={!podeProsseguir}>
-                {ehPdf ? 'Ler proposta com IA' : 'Anexar e conferir'}
+                {varios ? `Ler ${files.length} propostas com IA` : ehPdf ? 'Ler proposta com IA' : 'Anexar e conferir'}
               </Button>
             </form>
           )}
