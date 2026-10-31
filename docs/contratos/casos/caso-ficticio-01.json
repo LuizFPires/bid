@@ -1,0 +1,46 @@
+{
+  "_nota": "Dados 100% fictícios (CNPJ/CPF válidos só no dígito). Nunca usar dados reais: o repositório pode estar público.",
+  "campos": {
+    "obra_nome": "Residencial Jardim das Acácias", "obra_endereco": "Rua das Palmeiras, 100, Bairro Novo, Cidade Exemplo/MG, CEP 30000-000",
+    "obra_cno": "90.000.00000/01", "obra_foro": "Cidade Exemplo/MG",
+    "cd_razao": "Fundações Exemplo Ltda.", "cd_cnpj": "11.222.333/0001-81", "cd_sede": "Av. Teste, 50, Cidade Exemplo/MG", "cd_email": "contato@fundacoes-exemplo.com.br",
+    "ct_email": "obras@spe-exemplo.com.br", "cs_email": "contratos@construtora-exemplo.com.br",
+    "empreitada_desc": "execução de fundações profundas tipo estaca hélice contínua",
+    "escopo_resumo": "Execução de 120 estacas hélice contínua Ø40 cm, incluindo mobilização, concreto e armação, conforme planilha do Anexo I.",
+    "q_regime": "Preço unitário — pagamento pelas quantidades efetivamente medidas.", "q_valor": "312.450,00", "q_valor_extenso": "trezentos e doze mil, quatrocentos e cinquenta reais",
+    "q_criterio": "Medição mensal por metro linear executado.", "q_inicio": "10/11/2026", "q_prazo": "60 dias corridos",
+    "q_periodicidade": "Mensal, com corte no dia 25.", "q_liberacao": "Até 10 dias após a aprovação da medição.", "q_retencao": "5% de cada medição.",
+    "q_antecipacao": "Não há.", "q_mat_contratada": "Concreto, aço e consumíveis.", "q_mat_contratante": "Não há.", "q_fat_direto": "Não há.",
+    "q_garantia": "5 anos (art. 618 do Código Civil).", "q_seguros": "RC obras de R$ 500.000,00.", "q_marcos": "Não se aplica (sem cronograma físico).",
+    "q_representante": "Eng. Fulano de Tal (fictício)", "q_docs": "Projeto de fundações rev. 02; sondagens SP-01 a SP-08.",
+    "q_documentos_integrantes": "ANEXO I — Condições Particulares, Planilha e Escopo; ANEXO II — Declaração de Capacidade",
+    "decl_nome": "Beltrano Exemplo", "decl_cpf": "529.982.247-25", "decl_cargo": "Sócio-administrador",
+    "ass_local": "Cidade Exemplo/MG", "ass_dia": "5", "ass_mes": "novembro", "ass_ano": "2026", "total": "312.450,00", "anexos_lista": "ANEXOS I, II e III"
+  },
+  "qualificacao": {
+    "ct": "SPE Exemplo Empreendimentos Ltda., sociedade empresária limitada, CNPJ nº 22.333.444/0001-81, com sede na Rua Alfa, 1, Cidade Exemplo/MG, CEP 30000-001, neste ato representada por Sicrano Alves (fictício)",
+    "cd": "Fundações Exemplo Ltda., sociedade empresária limitada, CNPJ nº 11.222.333/0001-81, com sede na Av. Teste, 50, Cidade Exemplo/MG, CEP 30000-002, neste ato representada por Beltrano Exemplo",
+    "cs": "Construtora Exemplo S.A., sociedade anônima, CNPJ nº 33.444.555/0001-81, com sede na Rua Beta, 2, Cidade Exemplo/MG, neste ato representada por seus diretores Diretor Um e Diretor Dois (fictícios)"
+  },
+  "razao": { "contratante": "SPE Exemplo Empreendimentos Ltda.", "contratada": "Fundações Exemplo Ltda.", "construtora": "Construtora Exemplo S.A." },
+  "signatarios": {
+    "contratante": [{ "nome": "Sicrano Alves", "cargo": "Administrador" }],
+    "contratada": [{ "nome": "Beltrano Exemplo", "cargo": "Sócio-administrador" }],
+    "construtora": [{ "nome": "Diretor Um", "cargo": "Diretor" }, { "nome": "Diretor Dois", "cargo": "Diretor" }],
+    "declarante": [{ "nome": "Beltrano Exemplo", "cargo": "Sócio-administrador" }]
+  },
+  "itens": [
+    { "grupo": true, "n": "1", "desc": "MOBILIZAÇÃO" },
+    { "n": "1.1", "desc": "Mobilização e desmobilização de equipamento", "und": "vb", "qtd": "1", "unit": "18.000,00", "total": "18.000,00" },
+    { "grupo": true, "n": "2", "desc": "ESTACAS" },
+    { "n": "2.1", "desc": "Estaca hélice contínua Ø40 cm", "und": "m", "qtd": "1.800", "unit": "152,4725", "total": "274.450,50" },
+    { "n": "2.2", "desc": "Arrasamento de estaca", "und": "un", "qtd": "120", "unit": "166,6625", "total": "19.999,50" }
+  ],
+  "extras": [{ "apos": "3.6", "numero": "3.7", "texto": "Os dias de chuva que impeçam a execução, registrados no RDO e validados pela CONSTRUTORA, prorrogam o prazo na mesma medida, sem ônus para a CONTRATANTE." }],
+  "suprimidos": ["6.3.1"],
+  "blocos": [
+    { "titulo": "Fundações — escavação e escoramento", "itens": ["A CONTRATADA é responsável pela estabilidade das escavações e pelos escoramentos necessários.", "Sobras de concreto e solo escavado serão destinados conforme o plano de resíduos da obra."] },
+    { "titulo": "Ensaios", "itens": ["Ensaios de integridade (PIT) em 10% das estacas, por conta da CONTRATADA."] }
+  ],
+  "anexoIII": { "titulo": "ANEXO III – PROPOSTA COMERCIAL DA CONTRATADA", "texto": "Proposta nº 045/2026, de 20/10/2026, emitida por Fundações Exemplo Ltda. e dirigida à CONSTRUTORA. **Prevalência:** em caso de conflito, prevalecem o contrato e o Anexo I (cláusula 1.3)." }
+}
