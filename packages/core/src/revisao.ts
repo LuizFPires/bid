@@ -82,7 +82,7 @@ export function mensagemRevisao(d: MensagemRevisaoDados): string {
     '',
     ...linhas,
     '',
-    'Pode nos enviar a proposta revisada com esses itens? Assim conseguimos comparar na mesma base. Obrigado!',
+    'Pode nos enviar a proposta revisada com esses itens? Assim conseguimos comparar na mesma base dos demais proponentes desta cotação. Obrigado!',
   ].join('\n');
 }
 
