@@ -8,6 +8,7 @@ export * from './env';
 export * from './respond';
 export * from './supabase';
 export * from './anthropic';
+export * from './docx';
 export * from './pdf';
 export * from './relatorio-pdf';
 export * from './assinatura-pdf';

@@ -92,7 +92,7 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   // print salvo como .png pode ser JPEG; HEIC/planilha não são lidos pela IA.
   const tipo = detectarMidia(buf, path);
   if (!tipo) {
-    res.status(415).json({ erro: 'Formato não lido pela IA. Envie PDF, PNG, JPG ou WebP (fotos HEIC: converta ou tire um print).' });
+    res.status(415).json({ erro: 'Formato não lido pela IA. Envie PDF, Word (.docx) ou imagem (PNG, JPG, WebP, GIF). Planilhas e .doc antigo: preencha à mão ou converta para PDF.' });
     return;
   }
 

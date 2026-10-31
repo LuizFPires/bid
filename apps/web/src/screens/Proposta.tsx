@@ -24,6 +24,7 @@ import {
   useSugestoes,
 } from '../data/hooks';
 import {
+  ACCEPT_PROPOSTA,
   arquivoLegivelPelaIA,
   desfazerVencedora,
   extrairProposta,
@@ -882,12 +883,12 @@ function NovaVersao({
         <button type="button" className="dropzone" onClick={() => fileRef.current?.click()}>
           <Icon name={file ? 'doc' : 'upload'} />
           {file ? file.name : 'Toque para anexar (PDF, print/foto ou planilha)'}
-          <small>{file ? (ehPdf ? 'A IA vai ler os dados' : 'Planilha: você preenche à mão') : 'Máx. 8 MB'}</small>
+          <small>{file ? (ehPdf ? 'A IA vai ler os dados' : 'Planilha: você preenche à mão') : 'PDF, Word ou imagem · máx. 8 MB'}</small>
         </button>
         <input
           ref={fileRef}
           type="file"
-          accept=".pdf,.xlsx,.xls,.csv,image/png,image/jpeg"
+          accept={ACCEPT_PROPOSTA}
           style={{ display: 'none' }}
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />

@@ -9,7 +9,9 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "esbuild src/index.ts --bundle --platform=node --format=esm --external:@react-pdf/renderer --external:react --outfile=dist/index.js && tsc -p tsconfig.build.json --emitDeclarationOnly",
@@ -20,6 +22,7 @@
     "@bid/core": "workspace:*",
     "@react-pdf/renderer": "^4.9.0",
     "@supabase/supabase-js": "^2.118.0",
+    "fflate": "0.8.3",
     "pdf-lib": "^1.17.1",
     "react": "^18.3.1"
   },

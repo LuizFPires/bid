@@ -2,6 +2,7 @@
 // de verdade nas funções /api (onde o Vercel o instala), e passado como `client`.
 // Empacotar o SDK pelo esbuild quebrava a chamada em runtime (crash incapturável).
 import type Anthropic from '@anthropic-ai/sdk';
+import { ehDocx, textoDeDocx } from './docx';
 import {
   EQUALIZE_INPUT_SCHEMA,
   EQUALIZE_PROMPT,
@@ -21,7 +22,7 @@ import { env } from './env';
  * estruturada por ferramenta forçada. A normalização/validação final é do
  * core (`normalizarExtracao`), então a saída é sempre segura.
  */
-export type MidiaProposta = 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/webp';
+export type MidiaProposta = 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif' | 'docx';
 
 /**
  * Tipo real do arquivo pelos primeiros bytes (assinatura), não pela extensão:
@@ -34,6 +35,8 @@ export function detectarMidia(buf: Uint8Array, nomeOuPath?: string | null): Midi
   if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
   if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
   if (b.length >= 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
+  if (b.length >= 6 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'image/gif'; // GIF8
+  if (ehDocx(b)) return 'docx';
   // PDFs às vezes começam com lixo antes do %PDF (até 1 KB, pela própria spec).
   const cabeca = Buffer.from(b.subarray(0, 1024)).toString('latin1');
   if (cabeca.includes('%PDF')) return 'application/pdf';
@@ -42,14 +45,22 @@ export function detectarMidia(buf: Uint8Array, nomeOuPath?: string | null): Midi
   if (ext === 'png') return 'image/png';
   if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
   if (ext === 'webp') return 'image/webp';
+  if (ext === 'gif') return 'image/gif';
   return null;
 }
 
-/** Bloco de conteúdo para a Messages API conforme o tipo do arquivo (PDF ou imagem). */
+/**
+ * Bloco de conteúdo para a Messages API conforme o tipo: PDF vai como
+ * documento, imagem como imagem e Word (.docx) vira texto extraído no servidor
+ * (a API não lê .docx direto).
+ */
 function blocoArquivo(base64: string, tipo: MidiaProposta): Anthropic.ContentBlockParam {
-  return tipo === 'application/pdf'
-    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
-    : { type: 'image', source: { type: 'base64', media_type: tipo, data: base64 } };
+  if (tipo === 'application/pdf') return { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
+  if (tipo === 'docx') {
+    const texto = textoDeDocx(Buffer.from(base64, 'base64'));
+    return { type: 'text', text: `=== CONTEÚDO DO DOCUMENTO WORD (texto extraído; tabelas com células separadas por " | ") ===\n${texto || '(documento sem texto legível)'}\n=== FIM DO DOCUMENTO ===` };
+  }
+  return { type: 'image', source: { type: 'base64', media_type: tipo, data: base64 } };
 }
 
 export async function extrairPropostaDePdf(
@@ -83,7 +94,9 @@ export async function extrairPropostaDePdf(
             text:
               tipo === 'application/pdf'
                 ? EXTRACAO_PROMPT
-                : EXTRACAO_PROMPT +
+                : tipo === 'docx'
+                  ? EXTRACAO_PROMPT + '\n\nO anexo é o TEXTO extraído de um documento Word (.docx); tabelas vieram com células separadas por " | ". Leia como se fosse a proposta impressa.'
+                  : EXTRACAO_PROMPT +
                   '\n\nO anexo é uma IMAGEM (print de conversa, foto de documento ou tela), não um PDF. Leia TODO o texto visível, ' +
                   'inclusive mensagens curtas e informais. O VALOR costuma aparecer como "R$ 180.000", "180 mil", "180k", "R$180.000,00" ou ' +
                   'em um áudio transcrito: converta para número (180 mil = 180000). Se houver mais de um valor, use o TOTAL mais recente/fechado ' +

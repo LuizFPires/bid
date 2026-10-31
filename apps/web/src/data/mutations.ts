@@ -63,15 +63,19 @@ function nomeSeguro(nome: string): string {
     .toLowerCase();
 }
 
-/** A IA lê PDF e imagens (print de conversa, foto de proposta). */
+/** A IA lê PDF, Word (.docx) e qualquer imagem (print de conversa, foto de proposta). */
 export function arquivoLegivelPelaIA(file: File): boolean {
   const n = file.name.toLowerCase();
   return (
     file.type === 'application/pdf' ||
     file.type.startsWith('image/') ||
-    /\.(pdf|png|jpe?g|webp)$/.test(n)
+    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    /\.(pdf|png|jpe?g|webp|gif|heic|heif|docx)$/.test(n)
   );
 }
+
+/** Lista de tipos para o <input type="file">: tudo que a IA lê + planilhas (manuais). */
+export const ACCEPT_PROPOSTA = '.pdf,.docx,.doc,.xlsx,.xls,.csv,image/*';
 
 export interface ArquivoEnviado {
   path: string;
