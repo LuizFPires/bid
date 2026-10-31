@@ -7,6 +7,7 @@ import {
   formatNumber,
   formatBRLCompact,
   nomeProposta,
+  categoriasParecidas,
   pendenciasDaAnalise,
   pedidosDeRevisao,
   textoPendencias,
@@ -32,6 +33,7 @@ import {
   usePropostasDoCertame,
   usePropostasPorCategoria,
   useSugestoes,
+  useMesclarCategoria,
 } from '../data/hooks';
 import {
   desfazerVencedora,
@@ -277,6 +279,12 @@ export function IniciarEqualizacaoScreen() {
   }
 
   const certames = obraDetalhe.data?.certames ?? [];
+  // Categorias "primas" na mesma obra (nome parecido): oferecer "Juntar".
+  const certameAtual = certames.find((c) => c.id === certameId) ?? null;
+  const primas = certameAtual ? certames.filter((c) => c.id !== certameAtual.id && c.totalPropostas > 0 && categoriasParecidas(c.categoria, certameAtual.categoria)) : [];
+  const mesclar = useMesclarCategoria();
+  const [juntando, setJuntando] = useState<{ de: string; n: number } | null>(null);
+  const toast = useToast();
   useEffect(() => {
     if (pre?.categoria && !certameId) {
       const c = certames.find((x) => x.categoria === pre.categoria);
@@ -376,6 +384,38 @@ export function IniciarEqualizacaoScreen() {
           options={(categoriasSug.data ?? []).map((s) => s.texto)}
         />
       )}
+
+      {certameAtual && primas.length > 0 && (
+        <div className="sug" role="status" style={{ marginBottom: 14 }}>
+          <Icon name="layers" />
+          <span>
+            {primas.map((p) => `“${p.categoria}” (${p.totalPropostas} ${p.totalPropostas === 1 ? 'proposta' : 'propostas'})`).join(', ')} parece a mesma categoria. Juntar em “{certameAtual.categoria}” para comparar tudo?
+          </span>
+          <button type="button" className="mini" onClick={() => setJuntando({ de: primas[0]!.categoria, n: primas[0]!.totalPropostas })}>
+            Juntar
+          </button>
+        </div>
+      )}
+      <ConfirmDialog
+        aberto={juntando !== null}
+        titulo={juntando ? `Juntar “${juntando.de}” em “${certameAtual?.categoria ?? ''}”?` : ''}
+        confirmarLabel={mesclar.isPending ? 'Juntando…' : 'Juntar'}
+        ocupado={mesclar.isPending}
+        onCancelar={() => setJuntando(null)}
+        onConfirmar={async () => {
+          if (!juntando || !certameAtual) return;
+          try {
+            const n = await mesclar.mutateAsync({ de: juntando.de, para: certameAtual.categoria });
+            toast(`${n} ${n === 1 ? 'proposta movida' : 'propostas movidas'} para “${certameAtual.categoria}”.`);
+          } catch (e) {
+            toast(e instanceof Error ? e.message : 'Não foi possível juntar as categorias.');
+          } finally {
+            setJuntando(null);
+          }
+        }}
+      >
+        As propostas de “{juntando?.de}” passam para “{certameAtual?.categoria}” em todas as obras, e a categoria antiga deixa de existir. Dá para desfazer renomeando depois em Categorias (menu do perfil).
+      </ConfirmDialog>
 
       {propostas.length > 0 && (
         <>

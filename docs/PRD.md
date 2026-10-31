@@ -64,7 +64,7 @@ A UX e a navegação seguem esta ordem (é a espinha dorsal do app):
 
 ## Regras de negócio
 1. **Proposta é dado vivo:** chega, pode ser **revisada** (nova versão), e tudo fica registrado. Nunca se perde versão anterior.
-2. **Categoria é campo livre:** não há cadastro fechado de categorias. O que se digita vira **sugestão** de autocompletar (ordenada por uso). Mesma lógica para fornecedor, obra e local.
+2. **Categoria é campo livre:** não há cadastro fechado de categorias. O que se digita vira **sugestão** de autocompletar (ordenada por uso). Mesma lógica para fornecedor, obra e local. Para não duplicar, o app **avisa quando o nome digitado parece uma categoria existente** ("Já existe 'X' — usar essa?"), **oferece juntar** categorias parecidas da mesma obra ao iniciar a equalização, e tem a tela **Categorias** (renomear/mesclar) no menu do perfil.
 3. **A IA lê a proposta:** no cadastro, os dados (fornecedor, valor, prazo, pagamento, garantia, itens) são **extraídos do arquivo** pela IA; o usuário só informa obra + categoria e confere o resultado.
 4. **Equalização nivela escopos:** o objetivo é comparar no mesmo nível (ex.: somar transporte a quem não incluiu). A recomendação da IA é **apoio**, não decisão automática.
 5. **Vencedora pode ser direta:** com uma única proposta (ou por decisão), o usuário marca a vencedora **sem equalizar**; isso adjudica o certame e libera o contrato.

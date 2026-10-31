@@ -8,11 +8,11 @@ import {
   type PropostaExtraida,
 } from '@bid/core';
 import { Autocomplete, Button, Icon } from '@bid/ui';
-import { useObras, useSugestoes } from '../data/hooks';
+import { useCategorias, useObras, useSugestoes } from '../data/hooks';
 import { useCriarProposta } from '../data/hooks';
 import { ACCEPT_PROPOSTA, arquivoLegivelPelaIA, extrairProposta, uploadPropostaArquivo } from '../data/mutations';
 import { iniciarLote } from '../data/lote';
-import { LOTE_MAX_ARQUIVOS } from '@bid/core';
+import { LOTE_MAX_ARQUIVOS, categoriasParecidas, chaveCategoria } from '@bid/core';
 
 import { LeituraIA } from '../components/LeituraIA';
 import { AlertasLeitura } from '../components/AlertasLeitura';
@@ -65,6 +65,7 @@ export function NovaPropostaScreen() {
   const navigate = useNavigate();
   const obras = useObras();
   const categoriasSug = useSugestoes('categoria');
+  const categoriasUso = useCategorias();
   const criar = useCriarProposta();
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -98,6 +99,16 @@ export function NovaPropostaScreen() {
 
   const ehPdf = !!file && arquivoLegivelPelaIA(file);
   const podeProsseguir = Boolean(obraId && categoria.trim() && files.length > 0);
+  // Prevenção de duplicata: digitou algo parecido com uma categoria que já existe?
+  const parecida = (() => {
+    const t = categoria.trim();
+    if (t.length < 3) return null;
+    const k = chaveCategoria(t);
+    const lista = (categoriasUso.data ?? []).filter((c) => chaveCategoria(c.nome) !== k && categoriasParecidas(c.nome, t));
+    const exata = (categoriasUso.data ?? []).some((c) => chaveCategoria(c.nome) === k);
+    if (exata || lista.length === 0) return null;
+    return [...lista].sort((a, b) => b.propostas - a.propostas)[0] ?? null;
+  })();
 
   function preencher(d: PropostaExtraida) {
     setFornecedor(d.fornecedor ?? '');
@@ -268,6 +279,17 @@ export function NovaPropostaScreen() {
                 onChange={setCategoria}
                 options={(categoriasSug.data ?? []).map((s) => s.texto)}
               />
+              {parecida && (
+                <div className="sug" role="status">
+                  <Icon name="layers" />
+                  <span>
+                    <b>Já existe “{parecida.nome}”</b> ({parecida.propostas} {parecida.propostas === 1 ? 'proposta' : 'propostas'}). Usar essa categoria?
+                  </span>
+                  <button type="button" className="mini" onClick={() => setCategoria(parecida.nome)}>
+                    Usar
+                  </button>
+                </div>
+              )}
 
               <div className="field">
                 <label>Arquivo da proposta</label>

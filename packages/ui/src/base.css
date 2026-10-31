@@ -3214,3 +3214,35 @@ table.eq .nota-eq.warn {
 .lote-done .big svg { width: 30px; height: 30px; }
 .lote-done h1 { margin: 0; font-size: 22px; }
 .lote-done .lead { margin: 0 0 12px; color: var(--muted); font-weight: 600; }
+
+/* Sugestão contextual (categoria parecida, juntar categorias). */
+.sug {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  padding: 11px 12px 11px 14px;
+  margin: -4px 0 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.sug > svg { width: 18px; height: 18px; color: var(--accent-deep); flex: 0 0 auto; }
+.sug > span { flex: 1; min-width: 0; }
+.sug .mini {
+  margin-left: auto;
+  border: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent-deep);
+  background: var(--surface);
+  padding: 7px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  cursor: pointer;
+  min-height: 34px;
+}
