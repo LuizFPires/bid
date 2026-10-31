@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
 import { nomeProposta } from '@bid/core';
-import { IAErro, analisarEqualizacao, type DocumentoProposta, type PropostaParaIA } from '@bid/server';
+import { IAErro, analisarEqualizacao, detectarMidia, type DocumentoProposta, type PropostaParaIA } from '@bid/server';
 import { MissingEnvError, env } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';
 import { userClient } from '@bid/server';
@@ -121,9 +121,7 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   let totalBytes = 0;
   for (const p of propostas) {
     const path = ultimaPorProposta.get(p.id)?.arquivo_path;
-    const ext = path?.toLowerCase().split('.').pop() ?? '';
-    const tipo = ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : null;
-    if (!path || !tipo) continue;
+    if (!path) continue;
     try {
       const { data: signed } = await sb.storage.from('propostas').createSignedUrl(path, 60);
       if (!signed) continue;
@@ -133,6 +131,9 @@ async function processar(req: VercelRequest, res: VercelResponse) {
       if (Number.isFinite(declarado) && declarado > MAX_PDF_BYTES) continue;
       const buf = Buffer.from(await resp.arrayBuffer());
       if (buf.byteLength > MAX_PDF_BYTES || totalBytes + buf.byteLength > MAX_TOTAL_PDF_BYTES) continue;
+      // Tipo real pelos bytes (planilhas e HEIC ficam de fora; a proposta segue só com os dados).
+      const tipo = detectarMidia(buf, path);
+      if (!tipo) continue;
       totalBytes += buf.byteLength;
       documentos.push({ proposta_id: p.id, fornecedor: p.fornecedor, pdfBase64: buf.toString('base64'), tipo });
     } catch (e) {

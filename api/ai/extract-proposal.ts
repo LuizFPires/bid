@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
-import { extrairPropostaDePdf, type MidiaProposta } from '@bid/server';
+import { detectarMidia, extrairPropostaDePdf } from '@bid/server';
 import { MissingEnvError, env } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';
 import { userClient } from '@bid/server';
@@ -16,15 +16,6 @@ import { userClient } from '@bid/server';
  * no servidor.
  */
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
-
-/** PDF ou imagem (print/foto) — os dois são lidos pela IA. */
-function tipoPorExtensao(path: string): MidiaProposta {
-  const ext = path.toLowerCase().split('.').pop() ?? '';
-  if (ext === 'png') return 'image/png';
-  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
-  if (ext === 'webp') return 'image/webp';
-  return 'application/pdf';
-}
 
 async function processar(req: VercelRequest, res: VercelResponse) {
   if (!requireMethod(req, res, 'POST')) return;
@@ -97,10 +88,18 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   }
   const buf = Buffer.concat(pedacos);
 
+  // Tipo pelo CONTEÚDO (assinatura dos bytes), com a extensão só como reserva:
+  // print salvo como .png pode ser JPEG; HEIC/planilha não são lidos pela IA.
+  const tipo = detectarMidia(buf, path);
+  if (!tipo) {
+    res.status(415).json({ erro: 'Formato não lido pela IA. Envie PDF, PNG, JPG ou WebP (fotos HEIC: converta ou tire um print).' });
+    return;
+  }
+
   try {
     // SDK criado AQUI (na função), com o pacote real que o Vercel instala.
     const client = new Anthropic({ apiKey: env.anthropicKey() });
-    const dados = await extrairPropostaDePdf(client, buf.toString('base64'), tipoPorExtensao(path));
+    const dados = await extrairPropostaDePdf(client, buf.toString('base64'), tipo);
     res.status(200).json({ dados });
   } catch (e) {
     if (e instanceof MissingEnvError) {

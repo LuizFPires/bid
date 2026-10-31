@@ -23,6 +23,28 @@ import { env } from './env';
  */
 export type MidiaProposta = 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/webp';
 
+/**
+ * Tipo real do arquivo pelos primeiros bytes (assinatura), não pela extensão:
+ * um print salvo como ".png" pode ser JPEG, e um nome sem extensão não diz nada.
+ * null = formato que a IA não lê (HEIC, planilha, etc.).
+ */
+export function detectarMidia(buf: Uint8Array, nomeOuPath?: string | null): MidiaProposta | null {
+  const b = buf;
+  if (b.length >= 5 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) return 'application/pdf'; // %PDF
+  if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b.length >= 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
+  // PDFs às vezes começam com lixo antes do %PDF (até 1 KB, pela própria spec).
+  const cabeca = Buffer.from(b.subarray(0, 1024)).toString('latin1');
+  if (cabeca.includes('%PDF')) return 'application/pdf';
+  const ext = (nomeOuPath ?? '').toLowerCase().split('.').pop() ?? '';
+  if (ext === 'pdf') return 'application/pdf';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  return null;
+}
+
 /** Bloco de conteúdo para a Messages API conforme o tipo do arquivo (PDF ou imagem). */
 function blocoArquivo(base64: string, tipo: MidiaProposta): Anthropic.ContentBlockParam {
   return tipo === 'application/pdf'
@@ -62,9 +84,12 @@ export async function extrairPropostaDePdf(
               tipo === 'application/pdf'
                 ? EXTRACAO_PROMPT
                 : EXTRACAO_PROMPT +
-                  '\n\nO anexo é uma IMAGEM (print de conversa, foto de documento ou tela). Leia o texto visível: ' +
-                  'identifique quem propõe (nome do contato/empresa), o valor, prazo e condições que aparecerem; ' +
-                  'o que não estiver legível fica null. Se for um print de WhatsApp, o fornecedor é quem enviou a mensagem com o preço.',
+                  '\n\nO anexo é uma IMAGEM (print de conversa, foto de documento ou tela), não um PDF. Leia TODO o texto visível, ' +
+                  'inclusive mensagens curtas e informais. O VALOR costuma aparecer como "R$ 180.000", "180 mil", "180k", "R$180.000,00" ou ' +
+                  'em um áudio transcrito: converta para número (180 mil = 180000). Se houver mais de um valor, use o TOTAL mais recente/fechado ' +
+                  'e registre os outros em alertas. Identifique quem propõe (nome do contato/empresa no topo da conversa ou na assinatura); ' +
+                  'se for um print de WhatsApp, o fornecedor é quem enviou a mensagem com o preço. Prazo, pagamento e garantia só se estiverem ' +
+                  'escritos; o que não estiver legível fica null. Só devolva valor null se a imagem realmente não mostrar nenhum preço.',
           },
         ],
       },
