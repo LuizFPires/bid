@@ -991,15 +991,18 @@ export function EqualizacaoScreen() {
                       {ia.recomendacao?.justificativa ?? ''}
                     </>
                   ) : (
-                    (ia.recomendacao?.justificativa ?? 'Sem recomendação conclusiva.')
+                    <>
+                      <b>A IA não indicou uma vencedora.</b>{' '}
+                      {ia.recomendacao?.justificativa ??
+                        ia.conclusao ??
+                        'Faltam dados em pelo menos uma proposta para comparar com segurança (valor, escopo ou condições). Complete a proposta — por exemplo, lendo o arquivo ou editando os dados — e refaça o relatório.'}
+                    </>
                   )}
                 </p>
-                <small>A recomendação é apoio — a escolha da vencedora é sua, na tabela acima.</small>
-                <div>
-                  <Button variant="ghost" size="sm" icon="spark" disabled={gerando} onClick={analisar}>
-                    Refazer relatório
-                  </Button>
-                </div>
+                <small>
+                  A recomendação é apoio — a escolha da vencedora é sua, na tabela acima.
+                  {rec ? '' : ' "Refazer relatório" só muda o resultado se os dados das propostas mudarem.'}
+                </small>
               </div>
             );
           })()}
