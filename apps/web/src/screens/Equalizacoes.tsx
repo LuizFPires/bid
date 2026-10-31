@@ -322,11 +322,11 @@ export function IniciarEqualizacaoScreen() {
             onChange={(e) => setReferencia(e.target.value)}
             maxLength={4000}
             placeholder="Quantidades e escopo que toda proposta deveria cobrir. Ex.: 898,94 m² de ACM (vermelho 742,85 · azul 90,94 · branco 65,15) + letreiros + plataforma elevatória."
-            style={{ minHeight: 88 }}
+            style={{ minHeight: 88, display: 'block' }}
           />
-          <small style={{ display: 'block', marginTop: 6, fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>
+          <p className="field-help">
             A IA coloca todas as propostas nessa mesma base antes de comparar. Sem isso, usa a maior base clara entre elas.
-          </small>
+          </p>
         </div>
       )}
 
@@ -337,7 +337,7 @@ export function IniciarEqualizacaoScreen() {
         </div>
       )}
 
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: 22 }}>
         <Button block icon="scale" disabled={sel.size < 2 || criar.isPending} onClick={comparar}>
           {criar.isPending ? 'Iniciando…' : `Comparar ${sel.size || ''}`}
         </Button>

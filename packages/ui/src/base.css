@@ -1792,6 +1792,16 @@ table.eq .nota-eq.warn {
 .field {
   margin-bottom: 14px;
 }
+.field .field-help {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+  font-weight: 600;
+}
+.field textarea {
+  display: block;
+}
 .field label {
   display: block;
   font-size: 11px;
