@@ -1566,6 +1566,38 @@ table.eq .nota-eq.warn {
   font-size: 13.5px;
   font-variant-numeric: tabular-nums;
 }
+/* Dentro da célula: valor na 1ª linha; "ref." e a nota na linha de baixo. */
+.mx-td .ref {
+  display: inline-block;
+  margin: 4px 0 0;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--faint);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.mx-td .nota-s {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.mx-td .ref + .nota-s {
+  margin-top: 4px;
+}
+.mx-td .nota-eq {
+  font-weight: 700;
+  color: var(--muted);
+}
+.mx-td .nota-eq.warn {
+  color: var(--warn);
+}
 .mx-td .best {
   color: var(--ok);
   font-weight: 900;

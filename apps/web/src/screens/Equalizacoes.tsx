@@ -793,8 +793,13 @@ export function EqualizacaoScreen() {
                       const v = l.valores.find((x) => x.proposta_id === p.id);
                       return v?.valor != null ? (
                         <>
-                          {formatBRL(v.valor)}
-                          {v.referencia && <span className="ref">ref.</span>}
+                          <span className="val">{formatBRL(v.valor)}</span>
+                          {v.referencia && (
+                            <>
+                              <br />
+                              <span className="ref">ref.</span>
+                            </>
+                          )}
                           {v.nota && <small className="nota-s">{v.nota}</small>}
                         </>
                       ) : (
