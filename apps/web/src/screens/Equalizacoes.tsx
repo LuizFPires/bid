@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   CERTAME_LABEL,
   compararPropostas,
   formatBRL,
+  formatNumber,
   formatBRLCompact,
   nomeProposta,
   type CertameStatus,
@@ -161,6 +162,7 @@ export function IniciarEqualizacaoScreen() {
   const [certameId, setCertameId] = useState('');
   const [categoria, setCategoria] = useState('');
   const [sel, setSel] = useState<Set<string>>(new Set());
+  const [referencia, setReferencia] = useState('');
   const [erro, setErro] = useState<string | null>(null);
 
   const obraDetalhe = useObra(escopo === 'obra' ? obraId : undefined);
@@ -195,6 +197,7 @@ export function IniciarEqualizacaoScreen() {
         categoria: cat,
         certameId: escopo === 'obra' ? certameId : null,
         propostaIds: ids,
+        referencia,
       });
       navigate(`/equalizacoes/${id}`);
     } catch (err) {
@@ -308,6 +311,23 @@ export function IniciarEqualizacaoScreen() {
             ))}
           </div>
         </>
+      )}
+
+      {propostas.length > 0 && (
+        <div className="field" style={{ marginTop: 18 }}>
+          <label htmlFor="eq-ref">Régua do projeto (opcional)</label>
+          <textarea
+            id="eq-ref"
+            value={referencia}
+            onChange={(e) => setReferencia(e.target.value)}
+            maxLength={4000}
+            placeholder="Quantidades e escopo que toda proposta deveria cobrir. Ex.: 898,94 m² de ACM (vermelho 742,85 · azul 90,94 · branco 65,15) + letreiros + plataforma elevatória."
+            style={{ minHeight: 88 }}
+          />
+          <small style={{ display: 'block', marginTop: 6, fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>
+            A IA coloca todas as propostas nessa mesma base antes de comparar. Sem isso, usa a maior base clara entre elas.
+          </small>
+        </div>
       )}
 
       {erro && (
@@ -442,6 +462,20 @@ export function EqualizacaoScreen() {
   }
 
   const ia = data.resultadoIa;
+  const nome = (pid: string) => data!.propostas.find((p) => p.id === pid)?.fornecedor ?? '—';
+  const temRelatorio = !!ia && ((ia.cards?.length ?? 0) > 0 || (ia.matriz?.criterios?.length ?? 0) > 0);
+  // Ranking pelo total equalizado (menor primeiro); cai para o valor apresentado.
+  const ranking = [...data.propostas]
+    .map((p) => ({
+      id: p.id,
+      total: ia?.cards?.find((c) => c.proposta_id === p.id)?.equalizado ?? p.valor ?? Number.POSITIVE_INFINITY,
+    }))
+    .sort((a, b) => a.total - b.total)
+    .map((x) => x.id);
+  const posicao = (pid: string) => ranking.indexOf(pid) + 1;
+  const menorTotal = Math.min(
+    ...(ia?.equalizacao?.totais ?? []).map((t) => t.total ?? Number.POSITIVE_INFINITY),
+  );
 
   return (
     <>
@@ -457,177 +491,428 @@ export function EqualizacaoScreen() {
           {data.propostas.length} propostas
           {comp.economiaPotencial != null ? ` · economia até ${formatBRLCompact(comp.economiaPotencial)}` : ''}
         </p>
+        {data.referencia && (
+          <p className="lead rep-regua">
+            <b>Régua do projeto:</b> {data.referencia}
+          </p>
+        )}
       </div>
 
-      {/* Comparativo em tabela (rolagem horizontal no celular). A matriz de
-          itens de escopo do protótipo era dado fictício — aqui comparamos os
-          campos reais: prazo, pagamento, garantia e total. */}
-      <div className="tablewrap" style={{ marginBottom: 16 }}>
-        <table className="eq">
-          <thead>
-            <tr>
-              <th>Item</th>
-              {data.propostas.map((p) => {
-                const recomendada = ia?.recomendacao?.proposta_id === p.id;
-                return (
-                  <th key={p.id} className="forn">
-                    <div className="fornhd">
-                      <span className="nm" style={recomendada ? { color: 'var(--ok)' } : undefined}>
-                        {p.fornecedor}
-                      </span>
-                      {p.opcao && <span className="vz">{p.opcao}</span>}
-                      {data.escopo === 'entre_obras' && p.obraNome && (
-                        <span className="vz">{p.obraNome}</span>
-                      )}
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {(ia?.escopo?.itens ?? []).map((item, i) => (
-              <tr key={`esc-${i}`}>
-                <td className="itm">{item}</td>
-                {data.propostas.map((p) => {
-                  const st =
-                    ia?.escopo?.porProposta?.find((x) => x.proposta_id === p.id)?.status?.[i] ?? 'na';
-                  return (
-                    <td key={p.id} style={{ textAlign: 'center' }}>
-                      <MarcaEscopo status={st} />
+      {rodarIA.isPending && <AnaliseEmAndamento n={data.propostas.length} />}
+
+      {/* Sem análise: comparativo básico (campos reais) + chamada para a IA. */}
+      {!ia && !rodarIA.isPending && (
+        <>
+          <div className="tablewrap" style={{ marginBottom: 16 }}>
+            <table className="eq">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  {data.propostas.map((p) => (
+                    <th key={p.id} className="forn">
+                      <div className="fornhd">
+                        <span className="nm">{p.fornecedor}</span>
+                        {p.opcao && <span className="vz">{p.opcao}</span>}
+                        {data.escopo === 'entre_obras' && p.obraNome && <span className="vz">{p.obraNome}</span>}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="itm">Prazo</td>
+                  {data.propostas.map((p) => (
+                    <td key={p.id} className={`val ${comp.marcadores[p.id]?.menorPrazo ? 'best' : ''}`}>
+                      {p.prazo != null ? `${p.prazo}d` : '—'}
                     </td>
-                  );
-                })}
-              </tr>
-            ))}
-            <tr>
-              <td className="itm">Prazo</td>
-              {data.propostas.map((p) => {
-                const m = comp.marcadores[p.id];
-                return (
-                  <td key={p.id} className={`val ${m?.menorPrazo ? 'best' : ''}`}>
-                    {p.prazo != null ? `${p.prazo}d` : '—'}
-                  </td>
-                );
-              })}
-            </tr>
-            <tr>
-              <td className="itm">Pagamento</td>
-              {data.propostas.map((p) => (
-                <td key={p.id}>{p.condicaoPagamento ?? '—'}</td>
-              ))}
-            </tr>
-            <tr>
-              <td className="itm">Garantia</td>
-              {data.propostas.map((p) => (
-                <td key={p.id}>{p.garantia ?? '—'}</td>
-              ))}
-            </tr>
-            <tr className="total">
-              <td>Total</td>
-              {data.propostas.map((p) => {
-                const m = comp.marcadores[p.id];
-                return (
-                  <td key={p.id} className={`val ${m?.menorValor ? 'best' : m?.maiorValor ? 'high' : ''}`}>
-                    {p.valor != null ? formatBRL(p.valor) : '—'}
-                  </td>
-                );
-              })}
-            </tr>
-            <tr>
-              <td className="itm">Vencedora</td>
-              {data.propostas.map((p) => {
-                const ehVencedora = data.vencedoraPropostaId === p.id;
-                const recomendada = ia?.recomendacao?.proposta_id === p.id;
-                return (
-                  <td key={p.id} style={{ textAlign: 'center' }}>
-                    {ehVencedora ? (
-                      <span className="pill adjudicada">
-                        <Icon name="trophy" style={{ width: 13, height: 13 }} />
-                        Vencedora
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className={`btn sm ${recomendada ? 'primary' : 'soft'}`}
-                        disabled={definir.isPending}
-                        onClick={() => marcarVencedora(p.id)}
-                      >
-                        <Icon name="trophy" />
-                        Definir
-                      </button>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Análise por IA (apoio) */}
-      {ia ? (
-        <div className="ai" style={{ marginTop: 4 }}>
-          <div className="ai-h">
-            <span className="sp">
-              <Icon name="spark" />
-            </span>
-            <div>
-              <h3>{data.propostas.length} propostas equalizadas</h3>
-              <small>Claude</small>
-            </div>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="itm">Pagamento</td>
+                  {data.propostas.map((p) => (
+                    <td key={p.id}>{p.condicaoPagamento ?? '—'}</td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="itm">Garantia</td>
+                  {data.propostas.map((p) => (
+                    <td key={p.id}>{p.garantia ?? '—'}</td>
+                  ))}
+                </tr>
+                <tr className="total">
+                  <td>Total</td>
+                  {data.propostas.map((p) => {
+                    const m = comp.marcadores[p.id];
+                    return (
+                      <td key={p.id} className={`val ${m?.menorValor ? 'best' : m?.maiorValor ? 'high' : ''}`}>
+                        {p.valor != null ? formatBRL(p.valor) : '—'}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <LinhaVencedora />
+              </tbody>
+            </table>
           </div>
-          <div className="ai-b">
-            {ia.veredito && (
-              <div className="verdict">
-                <div className="tag">Resumo</div>
-                <div style={{ marginTop: 4 }}>{ia.veredito}</div>
-              </div>
-            )}
-            {(() => {
-              // Só mostra a recomendação quando aponta uma proposta COMPARADA
-              // (o id é validado no core); o fornecedor vem da proposta resolvida.
-              const rec = data.propostas.find((p) => p.id === ia.recomendacao?.proposta_id);
-              if (!rec) return null;
-              return (
-                <div className="verdict">
-                  <div className="tag">Recomendação</div>
-                  <div style={{ marginTop: 4 }}>
-                    <b>{rec.fornecedor}.</b> {ia.recomendacao?.justificativa ?? ''}
-                  </div>
-                </div>
-              );
-            })()}
-            {(ia.achados ?? []).map((a, i) => (
-              <div key={i} className="finding">
-                <span className="d w" />
-                <div>
-                  <b>{a.fornecedor}:</b> {(a.pontos ?? []).join(' · ')}
-                </div>
-              </div>
-            ))}
-            <p className="lead" style={{ margin: 0, fontSize: 12 }}>
-              A recomendação é apoio — a escolha da vencedora é sua.
-            </p>
-            <div>
-              <Button variant="ghost" size="sm" icon="spark" disabled={rodarIA.isPending} onClick={analisar}>
-                {rodarIA.isPending ? 'Analisando…' : 'Refazer análise'}
+          <div className="ai">
+            <div className="ai-empty">
+              <span className="sp">
+                <Icon name="spark" />
+              </span>
+              <p>
+                A IA lê os PDFs das propostas por inteiro, coloca todas na mesma régua e entrega o relatório:
+                lado a lado, composição equalizada, divergências, forças e riscos e próximos passos.
+              </p>
+              <Button icon="spark" disabled={rodarIA.isPending} onClick={analisar}>
+                Gerar relatório com IA
               </Button>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="ai" style={{ marginTop: 4 }}>
-          <div className="ai-empty">
-            <span className="sp">
-              <Icon name="spark" />
-            </span>
-            <p>A IA lê planilhas e PDFs e aponta escopo faltando, risco e melhor custo-benefício.</p>
-            <Button icon="spark" disabled={rodarIA.isPending} onClick={analisar}>
-              {rodarIA.isPending ? 'Analisando…' : 'Analisar com IA'}
-            </Button>
+        </>
+      )}
+
+      {ia && !rodarIA.isPending && (
+        <article className="rep">
+          <div className="rep-kicker">
+            <Icon name="spark" /> Relatório de equalização · Claude
           </div>
-        </div>
+          {ia.titulo && <h2 className="rep-title">{ia.titulo}</h2>}
+          {ia.veredito && <p className="rep-lead">{ia.veredito}</p>}
+
+          {temRelatorio && (
+            <div className="rep-cards">
+              {ranking.map((pid) => {
+                const p = data.propostas.find((x) => x.id === pid)!;
+                const c = ia.cards?.find((x) => x.proposta_id === pid);
+                const eq = c?.equalizado ?? null;
+                const ap = c?.apresentado ?? p.valor;
+                const pos = posicao(pid);
+                return (
+                  <div key={pid} className={`rep-card ${pos === 1 ? 'lider' : ''}`}>
+                    <div className="rc-h">
+                      <span className="rc-n">
+                        {p.fornecedor}
+                        {p.opcao ? ` · ${p.opcao}` : ''}
+                      </span>
+                      <span className="rc-pos">{pos}º</span>
+                    </div>
+                    <div className="rc-k">{eq != null ? 'Equalizado' : 'Apresentado'}</div>
+                    <div className="rc-v">{eq != null ? formatBRL(eq) : ap != null ? formatBRL(ap) : '—'}</div>
+                    <div className="rc-rows">
+                      {eq != null && (
+                        <div>
+                          <span>Apresentado</span>
+                          <b>{ap != null ? formatBRL(ap) : '—'}</b>
+                        </div>
+                      )}
+                      {c?.base && (
+                        <div>
+                          <span>Base cotada</span>
+                          <b>{c.base}</b>
+                        </div>
+                      )}
+                      {p.prazo != null && (
+                        <div>
+                          <span>Prazo</span>
+                          <b>{p.prazo} dias</b>
+                        </div>
+                      )}
+                      {c?.nota && (
+                        <div>
+                          <span>Observação</span>
+                          <b className="nota">{c.nota}</b>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {ia.conclusao && (
+            <div className="rep-concl">
+              <div className="k">Conclusão</div>
+              <p>{ia.conclusao}</p>
+            </div>
+          )}
+
+          <SecTitulo n="01" t="Lado a lado" s="O que cada proposta realmente inclui — e onde é omissa." />
+          <div className="tablewrap">
+            <table className="eq">
+              <thead>
+                <tr>
+                  <th>Critério</th>
+                  {data.propostas.map((p) => {
+                    const recomendada = ia.recomendacao?.proposta_id === p.id;
+                    return (
+                      <th key={p.id} className="forn">
+                        <div className="fornhd">
+                          <span className="nm" style={recomendada ? { color: 'var(--ok)' } : undefined}>
+                            {p.fornecedor}
+                          </span>
+                          {p.opcao && <span className="vz">{p.opcao}</span>}
+                          {data.escopo === 'entre_obras' && p.obraNome && <span className="vz">{p.obraNome}</span>}
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {(ia.matriz?.criterios ?? []).map((crit, i) => (
+                  <tr key={`c-${i}`}>
+                    <td className="itm">{crit}</td>
+                    {data.propostas.map((p) => {
+                      const cel = ia.matriz?.porProposta?.find((x) => x.proposta_id === p.id)?.celulas?.[i];
+                      return (
+                        <td key={p.id}>
+                          {cel ? <Celula texto={cel.texto} status={cel.status} /> : <span className="muted">—</span>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                {(ia.escopo?.itens ?? []).map((item, i) => (
+                  <tr key={`esc-${i}`}>
+                    <td className="itm">{item}</td>
+                    {data.propostas.map((p) => {
+                      const st = ia.escopo?.porProposta?.find((x) => x.proposta_id === p.id)?.status?.[i] ?? 'na';
+                      return (
+                        <td key={p.id} style={{ textAlign: 'center' }}>
+                          <MarcaEscopo status={st} />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                {(ia.matriz?.criterios?.length ?? 0) === 0 && (
+                  <>
+                    <tr>
+                      <td className="itm">Prazo</td>
+                      {data.propostas.map((p) => (
+                        <td key={p.id} className={`val ${comp.marcadores[p.id]?.menorPrazo ? 'best' : ''}`}>
+                          {p.prazo != null ? `${p.prazo}d` : '—'}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="itm">Pagamento</td>
+                      {data.propostas.map((p) => (
+                        <td key={p.id}>{p.condicaoPagamento ?? '—'}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="itm">Garantia</td>
+                      {data.propostas.map((p) => (
+                        <td key={p.id}>{p.garantia ?? '—'}</td>
+                      ))}
+                    </tr>
+                  </>
+                )}
+                <tr className="total">
+                  <td>Apresentado</td>
+                  {data.propostas.map((p) => {
+                    const m = comp.marcadores[p.id];
+                    return (
+                      <td key={p.id} className={`val ${m?.menorValor ? 'best' : m?.maiorValor ? 'high' : ''}`}>
+                        {p.valor != null ? formatBRL(p.valor) : '—'}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <LinhaVencedora />
+              </tbody>
+            </table>
+          </div>
+
+          {(ia.equalizacao?.linhas?.length ?? 0) > 0 && (
+            <>
+              <SecTitulo
+                n="02"
+                t="Na mesma régua"
+                s={ia.equalizacao?.base ?? 'Mesmo escopo e mesma quantidade para todas.'}
+              />
+              <div className="tablewrap">
+                <table className="eq">
+                  <thead>
+                    <tr>
+                      <th>Composição</th>
+                      {data.propostas.map((p) => (
+                        <th key={p.id} className="forn">
+                          <div className="fornhd">
+                            <span className="nm">{p.fornecedor}</span>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(ia.equalizacao?.linhas ?? []).map((l, i) => (
+                      <tr key={`l-${i}`}>
+                        <td className="itm">{l.item}</td>
+                        {data.propostas.map((p) => {
+                          const v = l.valores.find((x) => x.proposta_id === p.id);
+                          return (
+                            <td key={p.id} className="val">
+                              {v?.valor != null ? (
+                                <>
+                                  {formatBRL(v.valor)}
+                                  {v.referencia && <span className="ref">ref.</span>}
+                                  {v.nota && <small className="nota-s">{v.nota}</small>}
+                                </>
+                              ) : (
+                                <span className={`nota-eq ${v?.nota ? 'warn' : ''}`}>{v?.nota ?? '—'}</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                    <tr className="total">
+                      <td>Total equalizado</td>
+                      {data.propostas.map((p) => {
+                        const t = ia.equalizacao?.totais?.find((x) => x.proposta_id === p.id)?.total ?? null;
+                        return (
+                          <td key={p.id} className={`val ${t != null && t === menorTotal ? 'best' : ''}`}>
+                            {t != null ? formatBRL(t) : '—'}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {Number.isFinite(menorTotal) && (
+                      <tr>
+                        <td className="itm">Diferença para a menor</td>
+                        {data.propostas.map((p) => {
+                          const t = ia.equalizacao?.totais?.find((x) => x.proposta_id === p.id)?.total ?? null;
+                          if (t == null) return <td key={p.id}>—</td>;
+                          const d = t - menorTotal;
+                          return (
+                            <td key={p.id} className={`val ${d > 0 ? 'high' : 'best'}`}>
+                              {d > 0 ? `+${formatBRL(d)} (+${formatNumber((d / menorTotal) * 100, 1)}%)` : '—'}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {(ia.divergencias?.length ?? 0) > 0 && (
+            <>
+              <SecTitulo n="03" t="Divergências que mudam a decisão" />
+              <ol className="num-list">
+                {ia.divergencias!.map((d, i) => (
+                  <li key={i}>
+                    <span className="num">{i + 1}</span>
+                    <div>
+                      <b>{d.titulo}.</b> {d.texto}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+
+          {(ia.forcas_riscos?.length ?? 0) > 0 && (
+            <>
+              <SecTitulo n="04" t="Forças e riscos de cada proposta" />
+              {ranking
+                .map((pid) => ia.forcas_riscos!.find((f) => f.proposta_id === pid))
+                .filter((f): f is NonNullable<typeof f> => !!f)
+                .map((f) => (
+                  <div key={f.proposta_id} className="card fr-card">
+                    <div className="fr-h">
+                      <b>{nome(f.proposta_id)}</b>
+                      {f.resumo && <span className="fr-r">{f.resumo}</span>}
+                    </div>
+                    <div className="fr-cols">
+                      <div>
+                        <div className="fr-k ok">A favor</div>
+                        <ul>
+                          {f.a_favor.map((x, i) => (
+                            <li key={i}>{x}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="fr-k risco">Riscos</div>
+                        <ul>
+                          {f.riscos.map((x, i) => (
+                            <li key={i}>{x}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </>
+          )}
+
+          {(ia.forcas_riscos?.length ?? 0) === 0 && (ia.achados?.length ?? 0) > 0 && (
+            <>
+              <SecTitulo n="04" t="Achados" />
+              <div className="card">
+                {ia.achados!.map((a, i) => (
+                  <div key={i} className="blk">
+                    <span className="k">{a.fornecedor}</span>
+                    <div className="v">{(a.pontos ?? []).join(' · ')}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {(ia.proximos_passos?.length ?? 0) > 0 && (
+            <>
+              <SecTitulo n="05" t="Próximos passos" />
+              <ol className="num-list">
+                {ia.proximos_passos!.map((d, i) => (
+                  <li key={i}>
+                    <span className="num">{i + 1}</span>
+                    <div>
+                      <b>{d.titulo}.</b> {d.texto}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+
+          {(() => {
+            const rec = data.propostas.find((p) => p.id === ia.recomendacao?.proposta_id);
+            return (
+              <div className="rep-rec">
+                <div className="k">
+                  <Icon name="trophy" /> Recomendação da IA
+                </div>
+                <p>
+                  {rec ? (
+                    <>
+                      <b>
+                        {rec.fornecedor}
+                        {rec.opcao ? ` · ${rec.opcao}` : ''}.
+                      </b>{' '}
+                      {ia.recomendacao?.justificativa ?? ''}
+                    </>
+                  ) : (
+                    (ia.recomendacao?.justificativa ?? 'Sem recomendação conclusiva.')
+                  )}
+                </p>
+                <small>A recomendação é apoio — a escolha da vencedora é sua, na tabela acima.</small>
+                <div>
+                  <Button variant="ghost" size="sm" icon="spark" disabled={rodarIA.isPending} onClick={analisar}>
+                    Refazer relatório
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </article>
       )}
 
       {erroIA && (
@@ -638,5 +923,95 @@ export function EqualizacaoScreen() {
       )}
     </>
   );
+
+  /** Linha "Vencedora" da tabela: a decisão continua do usuário (regra #6). */
+  function LinhaVencedora() {
+    return (
+      <tr>
+        <td className="itm">Vencedora</td>
+        {data!.propostas.map((p) => {
+          const ehVencedora = data!.vencedoraPropostaId === p.id;
+          const recomendada = ia?.recomendacao?.proposta_id === p.id;
+          return (
+            <td key={p.id} style={{ textAlign: 'center' }}>
+              {ehVencedora ? (
+                <span className="pill adjudicada">
+                  <Icon name="trophy" style={{ width: 13, height: 13 }} />
+                  Vencedora
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className={`btn sm ${recomendada ? 'primary' : 'soft'}`}
+                  disabled={definir.isPending}
+                  onClick={() => marcarVencedora(p.id)}
+                >
+                  <Icon name="trophy" />
+                  Definir
+                </button>
+              )}
+            </td>
+          );
+        })}
+      </tr>
+    );
+  }
 }
+
+/* ---------- Peças do relatório ---------- */
+
+function SecTitulo({ n, t, s }: { n: string; t: string; s?: string }) {
+  return (
+    <div className="rep-sec">
+      <span className="n">{n}</span>
+      <div>
+        <h3>{t}</h3>
+        {s && <p>{s}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Célula da matriz: selo colorido (ok / atenção / não informa) + texto curto. */
+function Celula({ texto, status }: { texto: string | null; status: 'ok' | 'alerta' | 'falta' | 'neutro' }) {
+  if (status === 'neutro') return <span className="cel-t">{texto ?? '—'}</span>;
+  const rotulo = status === 'ok' ? 'ok' : status === 'alerta' ? 'atenção' : 'não informa';
+  return (
+    <span className="cel">
+      <span className={`bdg ${status}`}>{rotulo}</span>
+      {texto && <span className="cel-t">{texto}</span>}
+    </span>
+  );
+}
+
+/** Espera da análise: lê os PDFs e monta o relatório (pode levar 1–2 min). */
+function AnaliseEmAndamento({ n }: { n: number }) {
+  const etapas = [
+    `Lendo os PDFs das ${n} propostas…`,
+    'Identificando a base cotada de cada uma…',
+    'Colocando todas na mesma régua…',
+    'Separando o que está escrito do que está implícito…',
+    'Levantando forças, riscos e próximos passos…',
+    'Escrevendo o relatório…',
+  ];
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setI((v) => Math.min(v + 1, etapas.length - 1)), 9000);
+    return () => clearInterval(id);
+  }, [etapas.length]);
+  return (
+    <div className="card ler" role="status" aria-live="polite">
+      <span className="thinking" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      <div className="ler-status" key={i}>
+        <div className="t">{etapas[i]}</div>
+        <div className="s">Relatório completo em 1 a 2 minutos. Pode continuar navegando.</div>
+      </div>
+    </div>
+  );
+}
+
 

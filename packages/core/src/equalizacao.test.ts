@@ -145,6 +145,64 @@ describe('normalizarAnalise', () => {
     ]);
   });
 
+  it('relatório completo: cards, matriz, equalização, forças/riscos só com ids válidos', () => {
+    const r = normalizarAnalise(
+      {
+        titulo: 'A mais barata no papel não é a mais barata na obra.',
+        cards: [
+          { proposta_id: 'a', apresentado: 465629, equalizado: 498134, base: '818 m²', nota: 'estrutura inclusa' },
+          { proposta_id: 'zz', apresentado: 1, equalizado: 1, base: null, nota: null }, // fora → descartado
+          { proposta_id: 'a', apresentado: 9, equalizado: 9, base: null, nota: null }, // duplicado → ignorado
+        ],
+        matriz: {
+          criterios: ['Pagamento', 'Garantia', 'Pagamento'],
+          propostas: [
+            { proposta_id: 'a', celulas: [{ criterio: 'Garantia', texto: 'mín. 5 anos', status: 'ok' }] },
+            { proposta_id: 'b', celulas: [{ criterio: 'Pagamento', texto: null, status: 'xpto' }] },
+          ],
+        },
+        equalizacao: {
+          base: '898,94 m² × preço unitário',
+          linhas: [
+            { item: 'ACM', valores: [{ proposta_id: 'a', valor: 332607.8, referencia: false, nota: null }, { proposta_id: 'zz', valor: 1, referencia: true, nota: null }] },
+            { valores: [] }, // sem item → fora
+          ],
+          totais: [{ proposta_id: 'a', total: 498133.8 }, { proposta_id: 'b', total: 'x' }],
+        },
+        divergencias: [{ titulo: 'Ninguém cotou a área do projeto', texto: 'Cada um mediu uma fachada.' }, { titulo: 'sem texto' }],
+        forcas_riscos: [{ proposta_id: 'b', resumo: 'documento robusto', a_favor: ['garantia 5 anos'], riscos: ['área -18%'] }],
+        proximos_passos: [{ titulo: 'Planilha-base', texto: 'Mandar aos três.' }],
+        conclusao: 'LED lidera com folga.',
+      },
+      ['a', 'b'],
+    );
+    expect(r.titulo).toContain('papel');
+    expect(r.cards).toEqual([{ proposta_id: 'a', apresentado: 465629, equalizado: 498134, base: '818 m²', nota: 'estrutura inclusa' }]);
+    expect(r.matriz.criterios).toEqual(['Pagamento', 'Garantia']);
+    expect(r.matriz.porProposta).toEqual([
+      { proposta_id: 'a', celulas: [{ texto: null, status: 'neutro' }, { texto: 'mín. 5 anos', status: 'ok' }] },
+      { proposta_id: 'b', celulas: [{ texto: null, status: 'neutro' }, { texto: null, status: 'neutro' }] },
+    ]);
+    expect(r.equalizacao.base).toContain('898,94');
+    expect(r.equalizacao.linhas).toHaveLength(1);
+    expect(r.equalizacao.linhas[0]?.valores).toEqual([{ proposta_id: 'a', valor: 332607.8, referencia: false, nota: null }]);
+    expect(r.equalizacao.totais).toEqual([{ proposta_id: 'a', total: 498133.8 }, { proposta_id: 'b', total: null }]);
+    expect(r.divergencias).toEqual([{ titulo: 'Ninguém cotou a área do projeto', texto: 'Cada um mediu uma fachada.' }]);
+    expect(r.forcas_riscos[0]).toMatchObject({ proposta_id: 'b', a_favor: ['garantia 5 anos'], riscos: ['área -18%'] });
+    expect(r.proximos_passos).toHaveLength(1);
+    expect(r.conclusao).toBe('LED lidera com folga.');
+  });
+
+  it('análise antiga (sem seções novas) continua válida, com seções vazias', () => {
+    const r = normalizarAnalise({ veredito: 'ok', achados: [], recomendacao: { proposta_id: 'a', fornecedor: 'A', justificativa: 'x' } }, ['a']);
+    expect(r.titulo).toBeNull();
+    expect(r.cards).toEqual([]);
+    expect(r.matriz).toEqual({ criterios: [], porProposta: [] });
+    expect(r.equalizacao).toEqual({ base: null, linhas: [], totais: [] });
+    expect(r.divergencias).toEqual([]);
+    expect(r.recomendacao.proposta_id).toBe('a');
+  });
+
   it('escopo vazio quando não há itens', () => {
     const r = normalizarAnalise({ escopo: { itens: [], propostas: [{ proposta_id: 'a', marcacoes: [] }] } }, ['a']);
     expect(r.escopo).toEqual({ itens: [], porProposta: [] });

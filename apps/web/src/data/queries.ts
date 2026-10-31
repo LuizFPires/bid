@@ -1,6 +1,7 @@
 import {
   certameAtivo,
   nomeProposta,
+  type AnaliseEqualizacao,
   type CertameStatus,
   type PropostaAcervo,
   type PropostaStatus,
@@ -360,21 +361,15 @@ export interface EqualizacaoResumo {
   temAnalise: boolean;
 }
 
-export interface ResultadoIA {
-  veredito?: string | null;
-  achados?: { fornecedor?: string; pontos?: string[] }[];
-  recomendacao?: { proposta_id?: string | null; fornecedor?: string | null; justificativa?: string | null };
-  /** Matriz de escopo da análise (itens × propostas); `status` alinhado a `itens`. */
-  escopo?: {
-    itens?: string[];
-    porProposta?: { proposta_id?: string; status?: ('incluido' | 'ausente' | 'parcial' | 'na')[] }[];
-  };
-}
+/** Resultado gravado em `equalizacoes.resultado_ia` (forma do core, campos opcionais nas análises antigas). */
+export type ResultadoIA = Partial<AnaliseEqualizacao>;
 
 export interface EqualizacaoDetalhe {
   id: string;
   escopo: EqualizacaoEscopo;
   categoria: string;
+  /** Régua do projeto informada ao iniciar (opcional). */
+  referencia: string | null;
   certameId: string | null;
   certameTitulo: string | null;
   certameStatus: CertameStatus | null;
@@ -445,7 +440,7 @@ export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe |
   const { data, error } = await db()
     .from('equalizacoes')
     .select(
-      `id, escopo, categoria, certame_id, proposta_ids, resultado_ia,
+      `id, escopo, categoria, referencia, certame_id, proposta_ids, resultado_ia,
        certames ( id, titulo, status, vencedora_proposta_id, obras ( nome ) )`,
     )
     .eq('id', id)
@@ -457,6 +452,7 @@ export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe |
     id: string;
     escopo: EqualizacaoEscopo;
     categoria: string;
+    referencia: string | null;
     certame_id: string | null;
     proposta_ids: string[];
     resultado_ia: ResultadoIA | null;
@@ -492,6 +488,7 @@ export async function fetchEqualizacao(id: string): Promise<EqualizacaoDetalhe |
     id: r.id,
     escopo: r.escopo,
     categoria: r.categoria,
+    referencia: r.referencia ?? null,
     certameId: r.certame_id,
     certameTitulo: cert?.titulo ?? null,
     certameStatus: cert?.status ?? null,

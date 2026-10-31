@@ -174,6 +174,8 @@ export interface NovaEqualizacaoInput {
   categoria: string;
   certameId: string | null;
   propostaIds: string[];
+  /** Régua do projeto (quantidades/escopo de referência) — opcional. */
+  referencia?: string | null;
 }
 
 /** Cria uma equalização via RPC atômico. Devolve o id. */
@@ -183,6 +185,7 @@ export async function criarEqualizacao(input: NovaEqualizacaoInput): Promise<str
     p_categoria: input.categoria.trim(),
     p_certame: input.certameId,
     p_proposta_ids: input.propostaIds,
+    p_referencia: input.referencia?.trim() || null,
   });
   if (error) throw error;
   return data as string;

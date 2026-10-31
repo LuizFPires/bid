@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
 import { nomeProposta } from '@bid/core';
-import { analisarEqualizacao, type PropostaParaIA } from '@bid/server';
+import { analisarEqualizacao, type DocumentoProposta, type PropostaParaIA } from '@bid/server';
 import { MissingEnvError, env } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';
 import { userClient } from '@bid/server';
@@ -12,7 +12,20 @@ import { userClient } from '@bid/server';
  * Ação: carrega as propostas (RLS, contexto do usuário), pede a análise à Claude
  * e grava em `equalizacoes.resultado_ia`. A recomendação é APOIO (regra #6).
  */
+// PDFs que a IA lê por inteiro: limite por arquivo e no total (tempo + custo).
+const MAX_PDF_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_PDF_BYTES = 24 * 1024 * 1024;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    await processar(req, res);
+  } catch (e) {
+    console.error('equalize crash:', e);
+    if (!res.headersSent) res.status(502).json({ erro: 'Não foi possível gerar a análise.' });
+  }
+}
+
+async function processar(req: VercelRequest, res: VercelResponse) {
   if (!requireMethod(req, res, 'POST')) return;
 
   const token = bearer(req);
@@ -30,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sb = userClient(token);
   const { data: eq, error: eqErr } = await sb
     .from('equalizacoes')
-    .select('id, proposta_ids')
+    .select('id, proposta_ids, referencia')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle();
@@ -40,6 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const ids = (eq as { proposta_ids: string[] }).proposta_ids ?? [];
+  const referencia = (eq as { referencia: string | null }).referencia ?? null;
   if (ids.length < 2) {
     res.status(400).json({ erro: 'A equalização precisa de ao menos duas propostas.' });
     return;
@@ -61,16 +75,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Itens extraídos ficam na última versão de cada proposta (dados_extraidos).
+  // Itens extraídos e o ARQUIVO ficam na última versão de cada proposta.
   const { data: versoes } = await sb
     .from('proposta_versoes')
-    .select('proposta_id, n, dados_extraidos')
+    .select('proposta_id, n, dados_extraidos, arquivo_path')
     .in('proposta_id', ids);
-  const itensPorProposta = new Map<string, unknown>();
-  for (const v of (versoes ?? []) as { proposta_id: string; n: number; dados_extraidos: { itens?: unknown } | null }[]) {
-    const atual = itensPorProposta.get(v.proposta_id) as { n: number } | undefined;
+  const ultimaPorProposta = new Map<string, { n: number; itens: unknown; arquivo_path: string | null }>();
+  for (const v of (versoes ?? []) as {
+    proposta_id: string;
+    n: number;
+    dados_extraidos: { itens?: unknown } | null;
+    arquivo_path: string | null;
+  }[]) {
+    const atual = ultimaPorProposta.get(v.proposta_id);
     if (!atual || v.n > atual.n) {
-      itensPorProposta.set(v.proposta_id, { n: v.n, itens: v.dados_extraidos?.itens ?? [] });
+      ultimaPorProposta.set(v.proposta_id, { n: v.n, itens: v.dados_extraidos?.itens ?? [], arquivo_path: v.arquivo_path });
     }
   }
 
@@ -92,12 +111,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     prazo: p.prazo_atual,
     condicao_pagamento: p.condicao_pagamento,
     garantia: p.garantia,
-    itens: (itensPorProposta.get(p.id) as { itens?: unknown } | undefined)?.itens ?? [],
+    itens: ultimaPorProposta.get(p.id)?.itens ?? [],
   }));
+
+  // PDFs originais (última versão), lidos no contexto do usuário (RLS do
+  // Storage). Só PDFs, dentro dos limites; o que faltar segue só com os dados.
+  const documentos: DocumentoProposta[] = [];
+  let totalBytes = 0;
+  for (const p of propostas) {
+    const path = ultimaPorProposta.get(p.id)?.arquivo_path;
+    if (!path || !path.toLowerCase().endsWith('.pdf')) continue;
+    try {
+      const { data: signed } = await sb.storage.from('propostas').createSignedUrl(path, 60);
+      if (!signed) continue;
+      const resp = await fetch(signed.signedUrl);
+      if (!resp.ok) continue;
+      const declarado = Number(resp.headers.get('content-length'));
+      if (Number.isFinite(declarado) && declarado > MAX_PDF_BYTES) continue;
+      const buf = Buffer.from(await resp.arrayBuffer());
+      if (buf.byteLength > MAX_PDF_BYTES || totalBytes + buf.byteLength > MAX_TOTAL_PDF_BYTES) continue;
+      totalBytes += buf.byteLength;
+      documentos.push({ proposta_id: p.id, fornecedor: p.fornecedor, pdfBase64: buf.toString('base64') });
+    } catch (e) {
+      console.error('equalize: falha ao ler PDF', path, e);
+    }
+  }
 
   try {
     const client = new Anthropic({ apiKey: env.anthropicKey() });
-    const analise = await analisarEqualizacao(client, propostas);
+    const analise = await analisarEqualizacao(client, propostas, { referencia, documentos });
     const { data: eqRow, error: upErr } = await sb
       .from('equalizacoes')
       .update({ resultado_ia: analise })
@@ -114,7 +156,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       entidade: 'equalizacao',
       entidade_id: id,
       tipo: 'equalizacao_analisada',
-      payload: { recomendacao: analise.recomendacao.proposta_id },
+      payload: { recomendacao: analise.recomendacao.proposta_id, pdfs: documentos.length, com_referencia: !!referencia },
     });
     res.status(200).json({ analise });
   } catch (e) {

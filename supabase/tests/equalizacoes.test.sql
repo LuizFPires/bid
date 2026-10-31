@@ -26,7 +26,7 @@ select is(
 
 -- RPC criar_equalizacao.
 select has_function(
-  'public', 'criar_equalizacao', ARRAY['text', 'text', 'uuid', 'uuid[]'],
+  'public', 'criar_equalizacao', ARRAY['text', 'text', 'uuid', 'uuid[]', 'text'],
   'função criar_equalizacao existe'
 );
 select is(
@@ -34,7 +34,7 @@ select is(
   false, 'criar_equalizacao é SECURITY INVOKER'
 );
 select function_privs_are(
-  'public', 'criar_equalizacao', ARRAY['text', 'text', 'uuid', 'uuid[]'],
+  'public', 'criar_equalizacao', ARRAY['text', 'text', 'uuid', 'uuid[]', 'text'],
   'anon', ARRAY[]::text[], 'anon não executa criar_equalizacao'
 );
 
