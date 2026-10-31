@@ -6,8 +6,7 @@ import {
   type PropostaExtraida,
   type CertameStatus,
   type PropostaAcervo,
-  type PropostaStatus,
-} from '@bid/core';
+  type PropostaStatus, type PapelObra } from '@bid/core';
 import { supabase } from '../lib/supabase';
 import type { Obra, Organizacao } from './types';
 
@@ -229,17 +228,32 @@ export interface AcessoObra {
   conviteId: string | null;
   email: string;
   status: 'dono' | 'pendente' | 'aceito';
+  papel: PapelObra;
 }
 
 /** Quem tem acesso à obra: dono + convites pendentes/aceitos. */
 export async function fetchAcessoObra(obraId: string): Promise<AcessoObra[]> {
   const { data, error } = await db().rpc('listar_acesso_obra', { p_obra: obraId });
   if (error) throw error;
-  return ((data ?? []) as { convite_id: string | null; email: string; status: string }[]).map((r) => ({
+  return ((data ?? []) as { convite_id: string | null; email: string; status: string; papel: string | null }[]).map((r) => ({
     conviteId: r.convite_id,
     email: r.email,
     status: r.status as AcessoObra['status'],
+    papel: (r.status === 'dono' ? 'dono' : r.papel === 'gestor' ? 'gestor' : 'colaborador') as PapelObra,
   }));
+}
+
+/** Meu papel em cada obra que vejo (obra_id → papel). */
+export async function fetchMeusPapeis(): Promise<Map<string, PapelObra>> {
+  const { data, error } = await db().rpc('meus_papeis_obras');
+  if (error) throw error;
+  const m = new Map<string, PapelObra>();
+  for (const r of (data ?? []) as { obra_id: string; papel: string }[]) {
+    const p: PapelObra = r.papel === 'dono' ? 'dono' : r.papel === 'gestor' ? 'gestor' : 'colaborador';
+    // Dono prevalece se houver linha duplicada.
+    if (!m.has(r.obra_id) || p === 'dono') m.set(r.obra_id, p);
+  }
+  return m;
 }
 
 /* ---------- Categorias (organizar) ---------- */
@@ -369,6 +383,8 @@ import type { PropostaComparavel } from '@bid/core';
 export type EqualizacaoEscopo = 'obra' | 'entre_obras';
 
 export interface EqualizacaoResumo {
+  /** Obra do certame (null entre obras). */
+  obraId: string | null;
   id: string;
   escopo: EqualizacaoEscopo;
   categoria: string;
@@ -403,13 +419,13 @@ interface RawEqRow {
   certame_id: string | null;
   proposta_ids: string[];
   resultado_ia: ResultadoIA | null;
-  certames: { status: CertameStatus } | { status: CertameStatus }[] | null;
+  certames: { status: CertameStatus; obra_id: string } | { status: CertameStatus; obra_id: string }[] | null;
 }
 
 export async function fetchEqualizacoes(): Promise<EqualizacaoResumo[]> {
   const { data, error } = await db()
     .from('equalizacoes')
-    .select('id, escopo, categoria, certame_id, proposta_ids, resultado_ia, certames ( status )')
+    .select('id, escopo, categoria, certame_id, proposta_ids, resultado_ia, certames ( status, obra_id )')
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -421,6 +437,7 @@ export async function fetchEqualizacoes(): Promise<EqualizacaoResumo[]> {
       escopo: r.escopo,
       categoria: r.categoria,
       certameId: r.certame_id,
+      obraId: cert?.obra_id ?? null,
       certameStatus: cert?.status ?? null,
       totalPropostas: r.proposta_ids?.length ?? 0,
       temAnalise: r.resultado_ia != null,
@@ -566,6 +583,7 @@ export async function fetchPropostasPorCategoria(
 import type { ContratoStatus } from '@bid/core';
 
 export interface ContratoResumo {
+  obraId: string;
   id: string;
   categoria: string;
   obraNome: string;
@@ -601,13 +619,14 @@ interface RawContratoRow {
   valor: number | null;
   status: ContratoStatus;
   pdf_path: string | null;
+  obra_id: string;
   obras: { nome: string } | { nome: string }[] | null;
 }
 
 export async function fetchContratos(): Promise<ContratoResumo[]> {
   const { data, error } = await db()
     .from('contratos')
-    .select('id, categoria, valor, status, pdf_path, obras ( nome )')
+    .select('id, categoria, valor, status, pdf_path, obra_id, obras ( nome )')
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -616,6 +635,7 @@ export async function fetchContratos(): Promise<ContratoResumo[]> {
     id: r.id,
     categoria: r.categoria,
     obraNome: one(r.obras)?.nome ?? '',
+    obraId: r.obra_id,
     valor: r.valor,
     status: r.status,
     temPdf: Boolean(r.pdf_path),

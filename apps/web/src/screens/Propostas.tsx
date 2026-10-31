@@ -10,14 +10,14 @@ import {
 } from '@bid/core';
 import { useNavigate } from 'react-router-dom';
 import { Icon, iconeCategoria } from '@bid/ui';
-import { useAcervo, useApagarProposta, invalidarVencedora } from '../data/hooks';
+import { useAcervo, useApagarProposta, invalidarVencedora, useMeusPapeis } from '../data/hooks';
 import { restaurarProposta } from '../data/mutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../app/Toast';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 import { SwipeRow } from '../components/SwipeRow';
 import { useLote } from '../data/lote';
-import { resumoLote } from '@bid/core';
+import { gerencia, resumoLote } from '@bid/core';
 
 export function PropostasScreen() {
   // Arrastar para o lado → lixeira → confirmação → Desfazer (regra #11).
@@ -52,6 +52,8 @@ export function PropostasScreen() {
   const props = useMemo(() => data ?? [], [data]);
   const lote = useLote();
   const loteResumo = lote ? resumoLote(lote) : null;
+  // Só dono/gestor da obra apagam (regra 13 revisada); o servidor recusa de qualquer forma.
+  const papeis = useMeusPapeis();
 
   const [categoria, setCategoria] = useState<string | null>(null);
   const [obraId, setObraId] = useState<string | null>(null);
@@ -167,7 +169,7 @@ export function PropostasScreen() {
           </div>
           <div className="card rowlist">
             {lista.map((p) => (
-              <SwipeRow key={p.id} onApagar={() => setParaApagar(p)}>
+              <SwipeRow key={p.id} onApagar={gerencia(papeis.data?.get(p.obraId)) ? () => setParaApagar(p) : undefined}>
                 <AcervoRow p={p} />
               </SwipeRow>
             ))}

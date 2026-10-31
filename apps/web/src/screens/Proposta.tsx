@@ -9,8 +9,7 @@ import {
   variacao,
   PROPOSTA_LABEL,
   type PropostaExtraida,
-  type Variacao,
-} from '@bid/core';
+  type Variacao, gerencia } from '@bid/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Icon } from '@bid/ui';
 import {
@@ -22,6 +21,7 @@ import {
   useEditarProposta,
   useProposta,
   useSugestoes,
+  usePapelObra,
 } from '../data/hooks';
 import {
   ACCEPT_PROPOSTA,
@@ -71,7 +71,8 @@ function PropMenu({
   apagando,
 }: {
   onEditar: () => void;
-  onApagar: () => void;
+  /** Sem função = quem está vendo não pode apagar (só dono/gestor da obra). */
+  onApagar?: () => void;
   apagando: boolean;
 }) {
   const [aberto, setAberto] = useState(false);
@@ -119,19 +120,21 @@ function PropMenu({
             <Icon name="pencil" />
             Editar dados
           </button>
-          <button
-            type="button"
-            className="kebab-item danger"
-            role="menuitem"
-            disabled={apagando}
-            onClick={() => {
-              setAberto(false);
-              onApagar();
-            }}
-          >
-            <Icon name="trash" />
-            {apagando ? 'Apagando…' : 'Apagar proposta'}
-          </button>
+          {onApagar && (
+            <button
+              type="button"
+              className="kebab-item danger"
+              role="menuitem"
+              disabled={apagando}
+              onClick={() => {
+                setAberto(false);
+                onApagar();
+              }}
+            >
+              <Icon name="trash" />
+              {apagando ? 'Apagando…' : 'Apagar proposta'}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -142,6 +145,7 @@ export function PropostaScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useProposta(id);
+  const papelObra = usePapelObra(data?.obraId);
   const [modo, setModo] = useState<'ver' | 'nova' | 'editar'>('ver');
   const definir = useDefinirVencedora();
   const criarContrato = useCriarContrato();
@@ -260,7 +264,7 @@ export function PropostaScreen() {
           <PropMenu
             apagando={apagar.isPending}
             onEditar={() => setModo('editar')}
-            onApagar={() => setConfirmando(true)}
+            onApagar={gerencia(papelObra) ? () => setConfirmando(true) : undefined}
           />
         )}
       </div>

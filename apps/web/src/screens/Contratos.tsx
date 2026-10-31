@@ -6,8 +6,7 @@ import {
   PARTE_LABEL,
   formatBRL,
   formatNumeric,
-  linkWhatsApp,
-} from '@bid/core';
+  linkWhatsApp, gerencia } from '@bid/core';
 import { Button, Icon } from '@bid/ui';
 import {
   useAssinarApp,
@@ -20,6 +19,7 @@ import {
   useGerarPdf,
   useVencedoras,
   useApagarContrato,
+  useMeusPapeis,
 } from '../data/hooks';
 import { gerarTokenAssinatura, restaurarContrato } from '../data/mutations';
 import { urlContratoPdf } from '../data/queries';
@@ -35,6 +35,8 @@ import { useQueryClient } from '@tanstack/react-query';
 export function ContratosScreen() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useContratos();
+  // Só dono/gestor da obra apagam; o servidor recusa de qualquer forma.
+  const papeis = useMeusPapeis();
   const contratos = data ?? [];
 
   // Arrastar para o lado → lixeira → confirmação → Desfazer.
@@ -94,7 +96,7 @@ export function ContratosScreen() {
           {contratos.map((c) => {
             const label = CONTRATO_LABEL[c.status];
             return (
-              <SwipeRow key={c.id} onApagar={c.status === 'assinado' ? undefined : () => setParaApagar(c)}>
+              <SwipeRow key={c.id} onApagar={c.status === 'assinado' || !gerencia(papeis.data?.get(c.obraId)) ? undefined : () => setParaApagar(c)}>
               <div
                 className="row"
                 role="button"

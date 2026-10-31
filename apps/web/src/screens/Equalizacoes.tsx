@@ -8,6 +8,7 @@ import {
   formatBRLCompact,
   nomeProposta,
   categoriasParecidas,
+  gerencia,
   pendenciasDaAnalise,
   pedidosDeRevisao,
   textoPendencias,
@@ -34,6 +35,7 @@ import {
   usePropostasPorCategoria,
   useSugestoes,
   useMesclarCategoria,
+  useMeusPapeis,
 } from '../data/hooks';
 import {
   desfazerVencedora,
@@ -80,6 +82,7 @@ function MarcaEscopo({ status }: { status: 'incluido' | 'ausente' | 'parcial' | 
 export function EqualizacoesScreen() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useEqualizacoes();
+  const papeis = useMeusPapeis();
   const eqs = data ?? [];
 
   const gerandoIds = useAnalisesEmAndamento(eqs.map((e) => e.id));
@@ -156,7 +159,7 @@ export function EqualizacoesScreen() {
                 const adjudicada = e.certameStatus === 'adjudicada';
                 const tom = CERTAME_LABEL[(e.certameStatus ?? 'aberta') as CertameStatus].tom;
                 return (
-                  <SwipeRow key={e.id} onApagar={() => setParaApagar(e)}>
+                  <SwipeRow key={e.id} onApagar={e.obraId && !gerencia(papeis.data?.get(e.obraId)) ? undefined : () => setParaApagar(e)}>
                   <div
                     className="row"
                     role="button"

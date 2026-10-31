@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { CERTAME_LABEL, type CertameStatus } from '@bid/core';
+import { CERTAME_LABEL, PAPEL_LABEL, type CertameStatus } from '@bid/core';
 import { Button, Icon, iconeCategoria } from '@bid/ui';
 import {
   useAcessoObra,
   useApagarObra,
   useConvidarParaObra,
   useObra,
+  useMudarPapelObra,
+  usePapelObra,
   useRemoverAcessoObra,
 } from '../data/hooks';
 import { restaurarObra } from '../data/mutations';
@@ -78,22 +80,26 @@ const ACESSO_LABEL: Record<AcessoObra['status'], { texto: string; tom: 'neutro' 
  * Pessoas com acesso à obra. O dono convida por e-mail (a conta pode ainda não
  * existir — o convite espera o cadastro) e remove acessos com confirmação.
  */
-function Pessoas({ obraId, ehDono }: { obraId: string; ehDono: boolean }) {
+function Pessoas({ obraId, gerencia }: { obraId: string; gerencia: boolean }) {
   const acesso = useAcessoObra(obraId);
   const convidar = useConvidarParaObra(obraId);
   const remover = useRemoverAcessoObra(obraId);
+  const mudarPapel = useMudarPapelObra(obraId);
   const toast = useToast();
   const [email, setEmail] = useState('');
+  const [papel, setPapel] = useState<'gestor' | 'colaborador'>('colaborador');
   const [erro, setErro] = useState<string | null>(null);
   const [removendo, setRemovendo] = useState<AcessoObra | null>(null);
+  const meuEmail = useAuth().session?.user?.email ?? null;
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
     setErro(null);
     try {
-      await convidar.mutateAsync({ obraId, email });
-      toast(`Convite enviado para ${email.trim()}.`);
+      await convidar.mutateAsync({ obraId, email, papel });
+      toast(`Convite enviado para ${email.trim()} como ${PAPEL_LABEL[papel].texto.toLowerCase()}.`);
       setEmail('');
+      setPapel('colaborador');
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível convidar.');
     }
@@ -118,13 +124,13 @@ function Pessoas({ obraId, ehDono }: { obraId: string; ehDono: boolean }) {
       <div className="page-head" style={{ marginBottom: 10 }}>
         <h2 style={{ fontSize: 15, margin: 0 }}>Pessoas</h2>
         <p className="lead" style={{ marginTop: 2 }}>
-          {ehDono
-            ? 'Só quem você convidar vê esta obra e suas propostas.'
+          {gerencia
+            ? 'Só quem for convidado vê esta obra. Gestor aprova, emite e apaga; colaborador sobe, equaliza e monta contratos.'
             : 'Quem tem acesso a esta obra.'}
         </p>
       </div>
 
-      {ehDono && (
+      {gerencia && (
         <form className="acesso-form" onSubmit={enviar}>
           <div className="field">
             <label htmlFor="acesso-email">Convidar por e-mail</label>
@@ -137,6 +143,13 @@ function Pessoas({ obraId, ehDono }: { obraId: string; ehDono: boolean }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+          </div>
+          <div className="field">
+            <label htmlFor="acesso-papel">Papel na obra</label>
+            <select id="acesso-papel" value={papel} onChange={(e) => setPapel(e.target.value as 'gestor' | 'colaborador')}>
+              <option value="colaborador">Colaborador — sobe, equaliza, monta contrato</option>
+              <option value="gestor">Gestor — também aprova, emite e apaga</option>
+            </select>
           </div>
           <Button type="submit" icon="plus" disabled={convidar.isPending || !email.trim()}>
             Convidar
@@ -163,11 +176,38 @@ function Pessoas({ obraId, ehDono }: { obraId: string; ehDono: boolean }) {
                   <span className="t1">{a.email}</span>
                 </span>
                 <span className="rt" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span className={`pill ${l.tom}`}>
-                    <span className={`dot ${l.tom}`} />
-                    {l.texto}
-                  </span>
-                  {ehDono && a.conviteId && (
+                  {a.status === 'dono' ? (
+                    <span className={`pill ${l.tom}`}>
+                      <span className={`dot ${l.tom}`} />
+                      Dono
+                    </span>
+                  ) : gerencia && a.conviteId && a.email.toLowerCase() !== (meuEmail ?? '').toLowerCase() ? (
+                    <select
+                      className="papel-sel"
+                      aria-label={`Papel de ${a.email}`}
+                      value={a.papel}
+                      disabled={mudarPapel.isPending}
+                      onChange={async (e) => {
+                        const novo = e.target.value as 'gestor' | 'colaborador';
+                        try {
+                          await mudarPapel.mutateAsync({ conviteId: a.conviteId!, papel: novo });
+                          toast(`${a.email} agora é ${PAPEL_LABEL[novo].texto.toLowerCase()}.`);
+                        } catch (err) {
+                          toast(err instanceof Error ? err.message : 'Não foi possível mudar o papel.');
+                        }
+                      }}
+                    >
+                      <option value="colaborador">Colaborador{a.status === 'pendente' ? ' · convidado' : ''}</option>
+                      <option value="gestor">Gestor{a.status === 'pendente' ? ' · convidado' : ''}</option>
+                    </select>
+                  ) : (
+                    <span className={`pill ${a.papel === 'gestor' ? 'aberta' : l.tom}`}>
+                      <span className={`dot ${a.papel === 'gestor' ? 'aberta' : l.tom}`} />
+                      {a.status === 'pendente' ? 'convidado · ' : ''}
+                      {PAPEL_LABEL[a.papel].texto.toLowerCase()}
+                    </span>
+                  )}
+                  {gerencia && a.conviteId && (
                     <button
                       type="button"
                       className="remover"
@@ -260,6 +300,7 @@ export function ObraScreen() {
 
   const { obra, certames } = data;
   const ehDono = !!session?.user?.id && obra.criado_por === session.user.id;
+  const papelAqui = usePapelObra(obra.id);
 
   return (
     <>
@@ -327,7 +368,7 @@ export function ObraScreen() {
         </div>
       )}
 
-      <Pessoas obraId={obra.id} ehDono={ehDono} />
+      <Pessoas obraId={obra.id} gerencia={ehDono || papelAqui === 'gestor'} />
     </>
   );
 }

@@ -1,3 +1,4 @@
+import type { PapelObra } from '@bid/core';
 import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchAcervo,
@@ -17,6 +18,7 @@ import {
   fetchMembros,
   fetchMeusConvites,
   fetchAcessoObra,
+  fetchMeusPapeis,
   fetchCategorias,
 } from './queries';
 import {
@@ -40,6 +42,7 @@ import {
   convidarParaObra,
   responderConvite,
   removerAcessoObra,
+  mudarPapelObra,
   apagarEqualizacao,
   apagarContrato,
   mesclarCategoria,
@@ -248,6 +251,29 @@ export function useRemoverAcessoObra(obraId: string | undefined) {
     mutationFn: removerAcessoObra,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['acesso-obra', obraId] }),
   });
+}
+
+export function useMudarPapelObra(obraId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: mudarPapelObra,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['acesso-obra', obraId] });
+      qc.invalidateQueries({ queryKey: ['meus-papeis'] });
+    },
+  });
+}
+
+/** Meu papel em cada obra (dono/gestor/colaborador) — para esconder ações que o papel não tem. */
+export function useMeusPapeis() {
+  return useQuery({ queryKey: ['meus-papeis'], queryFn: fetchMeusPapeis, staleTime: 60_000 });
+}
+
+/** Meu papel numa obra específica (undefined enquanto carrega; null sem acesso). */
+export function usePapelObra(obraId: string | undefined): PapelObra | null | undefined {
+  const q = useMeusPapeis();
+  if (!obraId || !q.data) return undefined;
+  return q.data.get(obraId) ?? null;
 }
 
 export function useCriarObra() {

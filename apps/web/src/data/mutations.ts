@@ -604,10 +604,16 @@ export async function restaurarObra(obraId: string): Promise<void> {
 /* ---------- Acesso por obra: convites ---------- */
 
 /** Dono convida alguém (por e-mail) para a obra; a conta pode ainda não existir. */
-export async function convidarParaObra(input: { obraId: string; email: string }): Promise<void> {
+export async function convidarParaObra(input: { obraId: string; email: string; papel?: 'gestor' | 'colaborador' }): Promise<void> {
   const email = input.email.trim();
   if (!email) throw new Error('Informe o e-mail.');
-  const { error } = await db().rpc('convidar_para_obra', { p_obra: input.obraId, p_email: email });
+  const { error } = await db().rpc('convidar_para_obra', { p_obra: input.obraId, p_email: email, p_papel: input.papel ?? 'colaborador' });
+  if (error) throw error;
+}
+
+/** Troca o papel (gestor/colaborador) de quem tem acesso à obra. Dono ou gestor. */
+export async function mudarPapelObra(input: { conviteId: string; papel: 'gestor' | 'colaborador' }): Promise<void> {
+  const { error } = await db().rpc('mudar_papel_obra', { p_convite: input.conviteId, p_papel: input.papel });
   if (error) throw error;
 }
 
