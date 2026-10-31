@@ -1232,6 +1232,22 @@ table.eq .nota-eq.warn {
   .tab .tb-badge { animation: none; }
 }
 
+/* Barra de ação fixa acima das abas (botão principal da tela). */
+.barra-acao {
+  flex: 0 0 auto;
+}
+.barra-acao:empty {
+  display: none;
+}
+.barra-acao-in {
+  padding: 10px max(18px, env(safe-area-inset-right, 0px)) 10px max(18px, env(safe-area-inset-left, 0px));
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.barra-acao-in .btn {
+  box-shadow: 0 10px 24px rgba(124, 138, 240, 0.25);
+}
+
 /* ---------- Aviso de nova versão (acima das abas) ---------- */
 .upd {
   flex: 0 0 auto;

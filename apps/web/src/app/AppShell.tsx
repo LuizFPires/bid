@@ -43,6 +43,7 @@ export function AppShell() {
           <Outlet />
         </main>
 
+          <div id="barra-acao" className="barra-acao" />
           <AtualizacaoApp />
           <TabBar
             active={active}

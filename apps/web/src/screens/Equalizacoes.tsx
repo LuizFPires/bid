@@ -31,6 +31,7 @@ import {
 import { baixarRelatorioEqualizacao, desfazerVencedora, restaurarEqualizacao } from '../data/mutations';
 import { useToast } from '../app/Toast';
 import { Kebab } from '../app/Kebab';
+import { BarraAcao } from '../app/BarraAcao';
 import { EsperaEqualizacao } from '../components/EsperaEqualizacao';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 
@@ -352,11 +353,17 @@ export function IniciarEqualizacaoScreen() {
         </div>
       )}
 
-      <div style={{ marginTop: 22 }}>
+      <BarraAcao>
         <Button block icon="scale" disabled={sel.size < 2 || criar.isPending} onClick={comparar}>
-          {criar.isPending ? 'Iniciando…' : `Comparar ${sel.size || ''}`}
+          {criar.isPending
+            ? 'Iniciando…'
+            : sel.size >= 2
+              ? `Comparar ${sel.size} propostas`
+              : propostas.length > 0
+                ? 'Marque ao menos 2 propostas'
+                : 'Escolha a obra e a categoria'}
         </Button>
-      </div>
+      </BarraAcao>
     </>
   );
 }
@@ -659,11 +666,13 @@ export function EqualizacaoScreen() {
                 A IA lê os PDFs das propostas por inteiro, coloca todas na mesma régua e entrega o relatório:
                 lado a lado, composição equalizada, divergências, forças e riscos e próximos passos.
               </p>
-              <Button icon="spark" disabled={gerando} onClick={analisar}>
-                Gerar relatório com IA
-              </Button>
             </div>
           </div>
+          <BarraAcao>
+            <Button block icon="spark" disabled={gerando} onClick={analisar}>
+              Gerar relatório com IA
+            </Button>
+          </BarraAcao>
         </>
       )}
 
