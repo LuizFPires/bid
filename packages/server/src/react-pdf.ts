@@ -4,7 +4,7 @@
  * isso a função cai num 500 mudo da plataforma, sem log acessível.
  */
 type ReactPdf = typeof import('@react-pdf/renderer');
-type Pecas = Pick<ReactPdf, 'Document' | 'Page' | 'StyleSheet' | 'Text' | 'View' | 'renderToBuffer'>;
+type Pecas = Pick<ReactPdf, 'Document' | 'Page' | 'StyleSheet' | 'Text' | 'View' | 'Font' | 'renderToBuffer'>;
 export async function carregarReactPdf(): Promise<{ h: typeof import('react').createElement } & Pecas> {
   let react: typeof import('react');
   try {
@@ -13,8 +13,8 @@ export async function carregarReactPdf(): Promise<{ h: typeof import('react').cr
     throw new Error(`carregar react: ${primeiraLinha(e)}`);
   }
   try {
-    const { Document, Page, StyleSheet, Text, View, renderToBuffer } = await import('@react-pdf/renderer');
-    return { h: react.createElement, Document, Page, StyleSheet, Text, View, renderToBuffer };
+    const { Document, Page, StyleSheet, Text, View, Font, renderToBuffer } = await import('@react-pdf/renderer');
+    return { h: react.createElement, Document, Page, StyleSheet, Text, View, Font, renderToBuffer };
   } catch (e) {
     throw new Error(`carregar @react-pdf/renderer: ${primeiraLinha(e)}`);
   }

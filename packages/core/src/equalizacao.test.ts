@@ -203,6 +203,20 @@ describe('normalizarAnalise', () => {
     expect(r.recomendacao.proposta_id).toBe('a');
   });
 
+  it('normalizar de novo um resultado já normalizado não perde matriz nem escopo', () => {
+    const uma = normalizarAnalise(
+      {
+        matriz: { criterios: ['Prazo', 'Garantia'], propostas: [{ proposta_id: 'a', celulas: [{ criterio: 'Prazo', texto: '60 dias', status: 'ok' }, { criterio: 'Garantia', texto: null, status: 'falta' }] }] },
+        escopo: { itens: ['Transporte'], propostas: [{ proposta_id: 'a', marcacoes: [{ item: 'Transporte', status: 'incluido' }] }] },
+      },
+      ['a'],
+    );
+    const duas = normalizarAnalise(uma, ['a']);
+    expect(duas.matriz).toEqual(uma.matriz);
+    expect(duas.escopo).toEqual(uma.escopo);
+    expect(duas.matriz.porProposta[0]?.celulas[0]).toEqual({ texto: '60 dias', status: 'ok' });
+  });
+
   it('escopo vazio quando não há itens', () => {
     const r = normalizarAnalise({ escopo: { itens: [], propostas: [{ proposta_id: 'a', marcacoes: [] }] } }, ['a']);
     expect(r.escopo).toEqual({ itens: [], porProposta: [] });

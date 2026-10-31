@@ -523,17 +523,21 @@ function normalizarMatriz(v: unknown, ids: readonly string[]): AnaliseEqualizaca
   const m = obj(v) ?? {};
   const criterios = [...new Set(textos(m.criterios, 14).map((s) => s.slice(0, 60)))];
   if (criterios.length === 0) return { criterios: [], porProposta: [] };
-  const porProposta = lista(m.propostas)
+  // Aceita a forma da IA (`propostas`, células nomeadas por `criterio`) e a forma
+  // já normalizada (`porProposta`, células alinhadas a `criterios`), para que
+  // o resultado gravado possa ser normalizado de novo sem perder nada.
+  const fonte = Array.isArray(m.propostas) ? m.propostas : lista(m.porProposta);
+  const porProposta = fonte
     .map((p) => {
       const po = obj(p);
       const pid = po ? txt(po.proposta_id) : null;
       if (!po || !pid || !ids.includes(pid)) return null;
       const mapa = new Map<string, { texto: string | null; status: CriterioStatus }>();
-      for (const c of lista(po.celulas)) {
+      lista(po.celulas).forEach((c, i) => {
         const co = obj(c);
-        const nome = co ? txt(co.criterio) : null;
+        const nome = co ? (txt(co.criterio) ?? criterios[i] ?? null) : null;
         if (co && nome) mapa.set(nome, { texto: txt(co.texto)?.slice(0, 160) ?? null, status: statusCriterio(co.status) });
-      }
+      });
       return {
         proposta_id: pid,
         celulas: criterios.map((c) => mapa.get(c) ?? { texto: null, status: 'neutro' as const }),
@@ -607,7 +611,9 @@ function normalizarEscopo(
     ),
   ].slice(0, 12);
 
-  const porProposta = (Array.isArray(e.propostas) ? e.propostas : [])
+  // Forma da IA (`propostas` + `marcacoes`) ou já normalizada (`porProposta` + `status`).
+  const fonte = Array.isArray(e.propostas) ? e.propostas : Array.isArray(e.porProposta) ? e.porProposta : [];
+  const porProposta = fonte
     .map((p) => {
       if (typeof p !== 'object' || p === null) return null;
       const po = p as Record<string, unknown>;
@@ -620,6 +626,7 @@ function normalizarEscopo(
         const item = txt(mo.item);
         if (item) mapa.set(item, statusEscopo(mo.status));
       }
+      if (Array.isArray(po.status)) po.status.forEach((st, i) => { if (itens[i]) mapa.set(itens[i]!, statusEscopo(st)); });
       return { proposta_id: pid, status: itens.map((it) => mapa.get(it) ?? 'na') };
     })
     .filter((x): x is { proposta_id: string; status: EscopoStatus[] } => x !== null);

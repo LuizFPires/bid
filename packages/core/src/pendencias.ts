@@ -27,7 +27,9 @@ export function pendenciasDaAnalise(
       const nome = criterios[i];
       if (c.status === 'falta' && nome) {
         const n = nome.trim();
-        if (n && !faltas.some((f) => f.localeCompare(n, 'pt-BR', { sensitivity: 'base' }) === 0)) faltas.push(n);
+        const jaTem = faltas.some((f) => f.localeCompare(n, 'pt-BR', { sensitivity: 'base' }) === 0);
+        const valorRepetido = /^valor/i.test(n) && faltas.some((f) => /^valor/i.test(f));
+        if (n && !jaTem && !valorRepetido) faltas.push(n);
       }
     });
     if (faltas.length) out.push({ proposta_id: p.id, nome: p.nome, faltas });
