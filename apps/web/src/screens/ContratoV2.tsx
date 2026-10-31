@@ -58,7 +58,7 @@ export function ContratoV2Screen({ id }: { id: string }) {
   const editavel = ['rascunho', 'devolvido', 'aprovado'].includes(data.status);
   const faltamQuadro = camposFaltando(data.parametros).length;
   const faltamPartes = ['contratante', 'contratada', 'construtora'].filter((k) => !data.partes[k as keyof typeof data.partes]).length;
-  const revisaoAtual = data.revisao && data.revisao.status === 'concluida' && data.revisao.conteudoHash === data.conteudoHash;
+  const revisaoAtual = !!data.conteudoHash && data.revisao?.status === 'concluida' && data.revisao.conteudoHash === data.conteudoHash;
   const bloqueantes = data.revisao ? achadosBloqueantes(data.revisao.achados).length : 0;
   const ok: Record<Etapa, boolean> = {
     dossie: !!data.dossie,
@@ -262,7 +262,7 @@ function EtapaPartes({ c, editavel }: { c: ContratoV2Detalhe; editavel: boolean 
           )}
         </div>
       ))}
-      {editavel && (
+      {editavel && c.dossie && (
         <button type="button" className="link" disabled={montar.isPending} onClick={() => void montar.mutateAsync(true).then(() => toast('Partes recarregadas dos cadastros.')).catch((e) => toast(e instanceof Error ? e.message : 'Falhou'))}>
           <Icon name="arrow" /> Recarregar partes dos cadastros
         </button>
@@ -350,7 +350,7 @@ function EtapaQuadro({ c, editavel }: { c: ContratoV2Detalhe; editavel: boolean 
   const salvar = useSalvarContratoV2(c.id);
   const toast = useToast();
   const [rascunho, setRascunho] = useState<Record<string, string>>({});
-  useEffect(() => setRascunho({}), [c.conteudoHash, c.parametros]);
+  useEffect(() => setRascunho({}), [c.id]);
   const valor = (k: string) => (k in rascunho ? rascunho[k]! : (c.parametros[k] ?? ''));
   const sujo = Object.keys(rascunho).some((k) => rascunho[k] !== (c.parametros[k] ?? ''));
   const faltam = camposFaltando({ ...c.parametros, ...rascunho }).length;
@@ -361,6 +361,7 @@ function EtapaQuadro({ c, editavel }: { c: ContratoV2Detalhe; editavel: boolean 
     if (!Object.keys(patch).length) return;
     try {
       await salvar.mutateAsync({ parametros: patch });
+      setRascunho({});
       toast('Quadro salvo.');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Não foi possível salvar.');
@@ -430,7 +431,7 @@ function EtapaRevisao({ c, editavel, rodando }: { c: ContratoV2Detalhe; editavel
   const [aceitando, setAceitando] = useState<AchadoV2 | null>(null);
   const [just, setJust] = useState('');
   const r = c.revisao;
-  const atual = r && r.status === 'concluida' && r.conteudoHash === c.conteudoHash;
+  const atual = !!c.conteudoHash && r?.status === 'concluida' && r.conteudoHash === c.conteudoHash;
   const bloq = r ? achadosBloqueantes(r.achados) : [];
 
   async function aplicarSugestao(a: AchadoV2) {
@@ -441,6 +442,7 @@ function EtapaRevisao({ c, editavel, rodando }: { c: ContratoV2Detalhe; editavel
       } else if (/^\d+(\.\d+)*$/.test(a.numero)) {
         const item = c.itens.find((i) => i.numero === a.numero);
         if (!item) return toast('Item não encontrado no contrato.');
+        if (item.blocoChave) return toast('Este item vem de uma condição específica: ajuste na etapa de condições (em breve).');
         await salvar.mutateAsync({ itens: [{ ...item, texto: a.sugestao, origem: 'variante', justificativa: `Sugestão da revisão IA: ${a.titulo}` }] });
       } else {
         return toast('Aplique esta sugestão manualmente na etapa correspondente.');

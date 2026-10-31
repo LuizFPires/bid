@@ -2,7 +2,7 @@
 -- trava de edição por status, aprovado → rascunho ao editar, criar_contrato_v2
 -- idempotente, revisão/achados. Dados fictícios. `supabase test db`.
 begin;
-select plan(21);
+select plan(24);
 
 select has_column('public', 'contratos', 'dossie', 'contratos.dossie existe');
 select has_table('public', 'contrato_itens_clausula', 'itens de cláusula existem');
@@ -69,6 +69,11 @@ update public.contratos set status = 'aprovado' where id = (select id from fxc);
 select pg_temp.como('00000000-0000-4000-8000-00000000c001');
 select lives_ok($$ select public.salvar_contrato((select id from fxc), '{"parametros":{"q_prazo":"60 dias corridos"}}'::jsonb) $$, 'aprovado aceita edição…');
 select is((select status from public.contratos where id = (select id from fxc)), 'rascunho', '…mas volta a rascunho (RC-10)');
+select pg_temp.sair();
+update public.contratos set conteudo_hash = 'h-antigo' where id = (select id from fxc);
+select pg_temp.como('00000000-0000-4000-8000-00000000c001');
+select lives_ok($$ select public.salvar_contrato((select id from fxc), '{"parametros":{"q_retencao":"5%"}}'::jsonb) $$, 'edição em rascunho');
+select is((select conteudo_hash from public.contratos where id = (select id from fxc)), null, 'editar zera o hash (revisão fica desatualizada)');
 select pg_temp.sair();
 
 -- itens de cláusula: padrão/origem vêm do modelo

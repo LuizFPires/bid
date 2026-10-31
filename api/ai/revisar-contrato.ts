@@ -128,7 +128,11 @@ async function processar(req: VercelRequest, res: VercelResponse) {
             avisos.push('O arquivo da proposta era grande demais; a revisão usou só os dados extraídos.');
             continue;
           }
-          if (tentativa >= 2) throw e;
+          // Erros transitórios da API (limite/instabilidade): tenta mais 2 vezes com espera.
+          if ((st === 429 || st === 529 || (st != null && st >= 500)) && tentativa < 2) {
+            await new Promise((r) => setTimeout(r, 1500 * (tentativa + 1)));
+            continue;
+          }
           throw e;
         }
       }

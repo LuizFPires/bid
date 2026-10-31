@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
-import { REVISAO_INPUT_SCHEMA, REVISAO_PROMPT, REVISAO_TOOL_NAME, normalizarRevisao, type Dossie, type RevisaoIA } from '@bid/core';
+import { REVISAO_INPUT_SCHEMA, REVISAO_PROMPT, REVISAO_TOOL_NAME, mascararCpf, normalizarRevisao, type Dossie, type RevisaoIA } from '@bid/core';
 import { env } from './env';
 import { IAErro, type DocumentoProposta } from './anthropic';
 import { blocoArquivo } from './anthropic';
@@ -16,13 +16,27 @@ export interface ContratoParaRevisao {
   valor: number | null;
 }
 
+/** Partes sem dados pessoais/contatos (RC-16): só o que a IA precisa para comparar. */
+function partesSemPii(partes: unknown): unknown {
+  if (!partes || typeof partes !== 'object') return partes;
+  const out: Record<string, unknown> = {};
+  for (const [papel, p] of Object.entries(partes as Record<string, Record<string, unknown> | null>)) {
+    if (!p) { out[papel] = null; continue; }
+    out[papel] = { razao_social: p.razao_social, nome_curto: p.nome_curto, natureza: p.natureza, cnpj: p.cnpj, endereco: p.endereco, qualificacao: p.qualificacao, marca: p.marca };
+  }
+  return out;
+}
+
 export function textoDoContrato(c: ContratoParaRevisao): string {
   const linhas: string[] = [];
   linhas.push(`CONTRATO DE EMPREITADA — ${c.categoria} — obra ${c.obra}`);
   linhas.push(`Valor do contrato (soma da planilha): ${c.valor ?? 'não calculado'}`);
   linhas.push('', '== QUADRO-RESUMO E PARÂMETROS ==');
-  for (const [k, v] of Object.entries(c.parametros)) if (!k.startsWith('_')) linhas.push(`quadro.${k}: ${v}`);
-  linhas.push('', '== PARTES ==', JSON.stringify(c.partes));
+  for (const [k, v] of Object.entries(c.parametros)) {
+    if (k.startsWith('_') || /_email$/.test(k)) continue; // e-mails não vão à IA
+    linhas.push(`quadro.${k}: ${k === 'decl_cpf' ? mascararCpf(v) : v}`);
+  }
+  linhas.push('', '== PARTES ==', JSON.stringify(partesSemPii(c.partes)));
   linhas.push('', '== ITENS DE CLÁUSULA (número · origem) ==');
   for (const it of c.itens) {
     const marca = [it.origem !== 'padrao' ? `origem=${it.origem}` : null, it.reduzProtecao ? 'REDUZ_PROTECAO' : null, it.justificativa ? `justificativa="${it.justificativa}"` : null].filter(Boolean).join(' ');

@@ -126,6 +126,9 @@ begin
     new.status := 'rascunho';
     new.pdf_path := null;
     new.paginas := null;
+    new.modelo_id := null;           -- v2 só nasce pela RPC criar_contrato_v2
+    new.parametros := '{}'::jsonb;
+    new.partes := '{}'::jsonb;
     new.numero := null;
     new.conteudo_hash := null;
     new.docx_path := null;
@@ -160,11 +163,16 @@ begin
       if old.status = 'aprovado' then
         new.status := 'rascunho';
       end if;
+      -- Conteúdo mudou: a revisão por IA (que vale para um hash) fica desatualizada.
+      new.conteudo_hash := null;
     end if;
   end if;
   return new;
 end;
 $$;
+
+-- Contratos nascem só por RPC (criar_contrato / criar_contrato_v2): sem INSERT direto do cliente.
+drop policy if exists "contratos_insert" on public.contratos;
 
 -- ---------- filhos: só com contrato editável; editar aprovado volta a rascunho ----------
 create or replace function public.guard_filho_contrato()
@@ -179,11 +187,12 @@ begin
   if v_status is null or v_status not in ('rascunho', 'devolvido', 'aprovado') then
     raise exception 'contrato não está em edição (status %)', coalesce(v_status, '?');
   end if;
-  if v_status = 'aprovado' then
-    perform set_config('bid.interno', '1', true);
-    update public.contratos set status = 'rascunho' where id = v_contrato;
-    perform set_config('bid.interno', '0', true);
-  end if;
+  perform set_config('bid.interno', '1', true);
+  update public.contratos
+     set status = case when v_status = 'aprovado' then 'rascunho' else status end,
+         conteudo_hash = null
+   where id = v_contrato;
+  perform set_config('bid.interno', '0', true);
   return coalesce(new, old);
 end;
 $$;
@@ -225,11 +234,14 @@ declare v_contrato uuid := coalesce(new.contrato_id, old.contrato_id);
 begin
   select count(*) filter (where not grupo), coalesce(sum(total) filter (where not grupo), 0)
     into v_n, v_soma from public.contrato_planilha where contrato_id = v_contrato;
+  perform set_config('bid.interno', '1', true);
   if v_n > 0 then
-    perform set_config('bid.interno', '1', true);
     update public.contratos set valor = v_soma where id = v_contrato and valor is distinct from v_soma;
-    perform set_config('bid.interno', '0', true);
+  elsif tg_op = 'DELETE' then
+    -- Apagaram todas as linhas: sem planilha não há valor (RC-03).
+    update public.contratos set valor = null where id = v_contrato and valor is not null;
   end if;
+  perform set_config('bid.interno', '0', true);
   return null;
 end;
 $$;
@@ -284,7 +296,7 @@ begin
   if v_contrato is not null then return v_contrato; end if;
 
   select id into v_modelo from public.contrato_modelos where org_id = v_org and ativo limit 1;
-  if v_modelo is null then raise exception 'organização sem modelo de minuta ativo'; end if;
+  if v_modelo is null then raise exception 'organização sem modelo de minuta ativo' using errcode = 'P0201'; end if;
 
   insert into public.contratos (org_id, certame_id, proposta_id, obra_id, categoria, valor, status, modelo_id)
     values (v_org, v_certame, p_proposta, v_obra, v_categoria, v_valor, 'rascunho', v_modelo)
@@ -388,7 +400,7 @@ revoke all on function public.criar_contrato_v2(uuid) from public, anon;
 revoke all on function public.atualizar_dossie(uuid, jsonb) from public, anon;
 revoke all on function public.salvar_contrato(uuid, jsonb) from public, anon;
 grant execute on function public.criar_contrato_v2(uuid) to authenticated;
-grant execute on function public.atualizar_dossie(uuid, jsonb) to authenticated, service_role;
+grant execute on function public.atualizar_dossie(uuid, jsonb) to service_role;
 grant execute on function public.salvar_contrato(uuid, jsonb) to authenticated;
 
 
@@ -437,7 +449,12 @@ begin
     -- explícita; 'padrao' é recusado. Fora do catálogo de variantes, o cliente
     -- não decide se reduz proteção (a revisão IA avalia): fica false.
     if new.origem = 'padrao' then
-      raise exception 'item % alterado/suprimido precisa de origem (variante com justificativa, parâmetro ou proposta)', new.numero;
+      raise exception 'item % alterado/suprimido precisa de origem (variante com justificativa)', new.numero;
+    end if;
+    -- 'parametro' e 'proposta' são atribuídos pelo resolvedor do servidor (M11),
+    -- nunca pelo cliente: pelo cliente, alteração de item do catálogo é variante.
+    if v_padrao is not null and new.origem in ('parametro', 'proposta') then
+      raise exception 'item % do catálogo alterado pelo usuário é variante (com justificativa)', new.numero;
     end if;
     if new.origem = 'variante' and coalesce(length(trim(new.justificativa)), 0) < 10 then
       raise exception 'item % como variante exige justificativa (mínimo 10 caracteres)', new.numero;

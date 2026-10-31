@@ -278,8 +278,8 @@ export async function criarContrato(propostaId: string): Promise<string> {
   try {
     return await criarContratoV2(propostaId);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (!/sem modelo de minuta ativo/i.test(msg)) throw e;
+    // P0201 = "organização sem modelo de minuta ativo" (errcode da RPC); o resto sobe.
+    if ((e as { code?: string } | null)?.code !== 'P0201') throw e;
   }
   const prop = await fetchProposta(propostaId);
   if (!prop) throw new Error('Proposta não encontrada.');

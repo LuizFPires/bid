@@ -112,6 +112,12 @@ export async function fetchContratoV2(id: string): Promise<ContratoV2Detalhe | n
   const rev = ((revRows ?? []) as { id: string; conteudo_hash: string; modelo_ia: string; resumo: string | null; status: RevisaoV2['status']; erro: string | null; created_at: string }[])[0] ?? null;
   let revisao: RevisaoV2 | null = null;
   if (rev) {
+    // "processando" há mais de 10 min = a função morreu: tratar como falha (sem sondagem infinita).
+    const velha = rev.status === 'processando' && Date.now() - new Date(rev.created_at).getTime() > 10 * 60_000;
+    if (velha) {
+      rev.status = 'falhou';
+      rev.erro = rev.erro ?? 'tempo esgotado';
+    }
     const { data: ach } = await db().from('contrato_achados').select('id, tipo, severidade, numero, titulo, explicacao, trecho_proposta, sugestao, resolucao, justificativa').eq('revisao_id', rev.id);
     const peso = { alta: 0, media: 1, baixa: 2 } as const;
     revisao = {
@@ -194,7 +200,14 @@ export async function resolverAchado(achadoId: string, resolucao: 'corrigido' | 
 
 /* ---------- hooks ---------- */
 export function useContratoV2(id: string | undefined, opts: { sondar?: boolean } = {}) {
-  return useQuery({ queryKey: ['contrato-v2', id], queryFn: () => fetchContratoV2(id as string), enabled: !!id, refetchInterval: opts.sondar ? 4000 : false });
+  return useQuery({
+    queryKey: ['contrato-v2', id],
+    queryFn: () => fetchContratoV2(id as string),
+    enabled: !!id,
+    // Sonda enquanto a revisão roda nesta aba OU enquanto o banco diz "processando"
+    // (o usuário pode ter saído e voltado: a mutação não existe mais, a linha sim).
+    refetchInterval: (q) => (opts.sondar || q.state.data?.revisao?.status === 'processando' ? 4000 : false),
+  });
 }
 export function useSalvarContratoV2(id: string | undefined) {
   const qc = useQueryClient();

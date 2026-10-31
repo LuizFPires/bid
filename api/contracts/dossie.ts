@@ -42,9 +42,9 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   if (!requireMethod(req, res, 'POST')) return;
   const token = bearer(req);
   if (!token) return void res.status(401).json({ erro: 'Não autenticado.' });
+  // `refazer` do cliente é só semântico: a semeadura é decidida pela ausência de itens.
   const body = (req.body ?? {}) as { contratoId?: unknown; refazer?: unknown };
   const contratoId = typeof body.contratoId === 'string' ? body.contratoId : '';
-  const refazer = body.refazer === true;
   if (!contratoId) return void res.status(400).json({ erro: 'Informe o contrato.' });
 
   const sb = userClient(token);
@@ -120,7 +120,10 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     declarante: declarante ? { nome: declarante.nome, cpf: declarante.cpf, cargo: declarante.cargo } : null,
   });
 
-  const primeiraVez = !c.dossie && !refazer;
+  // Semeia quando o contrato ainda não tem itens de cláusula (dossiê gravado e
+  // semeadura falha no meio não deixam o contrato "vazio para sempre").
+  const { count: nItens } = await sb.from('contrato_itens_clausula').select('id', { count: 'exact', head: true }).eq('contrato_id', c.id);
+  const primeiraVez = (nItens ?? 0) === 0;
   const patch: Record<string, unknown> = {};
   if (primeiraVez) {
     patch.parametros = sugeridos;
