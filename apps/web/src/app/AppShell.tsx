@@ -2,6 +2,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BrandLogo, Icon, TabBar, type TabKey } from '@bid/ui';
 import { ToastProvider } from './Toast';
 import { ProfileMenu } from './ProfileMenu';
+import { AtualizacaoApp } from './AtualizacaoApp';
 
 /** Ação principal de cada aba: rótulo curto no botão, nome completo no aria-label. */
 const CTA: Partial<Record<TabKey, { label: string; aria: string; to: string }>> = {
@@ -38,6 +39,7 @@ export function AppShell() {
           <Outlet />
         </main>
 
+          <AtualizacaoApp />
           <TabBar active={active} onNavigate={(key) => navigate(`/${key}`)} />
         </ToastProvider>
       </div>

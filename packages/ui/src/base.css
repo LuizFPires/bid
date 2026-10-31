@@ -1204,6 +1204,61 @@ table.eq .nota-eq.warn {
   margin-bottom: 14px;
 }
 
+/* ---------- Aviso de nova versão (acima das abas) ---------- */
+.upd {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 12px 8px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 14px;
+  background: var(--brand-badge);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+  animation: drawer-up 220ms ease-out;
+}
+.upd-t {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.upd-t svg {
+  width: 16px;
+  height: 16px;
+  color: #d9b45c;
+}
+.upd-btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--brand-badge);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.upd-x {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.upd-x svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* ---------- Espera da equalização: "Mesma régua" ---------- */
 .esp {
   --nm: 84px; /* largura da coluna de nomes */
