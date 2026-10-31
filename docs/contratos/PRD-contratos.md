@@ -52,7 +52,8 @@ Substitui o modelo "dono + convidados iguais" da regra 13 por **três papéis na
 | **Apagar** propostas, equalizações e contratos | ✅ | ✅ | ❌ |
 | Convidar membros, mudar papel, remover acesso | ✅ | ✅ (*) | ❌ |
 | Apagar a obra | ✅ | ❓ (Q1) | ❌ |
-| Cadastros (partes, fornecedores, modelo da minuta) | ✅ | ✅ | ver só |
+| Cadastros: partes e modelo da minuta | ✅ (membro da org) | ✅ (membro da org) | ver só |
+| Cadastros: fornecedores (nascem da proposta) | ✅ | ✅ | ✅ criar/editar · signatários só membros veem |
 
 (*) Gestor não remove nem rebaixa o **dono**. O dono é sempre único (`obras.criado_por`).
 

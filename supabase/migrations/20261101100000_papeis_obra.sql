@@ -23,6 +23,7 @@ returns text language sql stable security definer set search_path = public as $$
     ) then 'dono'
     else (
       select c.papel from public.obra_convites c
+        join public.obras o on o.id = c.obra_id and o.deleted_at is null
        where c.obra_id = p_obra and c.user_id = auth.uid() and c.status = 'aceito'
        limit 1
     )
@@ -55,8 +56,8 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
--- Equalização em uma obra: gerencia a obra do certame. Entre obras: quem criou,
--- ou quem gerencia TODAS as obras das propostas comparadas.
+-- Equalização em uma obra: gerencia a obra do certame. Entre obras: gerencia
+-- TODAS as obras das propostas comparadas (colaborador não apaga, nem a que criou).
 create or replace function public.gerencia_equalizacao(p_eq uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
@@ -64,8 +65,7 @@ returns boolean language sql stable security definer set search_path = public as
      where e.id = p_eq
        and (
          (e.certame_id is not null and public.gerencia_certame(e.certame_id))
-         or (e.certame_id is null and e.criado_por = auth.uid())
-         or (e.certame_id is null and not exists (
+         or (e.certame_id is null and cardinality(e.proposta_ids) > 0 and not exists (
                select 1 from public.propostas p
                  join public.certames c on c.id = p.certame_id
                 where p.id = any(e.proposta_ids) and not public.gerencia_obra(c.obra_id)

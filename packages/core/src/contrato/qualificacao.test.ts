@@ -7,6 +7,9 @@ describe('documentos', () => {
     expect(cnpjValido('22.333.444/0001-81')).toBe(true);
     expect(cnpjValido('33.444.555/0001-81')).toBe(true);
     expect(cnpjValido('11.222.333/0001-82')).toBe(false);
+    // alfanumérico (Receita 2026): exemplo público 12.ABC.345/01DE-35
+    expect(cnpjValido('12.ABC.345/01DE-35')).toBe(true);
+    expect(cnpjValido('12.ABC.345/01DE-36')).toBe(false);
     expect(cnpjValido('00000000000000')).toBe(false);
     expect(cnpjValido('123')).toBe(false);
   });

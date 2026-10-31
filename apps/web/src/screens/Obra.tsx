@@ -248,7 +248,7 @@ function Pessoas({ obraId, gerencia }: { obraId: string; gerencia: boolean }) {
  * partes CONTRATANTE e CONSTRUTORA (cadastros). Só dono/gestor edita.
  */
 function DadosContrato({ obra, podeEditar }: { obra: Obra; podeEditar: boolean }) {
-  const partes = usePartes();
+  const partes = usePartes(obra.org_id);
   const salvar = useAtualizarObraContrato(obra.id);
   const toast = useToast();
   const [aberto, setAberto] = useState(false);

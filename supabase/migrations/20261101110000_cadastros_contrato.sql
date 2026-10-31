@@ -20,7 +20,7 @@ create table if not exists public.partes (
   razao_social text not null,
   nome_curto text,
   natureza text,
-  cnpj text not null check (cnpj ~ '^[0-9]{14}$'),
+  cnpj text not null check (cnpj ~ '^[A-Z0-9]{12}[0-9]{2}$'), -- CNPJ alfanumérico (Receita, 2026) aceito
   endereco text not null,
   cep text check (cep is null or cep ~ '^[0-9]{8}$'),
   email text,
@@ -59,7 +59,7 @@ create table if not exists public.fornecedores (
   razao_social text not null,
   nome_curto text,
   natureza text,
-  cnpj text not null check (cnpj ~ '^[0-9]{14}$'),
+  cnpj text not null check (cnpj ~ '^[A-Z0-9]{12}[0-9]{2}$'),
   endereco text not null,
   cep text check (cep is null or cep ~ '^[0-9]{8}$'),
   email text,
@@ -133,8 +133,6 @@ drop policy if exists "parte_sign_insert" on public.parte_signatarios;
 create policy "parte_sign_insert" on public.parte_signatarios for insert with check (public.administra_cadastros(org_id));
 drop policy if exists "parte_sign_update" on public.parte_signatarios;
 create policy "parte_sign_update" on public.parte_signatarios for update using (public.administra_cadastros(org_id)) with check (public.administra_cadastros(org_id));
-drop policy if exists "parte_sign_delete" on public.parte_signatarios;
-create policy "parte_sign_delete" on public.parte_signatarios for delete using (public.administra_cadastros(org_id));
 
 drop policy if exists "fornecedores_select" on public.fornecedores;
 create policy "fornecedores_select" on public.fornecedores for select using (public.colabora_org(org_id));
@@ -149,8 +147,6 @@ drop policy if exists "forn_sign_insert" on public.fornecedor_signatarios;
 create policy "forn_sign_insert" on public.fornecedor_signatarios for insert with check (public.colabora_org(org_id));
 drop policy if exists "forn_sign_update" on public.fornecedor_signatarios;
 create policy "forn_sign_update" on public.fornecedor_signatarios for update using (public.colabora_org(org_id)) with check (public.colabora_org(org_id));
-drop policy if exists "forn_sign_delete" on public.fornecedor_signatarios;
-create policy "forn_sign_delete" on public.fornecedor_signatarios for delete using (public.colabora_org(org_id));
 
 -- Campos de contrato da obra: só quem gerencia a obra edita (a policy de
 -- update de obras já exige pode_obra; o trigger abaixo aperta para esses campos).
@@ -167,9 +163,122 @@ begin
      and not public.gerencia_obra(old.id) then
     raise exception 'Só o dono ou um gestor da obra edita os dados de contrato da obra.';
   end if;
+  -- A parte apontada precisa ser do tipo certo.
+  if new.contratante_id is not null and not exists (
+    select 1 from public.partes p where p.id = new.contratante_id and p.tipo = 'contratante' and p.deleted_at is null
+  ) then raise exception 'contratante_id precisa apontar para uma parte do tipo contratante'; end if;
+  if new.construtora_id is not null and not exists (
+    select 1 from public.partes p where p.id = new.construtora_id and p.tipo = 'construtora' and p.deleted_at is null
+  ) then raise exception 'construtora_id precisa apontar para uma parte do tipo construtora'; end if;
   return new;
 end;
 $$;
 drop trigger if exists trg_obras_campos_contrato on public.obras;
 create trigger trg_obras_campos_contrato before update on public.obras
   for each row execute function public.guard_obra_campos_contrato();
+
+
+-- ---------- gravação em UMA transação (parte/fornecedor + signatários) ----------
+-- Signatários removidos viram ativo=false (regra 10: nada se apaga de fato).
+-- security invoker: RLS das tabelas decide quem pode.
+create or replace function public.salvar_parte(p_org uuid, p_parte jsonb, p_signatarios jsonb)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_id uuid := nullif(p_parte->>'id', '')::uuid;
+  v_sig jsonb;
+  v_ids uuid[] := '{}';
+  v_i int := 0;
+  v_sid uuid;
+begin
+  if jsonb_typeof(p_signatarios) <> 'array' then raise exception 'signatários inválidos'; end if;
+  if v_id is null then
+    insert into public.partes (org_id, tipo, razao_social, nome_curto, natureza, cnpj, endereco, cep, email, marca)
+    values (p_org, p_parte->>'tipo', p_parte->>'razao_social', nullif(p_parte->>'nome_curto',''), nullif(p_parte->>'natureza',''),
+            upper(p_parte->>'cnpj'), p_parte->>'endereco', nullif(p_parte->>'cep',''), nullif(p_parte->>'email',''), nullif(p_parte->>'marca',''))
+    returning id into v_id;
+  else
+    update public.partes set
+      tipo = p_parte->>'tipo', razao_social = p_parte->>'razao_social', nome_curto = nullif(p_parte->>'nome_curto',''),
+      natureza = nullif(p_parte->>'natureza',''), cnpj = upper(p_parte->>'cnpj'), endereco = p_parte->>'endereco',
+      cep = nullif(p_parte->>'cep',''), email = nullif(p_parte->>'email',''), marca = nullif(p_parte->>'marca','')
+    where id = v_id and org_id = p_org and deleted_at is null;
+    if not found then raise exception 'parte não encontrada ou sem permissão'; end if;
+  end if;
+
+  for v_sig in select * from jsonb_array_elements(p_signatarios) loop
+    v_i := v_i + 1;
+    v_sid := nullif(v_sig->>'id', '')::uuid;
+    if v_sid is null then
+      insert into public.parte_signatarios (org_id, parte_id, nome, cpf, cargo, email, telefone, ordem, ativo)
+      values (p_org, v_id, v_sig->>'nome', nullif(v_sig->>'cpf',''), nullif(v_sig->>'cargo',''), nullif(v_sig->>'email',''), nullif(v_sig->>'telefone',''), v_i, true)
+      returning id into v_sid;
+    else
+      update public.parte_signatarios set nome = v_sig->>'nome', cpf = nullif(v_sig->>'cpf',''), cargo = nullif(v_sig->>'cargo',''),
+        email = nullif(v_sig->>'email',''), telefone = nullif(v_sig->>'telefone',''), ordem = v_i, ativo = true
+      where id = v_sid and parte_id = v_id and org_id = p_org;
+      if not found then raise exception 'signatário não encontrado'; end if;
+    end if;
+    v_ids := array_append(v_ids, v_sid);
+  end loop;
+  update public.parte_signatarios set ativo = false where parte_id = v_id and org_id = p_org and ativo and not (id = any(v_ids));
+  return v_id;
+end;
+$$;
+
+create or replace function public.salvar_fornecedor(p_org uuid, p_fornecedor jsonb, p_signatarios jsonb)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_id uuid := nullif(p_fornecedor->>'id', '')::uuid;
+  v_sig jsonb;
+  v_ids uuid[] := '{}';
+  v_i int := 0;
+  v_sid uuid;
+begin
+  if jsonb_typeof(p_signatarios) <> 'array' then raise exception 'signatários inválidos'; end if;
+  if v_id is null then
+    insert into public.fornecedores (org_id, razao_social, nome_curto, natureza, cnpj, endereco, cep, email, responsavel_tecnico, crea)
+    values (p_org, p_fornecedor->>'razao_social', nullif(p_fornecedor->>'nome_curto',''), nullif(p_fornecedor->>'natureza',''),
+            upper(p_fornecedor->>'cnpj'), p_fornecedor->>'endereco', nullif(p_fornecedor->>'cep',''), nullif(p_fornecedor->>'email',''),
+            nullif(p_fornecedor->>'responsavel_tecnico',''), nullif(p_fornecedor->>'crea',''))
+    returning id into v_id;
+  else
+    update public.fornecedores set
+      razao_social = p_fornecedor->>'razao_social', nome_curto = nullif(p_fornecedor->>'nome_curto',''), natureza = nullif(p_fornecedor->>'natureza',''),
+      cnpj = upper(p_fornecedor->>'cnpj'), endereco = p_fornecedor->>'endereco', cep = nullif(p_fornecedor->>'cep',''), email = nullif(p_fornecedor->>'email',''),
+      responsavel_tecnico = nullif(p_fornecedor->>'responsavel_tecnico',''), crea = nullif(p_fornecedor->>'crea','')
+    where id = v_id and org_id = p_org and deleted_at is null;
+    if not found then raise exception 'fornecedor não encontrado ou sem permissão'; end if;
+  end if;
+
+  for v_sig in select * from jsonb_array_elements(p_signatarios) loop
+    v_i := v_i + 1;
+    v_sid := nullif(v_sig->>'id', '')::uuid;
+    if v_sid is null then
+      insert into public.fornecedor_signatarios (org_id, fornecedor_id, nome, cpf, cargo, email, telefone, ordem, ativo)
+      values (p_org, v_id, v_sig->>'nome', nullif(v_sig->>'cpf',''), nullif(v_sig->>'cargo',''), nullif(v_sig->>'email',''), nullif(v_sig->>'telefone',''), v_i, true)
+      returning id into v_sid;
+    else
+      update public.fornecedor_signatarios set nome = v_sig->>'nome', cpf = nullif(v_sig->>'cpf',''), cargo = nullif(v_sig->>'cargo',''),
+        email = nullif(v_sig->>'email',''), telefone = nullif(v_sig->>'telefone',''), ordem = v_i, ativo = true
+      where id = v_sid and fornecedor_id = v_id and org_id = p_org;
+      if not found then raise exception 'signatário não encontrado'; end if;
+    end if;
+    v_ids := array_append(v_ids, v_sid);
+  end loop;
+  update public.fornecedor_signatarios set ativo = false where fornecedor_id = v_id and org_id = p_org and ativo and not (id = any(v_ids));
+  return v_id;
+end;
+$$;
+
+revoke all on function public.salvar_parte(uuid, jsonb, jsonb) from public, anon;
+revoke all on function public.salvar_fornecedor(uuid, jsonb, jsonb) from public, anon;
+grant execute on function public.salvar_parte(uuid, jsonb, jsonb) to authenticated;
+grant execute on function public.salvar_fornecedor(uuid, jsonb, jsonb) to authenticated;

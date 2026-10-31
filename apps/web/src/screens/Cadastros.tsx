@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { cepValido, cnpjValido, cpfValido, formatarCnpj, gerencia, mascararCpf, qualificar } from '@bid/core';
+import { cepValido, cnpjValido, cpfValido, formatarCnpj, mascararCpf, qualificar } from '@bid/core';
 import { Button, Icon } from '@bid/ui';
 import { Drawer } from '../app/Drawer';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 import { useToast } from '../app/Toast';
 import { SwipeRow } from '../components/SwipeRow';
-import { useMeusPapeis } from '../data/hooks';
+import { useMinhaOrg } from '../data/hooks';
 import {
   restaurarCadastro,
   useApagarCadastro,
@@ -30,11 +30,13 @@ export function CadastrosScreen() {
   const navigate = useNavigate();
   const toast = useToast();
   const [aba, setAba] = useState<Aba>('partes');
-  const partes = usePartes();
-  const fornecedores = useFornecedores();
-  const papeis = useMeusPapeis();
-  // Partes são administração: quem gerencia alguma obra. Fornecedores: todos.
-  const administra = useMemo(() => [...(papeis.data?.values() ?? [])].some((p) => gerencia(p)), [papeis.data]);
+  // A tela Cadastros administra a MINHA organização (partes/fornecedores da empresa).
+  const org = useMinhaOrg();
+  const orgId = org.data?.id;
+  const partes = usePartes(orgId);
+  const fornecedores = useFornecedores(orgId);
+  // Membro da org edita partes (RLS confere); convidados de obra só veem.
+  const administra = !!orgId;
   const apagar = useApagarCadastro();
 
   const [parteAberta, setParteAberta] = useState<Partial<Parte> | null>(null);
@@ -146,8 +148,8 @@ export function CadastrosScreen() {
         </>
       )}
 
-      <DrawerParte parte={parteAberta} somenteLeitura={!administra} onFechar={() => setParteAberta(null)} />
-      <DrawerFornecedor fornecedor={fornAberto} onFechar={() => setFornAberto(null)} />
+      <DrawerParte parte={parteAberta} orgId={orgId} somenteLeitura={!administra} onFechar={() => setParteAberta(null)} />
+      <DrawerFornecedor fornecedor={fornAberto} orgId={orgId} onFechar={() => setFornAberto(null)} />
 
       <ConfirmDialog
         aberto={paraApagar !== null}
@@ -287,7 +289,7 @@ function CamposBase({ f, set, soLeitura }: { f: FormBase; set: (p: Partial<FormB
           <div className="pair">
             <div className="field" style={{ marginBottom: 8 }}>
               <label>CPF</label>
-              <input value={s.cpf ?? ''} disabled={soLeitura} inputMode="numeric" onChange={(e) => set({ signatarios: f.signatarios.map((x, j) => (j === i ? { ...x, cpf: e.target.value } : x)) })} placeholder={s.id && s.cpf ? mascararCpf(s.cpf) : '000.000.000-00'} />
+              <input value={soLeitura ? mascararCpf(s.cpf) : (s.cpf ?? '')} disabled={soLeitura} inputMode="numeric" onChange={(e) => set({ signatarios: f.signatarios.map((x, j) => (j === i ? { ...x, cpf: e.target.value } : x)) })} placeholder="000.000.000-00" />
             </div>
             <div className="field" style={{ marginBottom: 8 }}>
               <label>E-mail / WhatsApp</label>
@@ -317,7 +319,7 @@ function CamposBase({ f, set, soLeitura }: { f: FormBase; set: (p: Partial<FormB
   );
 }
 
-function DrawerParte({ parte, somenteLeitura, onFechar }: { parte: Partial<Parte> | null; somenteLeitura: boolean; onFechar: () => void }) {
+function DrawerParte({ parte, orgId, somenteLeitura, onFechar }: { parte: Partial<Parte> | null; orgId: string | undefined; somenteLeitura: boolean; onFechar: () => void }) {
   const salvar = useSalvarParte();
   const toast = useToast();
   const [f, setF] = useState<FormBase>(baseDe(null));
@@ -339,7 +341,8 @@ function DrawerParte({ parte, somenteLeitura, onFechar }: { parte: Partial<Parte
     if (v) return setErro(v);
     if (tipo === 'construtora' && !marca) return setErro('Escolha a marca da construtora (define a logo do contrato).');
     try {
-      await salvar.mutateAsync({ ...f, id: parte?.id, tipo, marca: tipo === 'construtora' ? (marca as 'ampla' | 'classica') : null, nome_curto: f.nome_curto || null, natureza: f.natureza || null, cep: f.cep || null, email: f.email || null });
+      if (!orgId) return setErro('Organização não carregada.');
+      await salvar.mutateAsync({ ...f, orgId, id: parte?.id, tipo, marca: tipo === 'construtora' ? (marca as 'ampla' | 'classica') : null, nome_curto: f.nome_curto || null, natureza: f.natureza || null, cep: f.cep || null, email: f.email || null });
       toast(parte?.id ? 'Parte atualizada.' : 'Parte cadastrada.');
       onFechar();
     } catch (err) {
@@ -394,7 +397,7 @@ function DrawerParte({ parte, somenteLeitura, onFechar }: { parte: Partial<Parte
   );
 }
 
-function DrawerFornecedor({ fornecedor, onFechar }: { fornecedor: Partial<Fornecedor> | null; onFechar: () => void }) {
+function DrawerFornecedor({ fornecedor, orgId, onFechar }: { fornecedor: Partial<Fornecedor> | null; orgId: string | undefined; onFechar: () => void }) {
   const salvar = useSalvarFornecedor();
   const toast = useToast();
   const [f, setF] = useState<FormBase>(baseDe(null));
@@ -415,7 +418,8 @@ function DrawerFornecedor({ fornecedor, onFechar }: { fornecedor: Partial<Fornec
     const v = validarBase(f);
     if (v) return setErro(v);
     try {
-      await salvar.mutateAsync({ ...f, id: fornecedor?.id, nome_curto: f.nome_curto || null, natureza: f.natureza || null, cep: f.cep || null, email: f.email || null, responsavel_tecnico: rt || null, crea: crea || null });
+      if (!orgId) return setErro('Organização não carregada.');
+      await salvar.mutateAsync({ ...f, orgId, id: fornecedor?.id, nome_curto: f.nome_curto || null, natureza: f.natureza || null, cep: f.cep || null, email: f.email || null, responsavel_tecnico: rt || null, crea: crea || null });
       toast(fornecedor?.id ? 'Fornecedor atualizado.' : 'Fornecedor cadastrado.');
       onFechar();
     } catch (err) {

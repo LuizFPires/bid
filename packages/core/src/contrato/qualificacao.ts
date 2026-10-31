@@ -14,11 +14,18 @@ function todosIguais(d: string): boolean {
   return /^(\d)\1+$/.test(d);
 }
 
+/** CNPJ sem máscara: 12 caracteres alfanuméricos (padrão da Receita desde 2026) + 2 dígitos. */
+export function normalizarCnpj(v: string | null | undefined): string {
+  return (v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
 export function cnpjValido(v: string | null | undefined): boolean {
-  const d = somenteDigitos(v);
-  if (d.length !== 14 || todosIguais(d)) return false;
+  const d = normalizarCnpj(v);
+  if (!/^[A-Z0-9]{12}[0-9]{2}$/.test(d) || todosIguais(d)) return false;
+  // Valor de cada caractere = código ASCII - 48 (dígitos 0–9 → 0–9; letras A–Z → 17–42).
+  const val = (c: string) => c.charCodeAt(0) - 48;
   const calc = (base: string, pesos: number[]) => {
-    const soma = base.split('').reduce((s, c, i) => s + Number(c) * pesos[i]!, 0);
+    const soma = base.split('').reduce((s, c, i) => s + val(c) * pesos[i]!, 0);
     const r = soma % 11;
     return r < 2 ? 0 : 11 - r;
   };
@@ -56,7 +63,7 @@ export function cepValido(v: string | null | undefined): boolean {
 }
 
 export function formatarCnpj(v: string | null | undefined): string {
-  const d = somenteDigitos(v);
+  const d = normalizarCnpj(v);
   return d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}` : (v ?? '');
 }
 export function formatarCpf(v: string | null | undefined): string {

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { somenteDigitos } from '@bid/core';
+import { normalizarCnpj, somenteDigitos } from '@bid/core';
 import { supabase } from '../lib/supabase';
-import { fetchMinhaOrg } from './queries';
 
 /**
  * Cadastros que a minuta padrão precisa: PARTES (contratante / construtora) e
@@ -58,10 +57,12 @@ const sigs = (xs: RawSig[] | null | undefined): Signatario[] =>
     .sort((a, b) => a.ordem - b.ordem)
     .map((s) => ({ id: s.id, nome: s.nome, cpf: s.cpf, cargo: s.cargo, email: s.email, telefone: s.telefone, ordem: s.ordem }));
 
-export async function fetchPartes(): Promise<Parte[]> {
+/** Partes de UMA organização (a minha, na tela Cadastros; a da obra, no cartão da obra). */
+export async function fetchPartes(orgId: string): Promise<Parte[]> {
   const { data, error } = await db()
     .from('partes')
     .select('id, tipo, razao_social, nome_curto, natureza, cnpj, endereco, cep, email, marca, parte_signatarios ( id, nome, cpf, cargo, email, telefone, ordem, ativo )')
+    .eq('org_id', orgId)
     .is('deleted_at', null)
     .order('tipo')
     .order('razao_social');
@@ -69,10 +70,11 @@ export async function fetchPartes(): Promise<Parte[]> {
   return ((data ?? []) as unknown as (Omit<Parte, 'signatarios'> & { parte_signatarios: RawSig[] | null })[]).map(({ parte_signatarios, ...p }) => ({ ...p, signatarios: sigs(parte_signatarios) }));
 }
 
-export async function fetchFornecedores(): Promise<Fornecedor[]> {
+export async function fetchFornecedores(orgId: string): Promise<Fornecedor[]> {
   const { data, error } = await db()
     .from('fornecedores')
     .select('id, razao_social, nome_curto, natureza, cnpj, endereco, cep, email, responsavel_tecnico, crea, fornecedor_signatarios ( id, nome, cpf, cargo, email, telefone, ordem, ativo )')
+    .eq('org_id', orgId)
     .is('deleted_at', null)
     .order('razao_social');
   if (error) throw error;
@@ -87,87 +89,58 @@ function limparDoc(v: string | null | undefined): string | null {
   return d ? d : null;
 }
 
-async function salvarSignatarios(
-  tabela: 'parte_signatarios' | 'fornecedor_signatarios',
-  chave: 'parte_id' | 'fornecedor_id',
-  orgId: string,
-  donoId: string,
-  lista: Signatario[],
-) {
-  const { data: atuais } = await db().from(tabela).select('id').eq(chave, donoId);
-  const manter = new Set(lista.map((s) => s.id).filter(Boolean) as string[]);
-  const remover = ((atuais ?? []) as { id: string }[]).map((r) => r.id).filter((id) => !manter.has(id));
-  if (remover.length) {
-    const { error } = await db().from(tabela).delete().in('id', remover);
-    if (error) throw error;
-  }
-  for (const [i, s] of lista.entries()) {
-    const linha = { org_id: orgId, [chave]: donoId, nome: s.nome.trim(), cpf: limparDoc(s.cpf), cargo: s.cargo?.trim() || null, email: s.email?.trim() || null, telefone: s.telefone?.trim() || null, ordem: i + 1, ativo: true };
-    const { error } = s.id ? await db().from(tabela).update(linha).eq('id', s.id) : await db().from(tabela).insert(linha);
-    if (error) throw error;
-  }
+function sigJson(lista: Signatario[]) {
+  return lista.map((s) => ({ id: s.id ?? null, nome: s.nome.trim(), cpf: limparDoc(s.cpf), cargo: s.cargo?.trim() || null, email: s.email?.trim() || null, telefone: s.telefone?.trim() || null }));
 }
 
-export async function salvarParte(input: ParteInput): Promise<string> {
-  const org = await fetchMinhaOrg();
-  if (!org) throw new Error('Organização não encontrada.');
-  const linha = {
-    org_id: org.id,
-    tipo: input.tipo,
-    razao_social: input.razao_social.trim(),
-    nome_curto: input.nome_curto?.trim() || null,
-    natureza: input.natureza?.trim() || null,
-    cnpj: somenteDigitos(input.cnpj),
-    endereco: input.endereco.trim(),
-    cep: limparDoc(input.cep),
-    email: input.email?.trim() || null,
-    marca: input.tipo === 'construtora' ? input.marca : null,
-  };
-  let id = input.id;
-  if (id) {
-    const { error } = await db().from('partes').update(linha).eq('id', id);
-    if (error) throw error;
-  } else {
-    const { data, error } = await db().from('partes').insert(linha).select('id').single();
-    if (error) throw error;
-    id = (data as { id: string }).id;
-  }
-  await salvarSignatarios('parte_signatarios', 'parte_id', org.id, id, input.signatarios);
-  return id;
+/** Parte + signatários numa transação (RPC); signatário removido vira inativo. */
+export async function salvarParte(input: ParteInput & { orgId: string }): Promise<string> {
+  const { data, error } = await db().rpc('salvar_parte', {
+    p_org: input.orgId,
+    p_parte: {
+      id: input.id ?? null,
+      tipo: input.tipo,
+      razao_social: input.razao_social.trim(),
+      nome_curto: input.nome_curto?.trim() || null,
+      natureza: input.natureza?.trim() || null,
+      cnpj: normalizarCnpj(input.cnpj),
+      endereco: input.endereco.trim(),
+      cep: limparDoc(input.cep),
+      email: input.email?.trim() || null,
+      marca: input.tipo === 'construtora' ? input.marca : null,
+    },
+    p_signatarios: sigJson(input.signatarios),
+  });
+  if (error) throw error;
+  return data as string;
 }
 
-export async function salvarFornecedor(input: FornecedorInput): Promise<string> {
-  const org = await fetchMinhaOrg();
-  if (!org) throw new Error('Organização não encontrada.');
-  const linha = {
-    org_id: org.id,
-    razao_social: input.razao_social.trim(),
-    nome_curto: input.nome_curto?.trim() || null,
-    natureza: input.natureza?.trim() || null,
-    cnpj: somenteDigitos(input.cnpj),
-    endereco: input.endereco.trim(),
-    cep: limparDoc(input.cep),
-    email: input.email?.trim() || null,
-    responsavel_tecnico: input.responsavel_tecnico?.trim() || null,
-    crea: input.crea?.trim() || null,
-  };
-  let id = input.id;
-  if (id) {
-    const { error } = await db().from('fornecedores').update(linha).eq('id', id);
-    if (error) throw error;
-  } else {
-    const { data, error } = await db().from('fornecedores').insert(linha).select('id').single();
-    if (error) throw error;
-    id = (data as { id: string }).id;
-  }
-  await salvarSignatarios('fornecedor_signatarios', 'fornecedor_id', org.id, id, input.signatarios);
-  return id;
+export async function salvarFornecedor(input: FornecedorInput & { orgId: string }): Promise<string> {
+  const { data, error } = await db().rpc('salvar_fornecedor', {
+    p_org: input.orgId,
+    p_fornecedor: {
+      id: input.id ?? null,
+      razao_social: input.razao_social.trim(),
+      nome_curto: input.nome_curto?.trim() || null,
+      natureza: input.natureza?.trim() || null,
+      cnpj: normalizarCnpj(input.cnpj),
+      endereco: input.endereco.trim(),
+      cep: limparDoc(input.cep),
+      email: input.email?.trim() || null,
+      responsavel_tecnico: input.responsavel_tecnico?.trim() || null,
+      crea: input.crea?.trim() || null,
+    },
+    p_signatarios: sigJson(input.signatarios),
+  });
+  if (error) throw error;
+  return data as string;
 }
 
 /** Exclusão lógica (regra 10). */
 export async function apagarCadastro(tabela: 'partes' | 'fornecedores', id: string): Promise<void> {
-  const { error } = await db().from(tabela).update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  const { data, error } = await db().from(tabela).update({ deleted_at: new Date().toISOString() }).eq('id', id).select('id');
   if (error) throw error;
+  if (!data?.length) throw new Error('Sem permissão para remover este cadastro.');
 }
 export async function restaurarCadastro(tabela: 'partes' | 'fornecedores', id: string): Promise<void> {
   const { error } = await db().from(tabela).update({ deleted_at: null }).eq('id', id);
@@ -184,7 +157,7 @@ export interface ObraContratoInput {
   construtora_id: string | null;
 }
 export async function atualizarObraContrato(obraId: string, d: ObraContratoInput): Promise<void> {
-  const { error } = await db()
+  const { data, error } = await db()
     .from('obras')
     .update({
       endereco: d.endereco?.trim() || null,
@@ -194,16 +167,18 @@ export async function atualizarObraContrato(obraId: string, d: ObraContratoInput
       contratante_id: d.contratante_id || null,
       construtora_id: d.construtora_id || null,
     })
-    .eq('id', obraId);
+    .eq('id', obraId)
+    .select('id');
   if (error) throw error;
+  if (!data?.length) throw new Error('Sem permissão para editar os dados de contrato desta obra.');
 }
 
 /* ---------- hooks ---------- */
-export function usePartes() {
-  return useQuery({ queryKey: ['partes'], queryFn: fetchPartes });
+export function usePartes(orgId: string | undefined) {
+  return useQuery({ queryKey: ['partes', orgId], queryFn: () => fetchPartes(orgId as string), enabled: !!orgId });
 }
-export function useFornecedores() {
-  return useQuery({ queryKey: ['fornecedores'], queryFn: fetchFornecedores });
+export function useFornecedores(orgId: string | undefined) {
+  return useQuery({ queryKey: ['fornecedores', orgId], queryFn: () => fetchFornecedores(orgId as string), enabled: !!orgId });
 }
 export function useSalvarParte() {
   const qc = useQueryClient();
