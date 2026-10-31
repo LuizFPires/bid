@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
-import { extrairPropostaDePdf } from '@bid/server';
+import { extrairPropostaDePdf, type MidiaProposta } from '@bid/server';
 import { MissingEnvError, env } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';
 import { userClient } from '@bid/server';
@@ -16,6 +16,15 @@ import { userClient } from '@bid/server';
  * no servidor.
  */
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
+
+/** PDF ou imagem (print/foto) — os dois são lidos pela IA. */
+function tipoPorExtensao(path: string): MidiaProposta {
+  const ext = path.toLowerCase().split('.').pop() ?? '';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  return 'application/pdf';
+}
 
 async function processar(req: VercelRequest, res: VercelResponse) {
   if (!requireMethod(req, res, 'POST')) return;
@@ -91,7 +100,7 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   try {
     // SDK criado AQUI (na função), com o pacote real que o Vercel instala.
     const client = new Anthropic({ apiKey: env.anthropicKey() });
-    const dados = await extrairPropostaDePdf(client, buf.toString('base64'));
+    const dados = await extrairPropostaDePdf(client, buf.toString('base64'), tipoPorExtensao(path));
     res.status(200).json({ dados });
   } catch (e) {
     if (e instanceof MissingEnvError) {

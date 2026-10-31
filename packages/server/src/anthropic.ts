@@ -21,9 +21,19 @@ import { env } from './env';
  * estruturada por ferramenta forçada. A normalização/validação final é do
  * core (`normalizarExtracao`), então a saída é sempre segura.
  */
+export type MidiaProposta = 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/webp';
+
+/** Bloco de conteúdo para a Messages API conforme o tipo do arquivo (PDF ou imagem). */
+function blocoArquivo(base64: string, tipo: MidiaProposta): Anthropic.ContentBlockParam {
+  return tipo === 'application/pdf'
+    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+    : { type: 'image', source: { type: 'base64', media_type: tipo, data: base64 } };
+}
+
 export async function extrairPropostaDePdf(
   client: Anthropic,
   pdfBase64: string,
+  tipo: MidiaProposta = 'application/pdf',
 ): Promise<PropostaExtraida> {
   const msg = await client.messages.create({
     model: env.modelExtract(),
@@ -45,8 +55,19 @@ export async function extrairPropostaDePdf(
       {
         role: 'user',
         content: [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
-          { type: 'text', text: EXTRACAO_PROMPT },
+          blocoArquivo(pdfBase64, tipo),
+          {
+            type: 'text',
+            text:
+              tipo === 'application/pdf'
+                ? EXTRACAO_PROMPT
+                : EXTRACAO_PROMPT +
+                  '
+
+O anexo é uma IMAGEM (print de conversa, foto de documento ou tela). Leia o texto visível: ' +
+                  'identifique quem propõe (nome do contato/empresa), o valor, prazo e condições que aparecerem; ' +
+                  'o que não estiver legível fica null. Se for um print de WhatsApp, o fornecedor é quem enviou a mensagem com o preço.',
+          },
         ],
       },
     ],
@@ -74,6 +95,8 @@ export interface DocumentoProposta {
   proposta_id: string;
   fornecedor: string;
   pdfBase64: string;
+  /** Tipo do arquivo (PDF ou imagem). Padrão PDF. */
+  tipo?: MidiaProposta;
 }
 
 /**
@@ -113,12 +136,9 @@ export async function analisarEqualizacao(
   for (const d of opts.documentos ?? []) {
     conteudo.push({
       type: 'text',
-      text: `PDF da proposta id=${d.proposta_id} (${d.fornecedor}):`,
+      text: `${d.tipo && d.tipo !== 'application/pdf' ? 'Imagem' : 'PDF'} da proposta id=${d.proposta_id} (${d.fornecedor}):`,
     });
-    conteudo.push({
-      type: 'document',
-      source: { type: 'base64', media_type: 'application/pdf', data: d.pdfBase64 },
-    });
+    conteudo.push(blocoArquivo(d.pdfBase64, d.tipo ?? 'application/pdf'));
   }
   if (opts.referencia) {
     conteudo.push({

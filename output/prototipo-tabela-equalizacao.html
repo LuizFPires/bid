@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bid · tabela de equalização sem perder a referência</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0e0f13;--surface:#17181f;--surface-2:#1c1e26;--ink:#f1f2f6;--muted:#9a9dab;--faint:#6e7180;--line:#262833;
+        --accent:#7c8af0;--accent-deep:#aeb7ff;--accent-soft:#1c2150;--ok:#7fc79e;--ok-soft:#172a20;--warn:#e0a95c;--warn-soft:#2e2414;--danger:#f08b8b;--danger-soft:#331b1b;--gold:#d9b45c}
+  body{margin:0;padding:24px;background:#e9eaef;font-family:'Nunito Sans',system-ui,sans-serif;color:#191a22}
+  h1{font-size:18px;margin:0 0 4px}
+  p.sub{margin:0 0 20px;color:#555;font-size:13px;max-width:860px}
+  h2{font-size:14px;margin:26px 0 10px;font-weight:900}
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:22px;align-items:start}
+  .cap{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#666;margin:0 0 8px}
+  .note{font-size:12px;color:#555;margin:10px 0 0;line-height:1.5;max-width:860px}
+  .phone{background:var(--bg);color:var(--ink);border-radius:26px;width:380px;box-sizing:border-box;padding:16px 18px 18px}
+  .phone.land{width:780px;padding:14px 18px}
+  .ttl{font-size:17px;font-weight:900;margin:0 0 2px}
+  .lead{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 12px}
+  .bdg{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:6px;margin-bottom:4px}
+  .ok{background:var(--ok-soft);color:var(--ok)}.al{background:var(--warn-soft);color:var(--warn)}.na{background:var(--danger-soft);color:var(--danger)}
+  .t{font-size:12px;font-weight:600;line-height:1.4}
+  .hint{font-size:11px;color:var(--faint);font-weight:700;margin-top:8px;text-align:center}
+
+  /* B · rótulo da linha como faixa (sticky à esquerda, largura da tela) */
+  .wrapB{border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow-x:auto;position:relative}
+  .wrapB .inner{min-width:600px}
+  .hdr{display:flex;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line)}
+  .hdr span,.cells span{flex:0 0 200px;padding:10px 12px;box-sizing:border-box}
+  .hdr span{font-size:11px;font-weight:800;color:var(--accent-deep)}
+  .hdr small{display:block;color:var(--faint);font-weight:700}
+  .grp{border-top:1px solid var(--line)}
+  .lbl{position:sticky;left:0;width:342px;box-sizing:border-box;padding:8px 12px 2px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:linear-gradient(90deg,var(--surface) 85%,transparent)}
+  .cells{display:flex;padding-bottom:8px}
+
+  /* A · trilho estreito translúcido com o rótulo girado/abreviado */
+  .wrapA{border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow-x:auto;display:flex;position:relative}
+  .rail{position:sticky;left:0;flex:0 0 64px;background:rgba(23,24,31,.92);backdrop-filter:blur(4px);border-right:1px solid var(--line);z-index:2}
+  .rail div{height:92px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:10px;font-weight:800;color:var(--muted);padding:0 6px;border-top:1px solid var(--line);line-height:1.2}
+  .rail div:first-child{height:44px;border-top:0}
+  .gridA{min-width:560px}
+  .gridA .hdr span{flex-basis:190px}
+  .gridA .r{display:flex;height:92px;border-top:1px solid var(--line);box-sizing:border-box}
+  .gridA .r span{flex:0 0 190px;padding:10px 12px;box-sizing:border-box}
+
+  /* C · cartões por proposta (carrossel) */
+  .car{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
+  .pc{flex:0 0 300px;scroll-snap-align:center;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}
+  .pc.ref{opacity:.55}
+  .pc h4{margin:0;font-size:14px;font-weight:900}
+  .pc .v{font-size:20px;font-weight:900;margin:2px 0 10px}
+  .pc .k{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:800;margin-top:10px}
+  .dots{display:flex;gap:6px;justify-content:center;margin-top:8px}
+  .dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--accent-deep)}
+</style>
+</head>
+<body>
+<h1>Tabela de equalização: rolar para o lado sem perder a referência</h1>
+<p class="sub">Problema: ao arrastar a matriz "Lado a lado" (e as demais) para a direita, a coluna do critério some e o usuário não sabe mais o que está lendo. Congelar a coluna inteira comeria um terço da tela. Três saídas, todas com a mesma matriz (Ar3 · 3 propostas).</p>
+
+<h2>B · O critério vira uma faixa acima das células — e fica presa na tela (recomendada)</h2>
+<div class="cols">
+  <div>
+    <p class="cap">Celular em pé</p>
+    <div class="phone">
+      <p class="ttl">Lado a lado</p>
+      <p class="lead">Arraste para o lado · o nome do critério acompanha</p>
+      <div class="wrapB"><div class="inner">
+        <div class="hdr"><span>PANAIR<small>Opção 1 (Cassete)</small></span><span>PANAIR<small>Opção 2 (Splitão)</small></span><span>ARTEC<small>Climatização</small></span></div>
+        <div class="grp"><div class="lbl">Valor apresentado</div><div class="cells"><span><i class="bdg ok">ok</i><div class="t">R$ 1.427.487 (rateio fecha)</div></span><span><i class="bdg al">atenção</i><div class="t">R$ 980.462 (opção splitão); rateio fecha</div></span><span><i class="bdg ok">ok</i><div class="t">R$ 1.445.699 (soma dos 3 sistemas fecha)</div></span></div></div>
+        <div class="grp"><div class="lbl">Capacidade da loja</div><div class="cells"><span><i class="bdg ok">ok</i><div class="t">Carrier 3 evap. 30 TR (90 TR), parte inverter, Modbus</div></span><span><i class="bdg ok">ok</i><div class="t">Carrier 2×30 + 2×20 TR cond.; evap. 2×30 + 1×40 (100 TR)</div></span><span><i class="bdg ok">ok</i><div class="t">Hitachi convencional 5×15 TR = 75 TR; menor que as Panair</div></span></div></div>
+        <div class="grp"><div class="lbl">Salas administrativas</div><div class="cells"><span><i class="bdg al">atenção</i><div class="t">VRF Midea hi wall, 11 evap.; cond. 220V/18HP (rev. 04: 380V)</div></span><span><i class="bdg ok">ok</i><div class="t">VRF Midea hi wall 380V, 11 evap.</div></span><span><i class="bdg ok">ok</i><div class="t">Samsung split hi wall, 11 un.; sem VRF</div></span></div></div>
+        <div class="grp"><div class="lbl">Cozinha (renovação/exaustão)</div><div class="cells"><span><i class="bdg ok">ok</i><div class="t">Incluída: gabinete 19.920 m³/h + 4 exaustores</div></span><span><i class="bdg na">não informa</i><div class="t">Excluída (coifas, ventiladores, dutos, acessórios)</div></span><span><i class="bdg al">atenção</i><div class="t">Ventiladores VLs listados; exaustores sem fans/dutos detalhados</div></span></div></div>
+      </div></div>
+      <div class="hint">← arraste as células · o critério e o cabeçalho ficam →</div>
+    </div>
+  </div>
+  <div>
+    <p class="cap">Celular deitado (mesma tela, sem moldura)</p>
+    <div class="phone land">
+      <p class="ttl">Lado a lado</p>
+      <p class="lead">Na horizontal cabem as três propostas sem rolar — e o critério volta a ser coluna</p>
+      <div class="wrapB"><div class="inner" style="min-width:0">
+        <div class="hdr" style="padding-left:150px"><span style="flex:1">PANAIR<small>Opção 1 (Cassete)</small></span><span style="flex:1">PANAIR<small>Opção 2 (Splitão)</small></span><span style="flex:1">ARTEC<small>Climatização</small></span></div>
+        <div class="grp" style="display:flex"><div class="lbl" style="position:static;width:150px;padding:10px 12px;background:none;text-transform:none;font-size:12px;color:var(--ink)">Valor apresentado</div><div class="cells" style="flex:1;padding:0"><span style="flex:1"><i class="bdg ok">ok</i><div class="t">R$ 1.427.487 (rateio fecha)</div></span><span style="flex:1"><i class="bdg al">atenção</i><div class="t">R$ 980.462; rateio fecha</div></span><span style="flex:1"><i class="bdg ok">ok</i><div class="t">R$ 1.445.699 (soma fecha)</div></span></div></div>
+        <div class="grp" style="display:flex"><div class="lbl" style="position:static;width:150px;padding:10px 12px;background:none;text-transform:none;font-size:12px;color:var(--ink)">Capacidade da loja</div><div class="cells" style="flex:1;padding:0"><span style="flex:1"><i class="bdg ok">ok</i><div class="t">Carrier 3 evap. 30 TR (90 TR), inverter, Modbus</div></span><span style="flex:1"><i class="bdg ok">ok</i><div class="t">Carrier 2×30 + 2×20 TR; evap. 100 TR</div></span><span style="flex:1"><i class="bdg ok">ok</i><div class="t">Hitachi 5×15 TR = 75 TR</div></span></div></div>
+        <div class="grp" style="display:flex"><div class="lbl" style="position:static;width:150px;padding:10px 12px;background:none;text-transform:none;font-size:12px;color:var(--ink)">Salas administrativas</div><div class="cells" style="flex:1;padding:0"><span style="flex:1"><i class="bdg al">atenção</i><div class="t">VRF Midea hi wall, 11 evap.; 220V/18HP</div></span><span style="flex:1"><i class="bdg ok">ok</i><div class="t">VRF Midea hi wall 380V, 11 evap.</div></span><span style="flex:1"><i class="bdg ok">ok</i><div class="t">Samsung split hi wall, 11 un.</div></span></div></div>
+      </div></div>
+    </div>
+  </div>
+</div>
+<p class="note"><b>B.</b> Cada critério deixa de ser coluna e vira uma <b>faixa de rótulo</b> acima das suas células, presa à borda esquerda (sticky) — ela nunca sai da tela, e as células usam 100% da largura. O cabeçalho com os fornecedores também fica preso no topo. Em pé: arrasta, sempre sabe onde está. Deitado: o app ocupa a tela inteira (hoje ele fica numa moldura de 440 px no centro — isso é o que a 3ª foto mostra, e já corrigi) e, com largura sobrando, a mesma tabela volta ao formato clássico com o critério em coluna, sem rolagem. Vale para "Lado a lado", "Na mesma régua" e a matriz de escopo.</p>
+
+<h2>A · Trilho estreito congelado, translúcido</h2>
+<div class="cols">
+  <div>
+    <p class="cap">Celular em pé</p>
+    <div class="phone">
+      <p class="ttl">Lado a lado</p>
+      <p class="lead">Coluna do critério reduzida a um trilho de 64 px que fica sempre visível</p>
+      <div class="wrapA">
+        <div class="rail"><div></div><div>Valor apresentado</div><div>Capacidade da loja</div><div>Salas admin.</div><div>Cozinha</div></div>
+        <div class="gridA">
+          <div class="hdr"><span>PANAIR<small>Opção 1 (Cassete)</small></span><span>PANAIR<small>Opção 2 (Splitão)</small></span><span>ARTEC<small>Climatização</small></span></div>
+          <div class="r"><span><i class="bdg ok">ok</i><div class="t">R$ 1.427.487 (rateio fecha)</div></span><span><i class="bdg al">atenção</i><div class="t">R$ 980.462 (opção splitão)</div></span><span><i class="bdg ok">ok</i><div class="t">R$ 1.445.699 (soma fecha)</div></span></div>
+          <div class="r"><span><i class="bdg ok">ok</i><div class="t">Carrier 3 evap. 30 TR (90 TR), inverter, Modbus</div></span><span><i class="bdg ok">ok</i><div class="t">Carrier 2×30 + 2×20 TR; 100 TR</div></span><span><i class="bdg ok">ok</i><div class="t">Hitachi 5×15 TR = 75 TR</div></span></div>
+          <div class="r"><span><i class="bdg al">atenção</i><div class="t">VRF Midea hi wall, 11 evap.; 220V/18HP</div></span><span><i class="bdg ok">ok</i><div class="t">VRF Midea hi wall 380V, 11 evap.</div></span><span><i class="bdg ok">ok</i><div class="t">Samsung split hi wall, 11 un.</div></span></div>
+          <div class="r"><span><i class="bdg ok">ok</i><div class="t">Incluída: gabinete 19.920 m³/h + 4 exaustores</div></span><span><i class="bdg na">não informa</i><div class="t">Excluída (coifas, dutos…)</div></span><span><i class="bdg al">atenção</i><div class="t">Ventiladores VLs listados</div></span></div>
+        </div>
+      </div>
+      <div class="hint">trilho fixo à esquerda · células rolam atrás dele</div>
+    </div>
+  </div>
+</div>
+<p class="note"><b>A.</b> Congela só um <b>trilho de 64 px</b> com o critério em letra pequena (abreviado quando preciso), translúcido para a célula passar por baixo. Perde ~17% da largura (não um terço). Funciona, mas critérios longos ficam abreviados ("Salas admin.") e letra miúda.</p>
+
+<h2>C · Um cartão por proposta, deslizando entre elas</h2>
+<div class="cols">
+  <div>
+    <p class="cap">Celular em pé</p>
+    <div class="phone">
+      <p class="ttl">Lado a lado</p>
+      <p class="lead">Deslize para a próxima proposta · os critérios se repetem em cada cartão</p>
+      <div class="car">
+        <div class="pc ref"><h4>PANAIR · Opção 1</h4><div class="v">R$ 1.427.487</div><div class="k">Capacidade da loja</div><i class="bdg ok">ok</i><div class="t">Carrier 3 evap. 30 TR…</div></div>
+        <div class="pc"><h4>PANAIR · Opção 2 (Splitão)</h4><div class="v">R$ 980.462</div>
+          <div class="k">Valor apresentado</div><i class="bdg al">atenção</i><div class="t">R$ 980.462 (opção splitão); rateio fecha</div>
+          <div class="k">Capacidade da loja</div><i class="bdg ok">ok</i><div class="t">Carrier 2×30 + 2×20 TR cond.; evap. 2×30 + 1×40 (100 TR)</div>
+          <div class="k">Salas administrativas</div><i class="bdg ok">ok</i><div class="t">VRF Midea hi wall 380V, 11 evap.</div>
+          <div class="k">Cozinha (renovação/exaustão)</div><i class="bdg na">não informa</i><div class="t">Excluída (coifas, ventiladores, dutos, acessórios)</div>
+        </div>
+        <div class="pc ref"><h4>ARTEC Climatização</h4><div class="v">R$ 1.445.699</div><div class="k">Capacidade da loja</div><i class="bdg ok">ok</i><div class="t">Hitachi 5×15 TR…</div></div>
+      </div>
+      <div class="dots"><i></i><i class="on"></i><i></i></div>
+      <div class="hint">1 proposta por vez, largura total · bom para ler, pior para comparar</div>
+    </div>
+  </div>
+</div>
+<p class="note"><b>C.</b> Transpõe a matriz: <b>um cartão por proposta</b> com todos os critérios na vertical, e o usuário desliza entre fornecedores (com a vizinha espiando na borda). Nunca perde a referência, usa 100% da largura, ótimo para ler uma proposta a fundo — mas comparar exige ir e voltar. Poderia coexistir com B como um "modo leitura".</p>
+</body>
+</html>

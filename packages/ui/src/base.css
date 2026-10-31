@@ -71,6 +71,20 @@ h4 {
     box-shadow: 0 30px 80px rgba(16, 18, 40, 0.2);
   }
 }
+@media (min-width: 620px) and (pointer: coarse) {
+  .stage {
+    align-items: stretch;
+    padding: 0;
+    background: var(--bg);
+  }
+  .device {
+    max-width: none;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
 .topbar {
   display: flex;
   align-items: center;
@@ -279,6 +293,7 @@ h4 {
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding: 6px max(18px, env(safe-area-inset-left, 0px)) 28px max(18px, env(safe-area-inset-right, 0px));
 }
@@ -797,6 +812,7 @@ h4 {
 /* ---------- Table (equalização) ---------- */
 .tablewrap {
   overflow-x: auto;
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -921,10 +937,12 @@ table.eq .high {
 }
 .rep-cards {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   margin-bottom: var(--sp-block);
 }
 .rep-card {
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--line);
   border-top: 3px solid var(--line);

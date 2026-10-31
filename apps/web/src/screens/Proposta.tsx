@@ -24,6 +24,7 @@ import {
   useSugestoes,
 } from '../data/hooks';
 import {
+  arquivoLegivelPelaIA,
   desfazerVencedora,
   extrairProposta,
   moverPropostaCategoria,
@@ -749,7 +750,7 @@ function NovaVersao({
   // Itens extraídos (não editáveis aqui, mas preservados em dados_extraidos).
   const [itens, setItens] = useState<PropostaExtraida['itens']>([]);
 
-  const ehPdf = !!file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+  const ehPdf = !!file && arquivoLegivelPelaIA(file);
 
   function preencher(d: PropostaExtraida) {
     setValor(d.valor != null ? formatBRL(d.valor).replace('R$', '').trim() : '');
@@ -869,8 +870,8 @@ function NovaVersao({
         <label>Arquivo da revisão</label>
         <button type="button" className="dropzone" onClick={() => fileRef.current?.click()}>
           <Icon name={file ? 'doc' : 'upload'} />
-          {file ? file.name : 'Toque para anexar (PDF, planilha ou imagem)'}
-          <small>{file ? (ehPdf ? 'PDF — a IA vai ler os dados' : 'Neste formato você preenche à mão') : 'Máx. 8 MB'}</small>
+          {file ? file.name : 'Toque para anexar (PDF, print/foto ou planilha)'}
+          <small>{file ? (ehPdf ? 'A IA vai ler os dados' : 'Planilha: você preenche à mão') : 'Máx. 8 MB'}</small>
         </button>
         <input
           ref={fileRef}

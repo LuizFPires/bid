@@ -120,7 +120,9 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   let totalBytes = 0;
   for (const p of propostas) {
     const path = ultimaPorProposta.get(p.id)?.arquivo_path;
-    if (!path || !path.toLowerCase().endsWith('.pdf')) continue;
+    const ext = path?.toLowerCase().split('.').pop() ?? '';
+    const tipo = ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : null;
+    if (!path || !tipo) continue;
     try {
       const { data: signed } = await sb.storage.from('propostas').createSignedUrl(path, 60);
       if (!signed) continue;
@@ -131,7 +133,7 @@ async function processar(req: VercelRequest, res: VercelResponse) {
       const buf = Buffer.from(await resp.arrayBuffer());
       if (buf.byteLength > MAX_PDF_BYTES || totalBytes + buf.byteLength > MAX_TOTAL_PDF_BYTES) continue;
       totalBytes += buf.byteLength;
-      documentos.push({ proposta_id: p.id, fornecedor: p.fornecedor, pdfBase64: buf.toString('base64') });
+      documentos.push({ proposta_id: p.id, fornecedor: p.fornecedor, pdfBase64: buf.toString('base64'), tipo });
     } catch (e) {
       console.error('equalize: falha ao ler PDF', path, e);
     }

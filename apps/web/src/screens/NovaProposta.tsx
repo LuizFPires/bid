@@ -10,7 +10,7 @@ import {
 import { Autocomplete, Button, Icon } from '@bid/ui';
 import { useObras, useSugestoes } from '../data/hooks';
 import { useCriarProposta } from '../data/hooks';
-import { extrairProposta, uploadPropostaArquivo } from '../data/mutations';
+import { arquivoLegivelPelaIA, extrairProposta, uploadPropostaArquivo } from '../data/mutations';
 
 import { LeituraIA } from '../components/LeituraIA';
 
@@ -87,8 +87,7 @@ export function NovaPropostaScreen() {
   const [opcoes, setOpcoes] = useState<OpcaoExtraida[]>([]);
   const [opcoesMarcadas, setOpcoesMarcadas] = useState<boolean[]>([]);
 
-  const ehPdf =
-    !!file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+  const ehPdf = !!file && arquivoLegivelPelaIA(file);
   const podeProsseguir = Boolean(obraId && categoria.trim() && file);
 
   function preencher(d: PropostaExtraida) {
@@ -260,12 +259,12 @@ export function NovaPropostaScreen() {
                   onClick={() => fileRef.current?.click()}
                 >
                   <Icon name={file ? 'doc' : 'upload'} />
-                  {file ? file.name : 'Toque para anexar (PDF, planilha ou imagem)'}
+                  {file ? file.name : 'Toque para anexar (PDF, print/foto ou planilha)'}
                   <small>
                     {file
                       ? ehPdf
-                        ? 'PDF — a IA vai ler e preencher os dados'
-                        : 'A IA lê PDF; neste formato você preenche à mão'
+                        ? 'A IA vai ler e preencher os dados'
+                        : 'A IA lê PDF e imagens; planilha você preenche à mão'
                       : 'Máx. 8 MB'}
                   </small>
                 </button>

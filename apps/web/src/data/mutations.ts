@@ -63,6 +63,16 @@ function nomeSeguro(nome: string): string {
     .toLowerCase();
 }
 
+/** A IA lê PDF e imagens (print de conversa, foto de proposta). */
+export function arquivoLegivelPelaIA(file: File): boolean {
+  const n = file.name.toLowerCase();
+  return (
+    file.type === 'application/pdf' ||
+    file.type.startsWith('image/') ||
+    /\.(pdf|png|jpe?g|webp)$/.test(n)
+  );
+}
+
 export interface ArquivoEnviado {
   path: string;
   /** true quando é PDF (único formato com extração automática neste milestone). */
@@ -85,7 +95,8 @@ export async function uploadPropostaArquivo(file: File): Promise<ArquivoEnviado>
     .upload(path, file, { upsert: false, contentType: file.type || undefined });
   if (error) throw error;
 
-  const ehPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  // "ehPdf" = legível pela IA: PDF ou imagem (print/foto). Planilhas seguem manuais.
+  const ehPdf = arquivoLegivelPelaIA(file);
   return { path, ehPdf };
 }
 
@@ -355,11 +366,26 @@ export async function baixarRelatorioEqualizacao(equalizacaoId: string): Promise
   }
   const blob = await resp.blob();
   const nome = /filename="([^"]+)"/.exec(resp.headers.get('Content-Disposition') ?? '')?.[1] ?? 'equalizacao.pdf';
+  const arquivo = new File([blob], nome, { type: 'application/pdf' });
+
+  // iPhone (PWA instalado) ignora <a download> em silêncio: a folha de
+  // compartilhar é o caminho que funciona lá ("Salvar em Arquivos", WhatsApp…).
+  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+  if (typeof nav.share === 'function' && nav.canShare?.({ files: [arquivo] })) {
+    try {
+      await nav.share({ files: [arquivo], title: nome });
+      return;
+    } catch (e) {
+      if ((e as { name?: string }).name === 'AbortError') return; // usuário cancelou
+      // cai para o download comum
+    }
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = nome;
   a.rel = 'noopener';
+  a.target = '_blank';
   document.body.appendChild(a);
   a.click();
   a.remove();
