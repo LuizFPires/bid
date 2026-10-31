@@ -1471,6 +1471,153 @@ table.eq .nota-eq.warn {
   .esp-bar i { animation: none; left: 30%; }
 }
 
+
+/* ---------- Matriz "faixa presa" (equalização) ---------- */
+.mx {
+  position: relative;
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  -webkit-overflow-scrolling: touch;
+}
+.mx-in {
+  min-width: calc(var(--mx-cols) * var(--mx-cel));
+}
+.mx-hdr {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.mx-hdr-lbl {
+  display: none;
+}
+.mx-th {
+  flex: 0 0 var(--mx-cel);
+  padding: 11px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.mx-th .nm {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--accent-deep);
+  line-height: 1.25;
+}
+.mx-th .vz {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--faint);
+}
+.mx-grp {
+  border-top: 1px solid var(--line-2);
+}
+.mx-grp:first-of-type {
+  border-top: 0;
+}
+.mx-grp.total {
+  background: var(--surface-2);
+}
+.mx-lbl {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: var(--mx-w);
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px 2px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: linear-gradient(90deg, var(--surface) 80%, transparent);
+}
+.mx-grp.total .mx-lbl {
+  color: var(--ink);
+  background: linear-gradient(90deg, var(--surface-2) 80%, transparent);
+}
+.mx-cells {
+  display: flex;
+  padding-bottom: 10px;
+}
+.mx-td {
+  flex: 0 0 var(--mx-cel);
+  min-width: 0;
+  padding: 4px 14px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.mx-cells.centro .mx-td {
+  display: flex;
+  justify-content: center;
+}
+.mx-grp.total .mx-td {
+  font-weight: 900;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.mx-td .best {
+  color: var(--ok);
+  font-weight: 900;
+}
+.mx-td .high {
+  color: var(--danger);
+  font-weight: 800;
+}
+/* Tela larga (celular deitado, desktop grande): tabela clássica, critério em coluna. */
+@media (min-width: 620px) {
+  .mx-in {
+    min-width: 0;
+  }
+  .mx-hdr-lbl {
+    display: block;
+    flex: 0 0 150px;
+    padding: 11px 14px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--faint);
+  }
+  .mx-th {
+    flex: 1 1 0;
+  }
+  .mx-grp {
+    display: flex;
+    align-items: stretch;
+  }
+  .mx-lbl {
+    position: static;
+    width: 150px;
+    flex: 0 0 150px;
+    padding: 11px 14px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--ink);
+    background: none;
+  }
+  .mx-cells {
+    flex: 1 1 auto;
+    padding-bottom: 0;
+  }
+  .mx-td {
+    flex: 1 1 0;
+    padding: 11px 14px;
+  }
+}
+
 /* ---------- IA ---------- */
 .ai {
   border: 1px solid var(--accent);

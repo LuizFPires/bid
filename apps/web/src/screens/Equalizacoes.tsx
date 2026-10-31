@@ -33,6 +33,7 @@ import { useToast } from '../app/Toast';
 import { Kebab } from '../app/Kebab';
 import { BarraAcao } from '../app/BarraAcao';
 import { EsperaEqualizacao } from '../components/EsperaEqualizacao';
+import { Matriz, type MatrizColuna, type MatrizLinha } from '../components/Matriz';
 import { ConfirmDialog } from '../app/ConfirmDialog';
 
 /** Marca de um item de escopo na matriz: ✓ incluído, ✗ ausente, ~ parcial. */
@@ -543,6 +544,64 @@ export function EqualizacaoScreen() {
     ...(ia?.equalizacao?.totais ?? []).map((t) => t.total ?? Number.POSITIVE_INFINITY),
   );
 
+  // Colunas da matriz = propostas (nome + opção/obra), e a linha "Vencedora"
+  // (a decisão continua do usuário — regra #6).
+  const colunas: MatrizColuna[] = data.propostas.map((p) => ({
+    id: p.id,
+    titulo: (
+      <span style={ia?.recomendacao?.proposta_id === p.id ? { color: 'var(--ok)' } : undefined}>{p.fornecedor}</span>
+    ),
+    sub: [p.opcao, data.escopo === 'entre_obras' ? p.obraNome : null].filter(Boolean).join(' · ') || undefined,
+  }));
+  const linhaVencedora: MatrizLinha = {
+    rotulo: 'Vencedora',
+    centro: true,
+    celulas: data.propostas.map((p) => {
+      const ehVencedora = data.vencedoraPropostaId === p.id;
+      const recomendada = ia?.recomendacao?.proposta_id === p.id;
+      return ehVencedora ? (
+        <span className="pill adjudicada">
+          <Icon name="trophy" style={{ width: 13, height: 13 }} />
+          Vencedora
+        </span>
+      ) : (
+        <button
+          type="button"
+          className={`btn sm ${recomendada ? 'primary' : 'soft'}`}
+          disabled={definir.isPending}
+          onClick={() => marcarVencedora(p.id)}
+        >
+          <Icon name="trophy" />
+          Definir
+        </button>
+      );
+    }),
+  };
+  const linhaApresentado: MatrizLinha = {
+    rotulo: 'Apresentado',
+    total: true,
+    celulas: data.propostas.map((p) => {
+      const m = comp.marcadores[p.id];
+      return (
+        <span className={m?.menorValor ? 'best' : m?.maiorValor ? 'high' : undefined}>
+          {p.valor != null ? formatBRL(p.valor) : '—'}
+        </span>
+      );
+    }),
+  };
+  const linhasBasicas: MatrizLinha[] = [
+    {
+      rotulo: 'Prazo',
+      celulas: data.propostas.map((p) => (
+        <span className={comp.marcadores[p.id]?.menorPrazo ? 'best' : undefined}>
+          {p.prazo != null ? `${p.prazo} dias` : '—'}
+        </span>
+      )),
+    },
+    { rotulo: 'Pagamento', celulas: data.propostas.map((p) => p.condicaoPagamento ?? '—') },
+    { rotulo: 'Garantia', celulas: data.propostas.map((p) => p.garantia ?? '—') },
+  ];
+
   return (
     <>
       <div className="crumb">
@@ -605,57 +664,8 @@ export function EqualizacaoScreen() {
       {/* Sem análise: comparativo básico (campos reais) + chamada para a IA. */}
       {!ia && !gerando && (
         <>
-          <div className="tablewrap" style={{ marginBottom: 16 }}>
-            <table className="eq">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  {data.propostas.map((p) => (
-                    <th key={p.id} className="forn">
-                      <div className="fornhd">
-                        <span className="nm">{p.fornecedor}</span>
-                        {p.opcao && <span className="vz">{p.opcao}</span>}
-                        {data.escopo === 'entre_obras' && p.obraNome && <span className="vz">{p.obraNome}</span>}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="itm">Prazo</td>
-                  {data.propostas.map((p) => (
-                    <td key={p.id} className={`val ${comp.marcadores[p.id]?.menorPrazo ? 'best' : ''}`}>
-                      {p.prazo != null ? `${p.prazo}d` : '—'}
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <td className="itm">Pagamento</td>
-                  {data.propostas.map((p) => (
-                    <td key={p.id}>{p.condicaoPagamento ?? '—'}</td>
-                  ))}
-                </tr>
-                <tr>
-                  <td className="itm">Garantia</td>
-                  {data.propostas.map((p) => (
-                    <td key={p.id}>{p.garantia ?? '—'}</td>
-                  ))}
-                </tr>
-                <tr className="total">
-                  <td>Total</td>
-                  {data.propostas.map((p) => {
-                    const m = comp.marcadores[p.id];
-                    return (
-                      <td key={p.id} className={`val ${m?.menorValor ? 'best' : m?.maiorValor ? 'high' : ''}`}>
-                        {p.valor != null ? formatBRL(p.valor) : '—'}
-                      </td>
-                    );
-                  })}
-                </tr>
-                <LinhaVencedora />
-              </tbody>
-            </table>
+          <div style={{ marginBottom: 16 }}>
+            <Matriz colunas={colunas} primeira="Item" linhas={[...linhasBasicas, { ...linhaApresentado, rotulo: 'Total' }, linhaVencedora]} />
           </div>
           <div className="ai">
             <div className="ai-empty">
@@ -742,94 +752,29 @@ export function EqualizacaoScreen() {
             </div>
           )}
 
-          <SecTitulo n="01" t="Lado a lado" s="O que cada proposta realmente inclui — e onde é omissa." />
-          <div className="tablewrap">
-            <table className="eq">
-              <thead>
-                <tr>
-                  <th>Critério</th>
-                  {data.propostas.map((p) => {
-                    const recomendada = ia.recomendacao?.proposta_id === p.id;
-                    return (
-                      <th key={p.id} className="forn">
-                        <div className="fornhd">
-                          <span className="nm" style={recomendada ? { color: 'var(--ok)' } : undefined}>
-                            {p.fornecedor}
-                          </span>
-                          {p.opcao && <span className="vz">{p.opcao}</span>}
-                          {data.escopo === 'entre_obras' && p.obraNome && <span className="vz">{p.obraNome}</span>}
-                        </div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {(ia.matriz?.criterios ?? []).map((crit, i) => (
-                  <tr key={`c-${i}`}>
-                    <td className="itm">{crit}</td>
-                    {data.propostas.map((p) => {
-                      const cel = ia.matriz?.porProposta?.find((x) => x.proposta_id === p.id)?.celulas?.[i];
-                      return (
-                        <td key={p.id}>
-                          {cel ? <Celula texto={cel.texto} status={cel.status} /> : <span className="muted">—</span>}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-                {(ia.escopo?.itens ?? []).map((item, i) => (
-                  <tr key={`esc-${i}`}>
-                    <td className="itm">{item}</td>
-                    {data.propostas.map((p) => {
-                      const st = ia.escopo?.porProposta?.find((x) => x.proposta_id === p.id)?.status?.[i] ?? 'na';
-                      return (
-                        <td key={p.id} style={{ textAlign: 'center' }}>
-                          <MarcaEscopo status={st} />
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-                {(ia.matriz?.criterios?.length ?? 0) === 0 && (
-                  <>
-                    <tr>
-                      <td className="itm">Prazo</td>
-                      {data.propostas.map((p) => (
-                        <td key={p.id} className={`val ${comp.marcadores[p.id]?.menorPrazo ? 'best' : ''}`}>
-                          {p.prazo != null ? `${p.prazo}d` : '—'}
-                        </td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td className="itm">Pagamento</td>
-                      {data.propostas.map((p) => (
-                        <td key={p.id}>{p.condicaoPagamento ?? '—'}</td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td className="itm">Garantia</td>
-                      {data.propostas.map((p) => (
-                        <td key={p.id}>{p.garantia ?? '—'}</td>
-                      ))}
-                    </tr>
-                  </>
-                )}
-                <tr className="total">
-                  <td>Apresentado</td>
-                  {data.propostas.map((p) => {
-                    const m = comp.marcadores[p.id];
-                    return (
-                      <td key={p.id} className={`val ${m?.menorValor ? 'best' : m?.maiorValor ? 'high' : ''}`}>
-                        {p.valor != null ? formatBRL(p.valor) : '—'}
-                      </td>
-                    );
-                  })}
-                </tr>
-                <LinhaVencedora />
-              </tbody>
-            </table>
-          </div>
+          <SecTitulo n="01" t="Lado a lado" s="O que cada proposta realmente inclui — e onde é omissa. Arraste para o lado." />
+          <Matriz
+            colunas={colunas}
+            linhas={[
+              ...(ia.matriz?.criterios ?? []).map((crit, i): MatrizLinha => ({
+                rotulo: crit,
+                celulas: data.propostas.map((p) => {
+                  const cel = ia.matriz?.porProposta?.find((x) => x.proposta_id === p.id)?.celulas?.[i];
+                  return cel ? <Celula texto={cel.texto} status={cel.status} /> : <span className="muted">—</span>;
+                }),
+              })),
+              ...(ia.escopo?.itens ?? []).map((item, i): MatrizLinha => ({
+                rotulo: item,
+                centro: true,
+                celulas: data.propostas.map((p) => (
+                  <MarcaEscopo status={ia.escopo?.porProposta?.find((x) => x.proposta_id === p.id)?.status?.[i] ?? 'na'} />
+                )),
+              })),
+              ...((ia.matriz?.criterios?.length ?? 0) === 0 ? linhasBasicas : []),
+              linhaApresentado,
+              linhaVencedora,
+            ]}
+          />
 
           {(ia.equalizacao?.linhas?.length ?? 0) > 0 && (
             <>
@@ -838,71 +783,52 @@ export function EqualizacaoScreen() {
                 t="Na mesma régua"
                 s={ia.equalizacao?.base ?? 'Mesmo escopo e mesma quantidade para todas.'}
               />
-              <div className="tablewrap">
-                <table className="eq">
-                  <thead>
-                    <tr>
-                      <th>Composição</th>
-                      {data.propostas.map((p) => (
-                        <th key={p.id} className="forn">
-                          <div className="fornhd">
-                            <span className="nm">{p.fornecedor}</span>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(ia.equalizacao?.linhas ?? []).map((l, i) => (
-                      <tr key={`l-${i}`}>
-                        <td className="itm">{l.item}</td>
-                        {data.propostas.map((p) => {
-                          const v = l.valores.find((x) => x.proposta_id === p.id);
-                          return (
-                            <td key={p.id} className="val">
-                              {v?.valor != null ? (
-                                <>
-                                  {formatBRL(v.valor)}
-                                  {v.referencia && <span className="ref">ref.</span>}
-                                  {v.nota && <small className="nota-s">{v.nota}</small>}
-                                </>
-                              ) : (
-                                <span className={`nota-eq ${v?.nota ? 'warn' : ''}`}>{v?.nota ?? '—'}</span>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                    <tr className="total">
-                      <td>Total equalizado</td>
-                      {data.propostas.map((p) => {
-                        const t = ia.equalizacao?.totais?.find((x) => x.proposta_id === p.id)?.total ?? null;
-                        return (
-                          <td key={p.id} className={`val ${t != null && t === menorTotal ? 'best' : ''}`}>
-                            {t != null ? formatBRL(t) : '—'}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                    {Number.isFinite(menorTotal) && (
-                      <tr>
-                        <td className="itm">Diferença para a menor</td>
-                        {data.propostas.map((p) => {
-                          const t = ia.equalizacao?.totais?.find((x) => x.proposta_id === p.id)?.total ?? null;
-                          if (t == null) return <td key={p.id}>—</td>;
-                          const d = t - menorTotal;
-                          return (
-                            <td key={p.id} className={`val ${d > 0 ? 'high' : 'best'}`}>
-                              {d > 0 ? `+${formatBRL(d)} (+${formatNumber((d / menorTotal) * 100, 1)}%)` : '—'}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <Matriz
+                colunas={colunas}
+                primeira="Composição"
+                linhas={[
+                  ...(ia.equalizacao?.linhas ?? []).map((l): MatrizLinha => ({
+                    rotulo: l.item,
+                    celulas: data.propostas.map((p) => {
+                      const v = l.valores.find((x) => x.proposta_id === p.id);
+                      return v?.valor != null ? (
+                        <>
+                          {formatBRL(v.valor)}
+                          {v.referencia && <span className="ref">ref.</span>}
+                          {v.nota && <small className="nota-s">{v.nota}</small>}
+                        </>
+                      ) : (
+                        <span className={`nota-eq ${v?.nota ? 'warn' : ''}`}>{v?.nota ?? '—'}</span>
+                      );
+                    }),
+                  })),
+                  {
+                    rotulo: 'Total equalizado',
+                    total: true,
+                    celulas: data.propostas.map((p) => {
+                      const t = ia.equalizacao?.totais?.find((x) => x.proposta_id === p.id)?.total ?? null;
+                      return <span className={t != null && t === menorTotal ? 'best' : undefined}>{t != null ? formatBRL(t) : '—'}</span>;
+                    }),
+                  },
+                  ...(Number.isFinite(menorTotal)
+                    ? [
+                        {
+                          rotulo: 'Diferença para a menor',
+                          celulas: data.propostas.map((p) => {
+                            const t = ia.equalizacao?.totais?.find((x) => x.proposta_id === p.id)?.total ?? null;
+                            if (t == null) return '—';
+                            const d = t - menorTotal;
+                            return (
+                              <span className={d > 0 ? 'high' : 'best'}>
+                                {d > 0 ? `+${formatBRL(d)} (+${formatNumber((d / menorTotal) * 100, 1)}%)` : '—'}
+                              </span>
+                            );
+                          }),
+                        } as MatrizLinha,
+                      ]
+                    : []),
+                ]}
+              />
             </>
           )}
 
@@ -1030,38 +956,6 @@ export function EqualizacaoScreen() {
     </>
   );
 
-  /** Linha "Vencedora" da tabela: a decisão continua do usuário (regra #6). */
-  function LinhaVencedora() {
-    return (
-      <tr>
-        <td className="itm">Vencedora</td>
-        {data!.propostas.map((p) => {
-          const ehVencedora = data!.vencedoraPropostaId === p.id;
-          const recomendada = ia?.recomendacao?.proposta_id === p.id;
-          return (
-            <td key={p.id} style={{ textAlign: 'center' }}>
-              {ehVencedora ? (
-                <span className="pill adjudicada">
-                  <Icon name="trophy" style={{ width: 13, height: 13 }} />
-                  Vencedora
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  className={`btn sm ${recomendada ? 'primary' : 'soft'}`}
-                  disabled={definir.isPending}
-                  onClick={() => marcarVencedora(p.id)}
-                >
-                  <Icon name="trophy" />
-                  Definir
-                </button>
-              )}
-            </td>
-          );
-        })}
-      </tr>
-    );
-  }
 }
 
 /* ---------- Peças do relatório ---------- */
