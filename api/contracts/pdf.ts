@@ -1,9 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-// Imports estáticos (sem uso direto) para o empacotador da Vercel levar react e
-// @react-pdf/renderer junto com esta função: o @bid/server os carrega por
-// import dinâmico, que o rastreador de dependências não enxerga.
-import 'react';
-import '@react-pdf/renderer';
 import { formatBRL } from '@bid/core';
 import { MissingEnvError } from '@bid/server';
 import { bearer, requireMethod } from '@bid/server';

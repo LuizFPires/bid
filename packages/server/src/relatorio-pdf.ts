@@ -1,3 +1,4 @@
+import { carregarReactPdf } from './react-pdf';
 import type { AnaliseEqualizacao } from '@bid/core';
 
 /** Dados prontos para o PDF do relatório de equalização. */
@@ -65,8 +66,7 @@ function dataBR(iso: string): string {
  * bundle (ver pdf.ts).
  */
 export async function renderRelatorioEqualizacaoPdf(d: RelatorioPdfDados): Promise<Buffer> {
-  const { createElement: h } = await import('react');
-  const { Document, Page, StyleSheet, Text, View, renderToBuffer } = await import('@react-pdf/renderer');
+  const { h, Document, Page, StyleSheet, Text, View, renderToBuffer } = await carregarReactPdf();
   type El = ReturnType<typeof h>;
 
   const a = limparGlifos(d.analise);

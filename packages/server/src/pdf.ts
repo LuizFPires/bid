@@ -1,3 +1,4 @@
+import { carregarReactPdf } from './react-pdf';
 export interface ContratoPdfDados {
   obra: string;
   categoria: string;
@@ -16,8 +17,7 @@ export interface ContratoPdfDados {
  * (extração/IA/assinatura) não carrega o react-pdf — só esta função o faz.
  */
 export async function renderContratoPdf(d: ContratoPdfDados): Promise<{ buffer: Buffer; paginas: number }> {
-  const { createElement: h } = await import('react');
-  const { Document, Page, StyleSheet, Text, View, renderToBuffer } = await import('@react-pdf/renderer');
+  const { h, Document, Page, StyleSheet, Text, View, renderToBuffer } = await carregarReactPdf();
 
   const s = StyleSheet.create({
     page: { paddingTop: 54, paddingBottom: 54, paddingHorizontal: 48, fontSize: 11, lineHeight: 1.5, color: '#1a1a2e' },
