@@ -113,14 +113,13 @@ async function coletarV2(req: VercelRequest, res: VercelResponse, token: string,
   if (!['emitido', 'enviado'].includes(c.status)) return void res.status(409).json({ erro: 'Só contrato emitido recebe assinaturas.' });
   const sig = (c.contrato_signatarios ?? []).find((s) => s.id === signatarioId);
   if (!sig) return void res.status(404).json({ erro: 'Signatário não encontrado neste contrato.' });
-  const pdfPath = `${c.org_id}/${c.id}/emitido.pdf`;
+  if (!c.pdf_path) return void res.status(409).json({ erro: 'PDF emitido não encontrado.' });
   try {
     const sb = serviceClient();
     const r = await registrarAssinaturaV2(sb, {
       contratoId: c.id,
       orgId: c.org_id,
-      pdfPath,
-      pdfHashEmissao: c.pdf_hash,
+      pdfPath: c.pdf_path,
       signatarioId: sig.id,
       parte: sig.parte,
       nome: sig.nome,

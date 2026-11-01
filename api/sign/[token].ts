@@ -185,7 +185,8 @@ async function assinarV2(
   if (!c) return void res.status(404).json({ erro: 'Contrato não encontrado.' });
   if (!['emitido', 'enviado'].includes(c.status)) return void res.status(409).json({ erro: c.status === 'assinado' ? 'Este contrato já está assinado por todas as partes.' : 'Este contrato não está disponível para assinatura.' });
   const obraNome = Array.isArray(c.obras) ? (c.obras[0]?.nome ?? '') : (c.obras?.nome ?? '');
-  const pdfPath = `${a.org_id}/${c.id}/emitido.pdf`;
+  const pdfPath = c.pdf_path && c.pdf_path.startsWith(`${a.org_id}/${c.id}/`) ? c.pdf_path : null;
+  if (!pdfPath) return void res.status(409).json({ erro: 'PDF emitido não encontrado.' });
 
   if (req.method === 'GET') {
     const { data: signed } = await sb.storage.from('contratos').createSignedUrl(pdfPath, 300);
@@ -213,7 +214,6 @@ async function assinarV2(
       contratoId: c.id,
       orgId: a.org_id,
       pdfPath,
-      pdfHashEmissao: c.pdf_hash,
       signatarioId: a.signatario_id,
       parte: a.parte as ParteV2,
       nome: a.signatario_nome ?? '',

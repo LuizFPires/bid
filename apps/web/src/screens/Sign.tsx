@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { formatBRL, PARTE_LABEL, type ParteAssinatura } from '@bid/core';
+import { formatBRL, PARTE_LABEL, PARTE_V2_LABEL, type ParteAssinatura, type ParteV2 } from '@bid/core';
 import { BrandLogo, Button, Icon } from '@bid/ui';
 import { SignaturePad, type SignaturePadHandle } from '../components/SignaturePad';
 
@@ -8,8 +8,13 @@ interface Resumo {
   categoria: string;
   obra: string;
   valor: number | null;
-  parte: ParteAssinatura;
+  parte: ParteAssinatura | ParteV2;
   signatario: string | null;
+  /** v2 (M13): contrato emitido, assinatura por signatário. */
+  v2?: boolean;
+  numero?: string | null;
+  partes?: { contratante: string | null; contratada: string | null; construtora: string | null };
+  pdfUrl?: string | null;
 }
 
 /** Página pública de assinatura por link (`/sign/:token`), sem login. */
@@ -124,21 +129,35 @@ export function SignScreen() {
               <div className="page-head">
                 <h1>Assinar documento</h1>
                 <p className="lead">
-                  {resumo.categoria} · {resumo.obra}
+                  {resumo.numero ? `${resumo.numero} · ` : ''}{resumo.categoria} · {resumo.obra}
                   {resumo.valor != null ? ` · ${formatBRL(resumo.valor)}` : ''}
                 </p>
               </div>
+              {resumo.v2 && resumo.partes && (
+                <div className="card flush doss" style={{ marginBottom: 14 }}>
+                  <div className="dl"><span className="k">Contratante</span><span className="v">{resumo.partes.contratante ?? '—'}</span></div>
+                  <div className="dl"><span className="k">Contratada</span><span className="v">{resumo.partes.contratada ?? '—'}</span></div>
+                  <div className="dl"><span className="k">Construtora</span><span className="v">{resumo.partes.construtora ?? '—'}</span></div>
+                </div>
+              )}
+              {resumo.v2 && resumo.pdfUrl && (
+                <a className="link" href={resumo.pdfUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', marginBottom: 14 }}>
+                  <Icon name="doc" /> Ler o contrato (PDF)
+                </a>
+              )}
               <div className="card" style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: 'var(--muted)' }}>
                   Você assina como
                 </div>
-                <div style={{ fontWeight: 900, fontSize: 15 }}>{PARTE_LABEL[resumo.parte]}</div>
+                <div style={{ fontWeight: 900, fontSize: 15 }}>{resumo.v2 ? `${resumo.signatario ?? ''} · ${PARTE_V2_LABEL[resumo.parte as ParteV2]}` : PARTE_LABEL[resumo.parte as ParteAssinatura]}</div>
               </div>
 
+              {!resumo.v2 && (
               <div className="field">
                 <label>Seu nome</label>
                 <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome de quem assina" />
               </div>
+              )}
 
               <div className="field">
                 <label>Assinatura</label>
@@ -152,7 +171,7 @@ export function SignScreen() {
                 </div>
               )}
 
-              <Button block icon="check" disabled={fase === 'assinando' || !nome.trim()} onClick={assinar}>
+              <Button block icon="check" disabled={fase === 'assinando' || (!resumo.v2 && !nome.trim())} onClick={assinar}>
                 {fase === 'assinando' ? 'Assinando…' : 'Assinar documento'}
               </Button>
             </>

@@ -3,7 +3,7 @@
 -- links por signatário (gestor), colaborador não; cancelar com motivo;
 -- emitido não se apaga. Dados fictícios. `supabase test db`.
 begin;
-select plan(24);
+select plan(30);
 
 select has_function('public', 'emitir_contrato', ARRAY['uuid', 'text', 'text', 'text', 'text', 'integer', 'uuid'], 'emitir_contrato existe');
 select has_function('public', 'gerar_links_assinatura', ARRAY['uuid', 'uuid'], 'gerar_links_assinatura existe');
@@ -89,6 +89,17 @@ select pg_temp.como('00000000-0000-4000-8000-00000000a002');
 select is((select count(*) from public.gerar_links_assinatura((select id from fxk))), 4::bigint, 'um link por signatário pendente');
 select is((select status from public.contratos where id = (select id from fxk)), 'enviado', 'primeiro link leva a enviado');
 select is((select count(*) from public.assinaturas where contrato_id = (select id from fxk) and token_hash is not null), 4::bigint, 'tokens guardados só como hash');
+select pg_temp.sair();
+
+-- trilha por RPC (servidor): cadeia de hashes a partir do pdf_hash; signatário só assina uma vez; todos obrigatórios → assinado
+create temporary table fxs as select id, parte from public.contrato_signatarios where contrato_id = (select id from fxk) order by ordem;
+select throws_like($$ select public.registrar_assinatura_v2((select id from fxk), (select id from fxs where parte = 'contratante'), 'hash-errado', 'd1', (select org from fx6) || '/' || (select id from fxk) || '/assinado-1.pdf', 'img', 'app', null, null, null) $$, '%alterado%', 'hash anterior diferente do pdf_hash da emissão é recusado');
+select is(public.registrar_assinatura_v2((select id from fxk), (select id from fxs where parte = 'contratante'), 'ph', 'd1', (select org from fx6) || '/' || (select id from fxk) || '/assinado-1.pdf', 'img', 'app', '00000000-0000-4000-8000-00000000a002', '127.0.0.1', 'ua'), false, 'primeira assinatura: ainda faltam obrigatórios');
+select is((select pdf_path from public.contratos where id = (select id from fxk)), (select org from fx6) || '/' || (select id from fxk) || '/assinado-1.pdf', 'ponteiro do PDF avança');
+select throws_like($$ select public.registrar_assinatura_v2((select id from fxk), (select id from fxs where parte = 'contratante'), 'd1', 'd2', (select org from fx6) || '/' || (select id from fxk) || '/assinado-2.pdf', 'img', 'app', null, null, null) $$, '%já assinou%', 'signatário não assina duas vezes');
+select throws_like($$ select public.registrar_assinatura_v2((select id from fxk), (select id from fxs where parte = 'contratada'), 'ph', 'd2', (select org from fx6) || '/' || (select id from fxk) || '/assinado-2.pdf', 'img', 'link', null, null, null) $$, '%alterado%', 'cadeia: hash da emissão já não vale depois da 1ª assinatura');
+select is(public.registrar_assinatura_v2((select id from fxk), (select id from fxs where parte = 'contratada'), 'd1', 'd2', (select org from fx6) || '/' || (select id from fxk) || '/assinado-2.pdf', 'img', 'link', null, null, null), false, 'segunda assinatura entra na cadeia');
+select pg_temp.como('00000000-0000-4000-8000-00000000a002');
 select throws_ok($$ select public.apagar_contrato((select id from fxk)) $$, 'P0001', null, 'enviado não se apaga pela RPC');
 select throws_ok($$ update public.contratos set deleted_at = now() where id = (select id from fxk) $$, 'P0001', null, 'enviado não se apaga por update direto');
 select throws_ok($$ select public.cancelar_contrato((select id from fxk), 'x') $$, 'P0001', 'Cancelar exige um motivo.', 'cancelar sem motivo falha');

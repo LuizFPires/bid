@@ -11,6 +11,7 @@ import {
   dossieDesatualizado,
   formatBRL,
   formatarCnpj,
+  gerencia,
   justificativaValida,
   mascararCpf,
   totalPlanilha,
@@ -21,10 +22,12 @@ import {
 import { Button, Icon } from '@bid/ui';
 import { BarraAcao } from '../app/BarraAcao';
 import { Drawer } from '../app/Drawer';
+import { usePapelObra } from '../data/hooks';
 import { useToast } from '../app/Toast';
 import { EtapaCondicoes, EtapaPlanilha } from './ContratoV2Etapas';
 import { EtapaMinuta, PainelEnvio, PainelValidacao } from './ContratoV2Minuta';
-import { useAprovacaoVigente, useContratoV2, useMontarDossie, useResolverAchado, useRevisarContrato, useSalvarContratoV2, type AchadoV2, type ContratoV2Detalhe } from '../data/contrato-v2';
+import { PainelEmitido } from './ContratoV2Emissao';
+import { useAprovacaoVigente, useContratoV2, useEmitirContrato, useMontarDossie, useResolverAchado, useRevisarContrato, useSalvarContratoV2, type AchadoV2, type ContratoV2Detalhe } from '../data/contrato-v2';
 
 type Etapa = 'dossie' | 'partes' | 'quadro' | 'planilha' | 'condicoes' | 'minuta' | 'revisao';
 const ETAPAS: { chave: Etapa; n: number; rotulo: string }[] = [
@@ -50,6 +53,8 @@ export function ContratoV2Screen({ id }: { id: string }) {
   const sondar = revisar.isPending;
   const { data, isLoading, isError } = useContratoV2(id, { sondar });
   const aprovacao = useAprovacaoVigente(id);
+  const emitir = useEmitirContrato(id);
+  const papel = usePapelObra(data?.obraId);
   const toast = useToast();
 
   if (isLoading) {
@@ -110,6 +115,7 @@ export function ContratoV2Screen({ id }: { id: string }) {
         </span>
       </div>
 
+      {['emitido', 'enviado', 'assinado', 'cancelado'].includes(data.status) && <PainelEmitido c={data} />}
       {data.status === 'em_validacao' && <PainelValidacao c={data} />}
       {data.status === 'devolvido' && aprovacao.data?.acao === 'devolvido' && (
         <div className="banner warn" role="status" style={{ marginTop: 14 }}>
@@ -120,7 +126,7 @@ export function ContratoV2Screen({ id }: { id: string }) {
       {data.status === 'aprovado' && (
         <div className="banner ok" role="status" style={{ marginTop: 14 }}>
           <Icon name="check" />
-          <span><b>Aprovado.</b> Qualquer edição volta o contrato a rascunho e exige nova validação (RC-10). A emissão com número entra no próximo passo.</span>
+          <span><b>Aprovado.</b> Qualquer edição volta o contrato a rascunho e exige nova validação (RC-10). {gerencia(papel) ? 'Emita para gerar o número e a versão final.' : 'O dono ou um gestor emite o contrato.'}</span>
         </div>
       )}
 
@@ -145,8 +151,13 @@ export function ContratoV2Screen({ id }: { id: string }) {
         </>
       )}
 
+      {!['emitido', 'enviado', 'assinado', 'cancelado'].includes(data.status) && (
       <BarraAcao>
-        {etapa === 'revisao' ? (
+        {data.status === 'aprovado' && gerencia(papel) ? (
+          <Button block icon="check" disabled={emitir.isPending} onClick={() => void emitir.mutateAsync().then((r) => toast(`Contrato ${r.numero} emitido (${r.paginas} páginas).`)).catch((e) => toast(e instanceof Error ? e.message : 'Não foi possível emitir.'))}>
+            {emitir.isPending ? 'Emitindo…' : 'Emitir contrato'}
+          </Button>
+        ) : etapa === 'revisao' ? (
           <Button block icon="spark" disabled={!editavel || revisar.isPending || !data.dossie} onClick={() => void rodarRevisao()}>
             {revisar.isPending ? 'IA revisando…' : revisaoAtual ? 'Refazer revisão' : 'Revisar com IA'}
           </Button>
@@ -156,6 +167,7 @@ export function ContratoV2Screen({ id }: { id: string }) {
           </Button>
         )}
       </BarraAcao>
+      )}
     </>
   );
 }

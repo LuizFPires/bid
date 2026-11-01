@@ -179,3 +179,75 @@ revoke all on function public.gerar_links_assinatura(uuid, uuid) from public, an
 grant execute on function public.gerar_links_assinatura(uuid, uuid) to authenticated;
 revoke all on function public.cancelar_contrato(uuid, text) from public, anon;
 grant execute on function public.cancelar_contrato(uuid, text) to authenticated;
+
+-- ---------- trilha da assinatura v2: transação única no banco (service_role) ----------
+-- O servidor carimba o PDF e grava o arquivo num caminho NOVO por versão; a
+-- trilha, a troca do ponteiro (contratos.pdf_path) e a transição para
+-- `assinado` acontecem aqui, com trava da linha do contrato e compare-and-swap
+-- do hash da cadeia (último doc_hash ou pdf_hash da emissão). Duas assinaturas
+-- simultâneas não se sobrescrevem: a segunda lê a cadeia já avançada e falha.
+create or replace function public.registrar_assinatura_v2(
+  p_contrato uuid,
+  p_signatario uuid,
+  p_hash_anterior text,
+  p_doc_hash text,
+  p_pdf_path text,
+  p_img_path text,
+  p_via text,
+  p_coletado_por uuid,
+  p_ip text,
+  p_user_agent text
+) returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_org uuid; v_status text; v_pdf_hash text; v_cadeia text; v_parte text; v_nome text; v_id uuid; v_todas boolean;
+begin
+  if auth.uid() is not null then raise exception 'registrar_assinatura_v2 é só do servidor'; end if;
+  select org_id, status, pdf_hash into v_org, v_status, v_pdf_hash
+    from public.contratos where id = p_contrato and deleted_at is null and modelo_id is not null for update;
+  if v_org is null then raise exception 'contrato não encontrado'; end if;
+  if v_status not in ('emitido', 'enviado') then raise exception 'contrato não está em assinatura (status %)', v_status; end if;
+  if p_pdf_path !~ ('^' || v_org::text || '/' || p_contrato::text || '/') then raise exception 'caminho do PDF fora do contrato'; end if;
+
+  select a.doc_hash into v_cadeia from public.assinaturas a
+   where a.contrato_id = p_contrato and a.doc_hash is not null order by a.assinado_em desc limit 1;
+  v_cadeia := coalesce(v_cadeia, v_pdf_hash);
+  if v_cadeia is distinct from p_hash_anterior then
+    raise exception 'O documento foi alterado desde a emissão ou a última assinatura.';
+  end if;
+
+  select s.parte, s.nome into v_parte, v_nome from public.contrato_signatarios s where s.id = p_signatario and s.contrato_id = p_contrato;
+  if v_parte is null then raise exception 'signatário não pertence ao contrato'; end if;
+  select a.id into v_id from public.assinaturas a where a.contrato_id = p_contrato and a.signatario_id = p_signatario;
+  if v_id is not null and exists (select 1 from public.assinaturas where id = v_id and assinado_em is not null) then
+    raise exception 'Este signatário já assinou.';
+  end if;
+  if v_id is null then
+    insert into public.assinaturas (org_id, contrato_id, signatario_id, parte, signatario_nome, assinatura_img_path, via, coletado_por, assinado_em, ip, user_agent, doc_hash, token_hash, token_expira)
+      values (v_org, p_contrato, p_signatario, v_parte, v_nome, p_img_path, p_via, p_coletado_por, now(), p_ip, p_user_agent, p_doc_hash, null, null);
+  else
+    update public.assinaturas
+       set assinatura_img_path = p_img_path, via = p_via, coletado_por = p_coletado_por, assinado_em = now(),
+           ip = p_ip, user_agent = p_user_agent, doc_hash = p_doc_hash, token_hash = null, token_expira = null, signatario_nome = coalesce(signatario_nome, v_nome)
+     where id = v_id;
+  end if;
+
+  v_todas := not exists (
+    select 1 from public.contrato_signatarios s
+     where s.contrato_id = p_contrato and s.obrigatorio
+       and not exists (select 1 from public.assinaturas a where a.signatario_id = s.id and a.assinado_em is not null)
+  );
+  update public.contratos
+     set pdf_path = p_pdf_path, status = case when v_todas then 'assinado' else status end
+   where id = p_contrato;
+  insert into public.eventos (org_id, entidade, entidade_id, tipo, payload)
+    values (v_org, 'contrato', p_contrato,
+            case when v_todas then 'contrato_assinado' else 'assinatura_coletada' end,
+            jsonb_build_object('signatario', p_signatario, 'parte', v_parte, 'via', p_via, 'doc_hash', p_doc_hash));
+  return v_todas;
+end;
+$$;
+revoke all on function public.registrar_assinatura_v2(uuid, uuid, text, text, text, text, text, uuid, text, text) from public, anon, authenticated;
+grant execute on function public.registrar_assinatura_v2(uuid, uuid, text, text, text, text, text, uuid, text, text) to service_role;

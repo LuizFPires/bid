@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Achado, BlocoModelo, CatalogoModelo, Dossie, ItemClausula, ParametroClausula, PartesContrato, SignatarioContrato, StatusContratoV2, VarianteModelo } from '@bid/core';
+import type { Achado, BlocoModelo, CatalogoModelo, Dossie, ItemClausula, ParametroClausula, ParteV2, PartesContrato, SignatarioContrato, StatusContratoV2, VarianteModelo } from '@bid/core';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -360,4 +360,80 @@ export function useAprovarContrato(id: string | undefined) {
 export function useDevolverContrato(id: string | undefined) {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (comentario: string) => devolverContrato(id as string, comentario), onSettled: () => invalidarContrato(qc, id) });
+}
+
+/* ---------- M13: emissão, download, links e assinatura por signatário ---------- */
+export interface AssinaturaV2Linha {
+  signatarioId: string | null;
+  parte: ParteV2;
+  signatarioNome: string | null;
+  assinadoEm: string | null;
+  via: 'app' | 'link' | null;
+  temLink: boolean;
+  linkExpira: string | null;
+}
+
+export async function fetchAssinaturasV2(contratoId: string): Promise<AssinaturaV2Linha[]> {
+  const { data, error } = await db().from('assinaturas').select('signatario_id, parte, signatario_nome, assinado_em, via, token_hash, token_expira').eq('contrato_id', contratoId);
+  if (error) throw error;
+  return ((data ?? []) as { signatario_id: string | null; parte: ParteV2; signatario_nome: string | null; assinado_em: string | null; via: 'app' | 'link' | null; token_hash: string | null; token_expira: string | null }[]).map((r) => ({
+    signatarioId: r.signatario_id,
+    parte: r.parte,
+    signatarioNome: r.signatario_nome,
+    assinadoEm: r.assinado_em,
+    via: r.via,
+    temLink: !!r.token_hash && (!r.token_expira || new Date(r.token_expira).getTime() > Date.now()),
+    linkExpira: r.token_expira,
+  }));
+}
+
+export async function emitirContrato(contratoId: string): Promise<{ numero: string; paginas: number }> {
+  return post('/api/contracts/emitir', { contratoId });
+}
+
+/** URL assinada (60 s) do arquivo emitido; abrir dentro do gesto do usuário. */
+export async function urlDownloadEmitido(contratoId: string, formato: 'docx' | 'pdf'): Promise<{ url: string; nome: string }> {
+  const resp = await fetch(`/api/contracts/download?id=${encodeURIComponent(contratoId)}&formato=${formato}`, { headers: { Authorization: `Bearer ${await token()}` } });
+  const corpo = (await resp.json().catch(() => null)) as { url?: string; nome?: string; erro?: string } | null;
+  if (!resp.ok || !corpo?.url) throw new Error(corpo?.erro ?? `Falha (HTTP ${resp.status}).`);
+  return { url: corpo.url, nome: corpo.nome ?? `contrato.${formato}` };
+}
+
+export async function gerarLinksAssinatura(contratoId: string, signatarioId?: string): Promise<{ signatarioId: string; nome: string; parte: ParteV2; token: string }[]> {
+  const { data, error } = await db().rpc('gerar_links_assinatura', { p_contrato: contratoId, p_signatario: signatarioId ?? null });
+  if (error) throw error;
+  return ((data ?? []) as { signatario_id: string; nome: string; parte: ParteV2; token: string }[]).map((r) => ({ signatarioId: r.signatario_id, nome: r.nome, parte: r.parte, token: r.token }));
+}
+
+export async function coletarAssinaturaApp(contratoId: string, signatarioId: string, pngBase64: string): Promise<{ assinado: boolean }> {
+  return post('/api/contracts/sign', { contratoId, signatarioId, pngBase64 });
+}
+
+export async function cancelarContrato(contratoId: string, motivo: string): Promise<void> {
+  const { error } = await db().rpc('cancelar_contrato', { p_contrato: contratoId, p_motivo: motivo });
+  if (error) throw error;
+}
+
+export function useAssinaturasV2(contratoId: string | undefined) {
+  return useQuery({ queryKey: ['assinaturas-v2', contratoId], queryFn: () => fetchAssinaturasV2(contratoId as string), enabled: !!contratoId });
+}
+function invalidarEmissao(qc: ReturnType<typeof useQueryClient>, id: string | undefined) {
+  invalidarContrato(qc, id);
+  qc.invalidateQueries({ queryKey: ['assinaturas-v2', id] });
+}
+export function useEmitirContrato(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: () => emitirContrato(id as string), onSettled: () => invalidarEmissao(qc, id) });
+}
+export function useGerarLinksAssinatura(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (signatarioId?: string) => gerarLinksAssinatura(id as string, signatarioId), onSettled: () => invalidarEmissao(qc, id) });
+}
+export function useColetarAssinatura(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (v: { signatarioId: string; pngBase64: string }) => coletarAssinaturaApp(id as string, v.signatarioId, v.pngBase64), onSettled: () => invalidarEmissao(qc, id) });
+}
+export function useCancelarContrato(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (motivo: string) => cancelarContrato(id as string, motivo), onSettled: () => invalidarEmissao(qc, id) });
 }
