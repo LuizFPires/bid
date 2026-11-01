@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Achado, Dossie, ItemClausula, PartesContrato, SignatarioContrato, StatusContratoV2 } from '@bid/core';
+import type { Achado, BlocoModelo, Dossie, ItemClausula, PartesContrato, SignatarioContrato, StatusContratoV2 } from '@bid/core';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -232,4 +232,26 @@ export function useResolverAchado(id: string | undefined) {
     mutationFn: (v: { achadoId: string; resolucao: 'corrigido' | 'aceito'; justificativa?: string }) => resolverAchado(v.achadoId, v.resolucao, v.justificativa),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['contrato-v2', id] }),
   });
+}
+
+/* ---------- biblioteca de blocos do modelo (M11) ---------- */
+export async function fetchBlocosModelo(modeloId: string): Promise<BlocoModelo[]> {
+  const { data, error } = await db()
+    .from('modelo_blocos')
+    .select('chave, titulo, categorias, quando, itens_anexo, altera_clausulas, parametros')
+    .eq('modelo_id', modeloId)
+    .order('titulo');
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[]).map((b) => ({
+    chave: String(b.chave),
+    titulo: String(b.titulo),
+    categorias: Array.isArray(b.categorias) ? (b.categorias as string[]) : [],
+    quando: (b.quando as string | null) ?? null,
+    itens_anexo: Array.isArray(b.itens_anexo) ? (b.itens_anexo as string[]) : [],
+    altera_clausulas: Array.isArray(b.altera_clausulas) ? (b.altera_clausulas as BlocoModelo['altera_clausulas']) : [],
+    parametros: Array.isArray(b.parametros) ? (b.parametros as BlocoModelo['parametros']) : [],
+  }));
+}
+export function useBlocosModelo(modeloId: string | undefined) {
+  return useQuery({ queryKey: ['modelo-blocos', modeloId], queryFn: () => fetchBlocosModelo(modeloId as string), enabled: !!modeloId, staleTime: 5 * 60_000 });
 }

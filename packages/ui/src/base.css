@@ -3310,3 +3310,17 @@ table.eq .nota-eq.warn {
   font-style: italic;
   line-height: 1.45;
 }
+
+/* ===== Contrato v2 · planilha (etapa 4) e condições (etapa 5) ===== */
+table.pl { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.pl td { padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+table.pl tr:first-child td { border-top: 0; }
+table.pl td.r { text-align: right; white-space: nowrap; font-weight: 800; font-variant-numeric: tabular-nums; }
+table.pl tr.g td { background: var(--bg-2, var(--bg)); font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: .02em; }
+table.pl tr.total td { background: transparent; text-transform: none; font-size: 14px; color: var(--ink); }
+table.pl .cod { display: inline-block; min-width: 28px; margin-right: 8px; color: var(--muted); font-weight: 800; font-variant-numeric: tabular-nums; }
+table.pl .mut { color: var(--muted); font-size: 12px; margin-top: 2px; font-weight: 600; }
+table.pl i { color: var(--muted); font-style: italic; font-weight: 500; }
+.rowlist .row .ck { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line-2, var(--line)); display: inline-flex; align-items: center; justify-content: center; color: var(--on-accent, var(--ink)); margin-right: 12px; }
+.rowlist .row .ck.on { background: var(--accent); border-color: var(--accent); }
+.rowlist .row .ck svg { width: 14px; height: 14px; }

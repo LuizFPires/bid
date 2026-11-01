@@ -7,11 +7,13 @@ import {
   camposFaltando,
   cpfValido,
   destaquesDoDossie,
+  divergenciaValor,
   dossieDesatualizado,
   formatBRL,
   formatarCnpj,
   justificativaValida,
   mascararCpf,
+  totalPlanilha,
   type Dossie,
   type ParteSnapshot,
   type SignatarioContrato,
@@ -20,20 +22,23 @@ import { Button, Icon } from '@bid/ui';
 import { BarraAcao } from '../app/BarraAcao';
 import { Drawer } from '../app/Drawer';
 import { useToast } from '../app/Toast';
+import { EtapaCondicoes, EtapaPlanilha } from './ContratoV2Etapas';
 import { useContratoV2, useMontarDossie, useResolverAchado, useRevisarContrato, useSalvarContratoV2, type AchadoV2, type ContratoV2Detalhe } from '../data/contrato-v2';
 
-type Etapa = 'dossie' | 'partes' | 'quadro' | 'revisao';
+type Etapa = 'dossie' | 'partes' | 'quadro' | 'planilha' | 'condicoes' | 'revisao';
 const ETAPAS: { chave: Etapa; n: number; rotulo: string }[] = [
   { chave: 'dossie', n: 1, rotulo: 'Dossiê' },
   { chave: 'partes', n: 2, rotulo: 'Partes' },
   { chave: 'quadro', n: 3, rotulo: 'Quadro' },
+  { chave: 'planilha', n: 4, rotulo: 'Planilha' },
+  { chave: 'condicoes', n: 5, rotulo: 'Condições' },
   { chave: 'revisao', n: 7, rotulo: 'Revisão IA' },
 ];
 
 /**
- * Assistente do contrato na minuta padrão (M10: etapas 1–3 e 7). As etapas 4–6
- * (planilha, condições específicas, minuta/variantes) entram nos M11/M12; o
- * envio para validação, no M12. Nada aqui monta texto de contrato (regra 15).
+ * Assistente do contrato na minuta padrão (M10: etapas 1–3 e 7; M11: 4 planilha
+ * e 5 condições específicas/Anexo III). A etapa 6 (minuta/variantes) e o envio
+ * para validação entram no M12. Nada aqui monta texto de contrato (regra 15).
  */
 export function ContratoV2Screen({ id }: { id: string }) {
   const navigate = useNavigate();
@@ -64,6 +69,8 @@ export function ContratoV2Screen({ id }: { id: string }) {
     dossie: !!data.dossie,
     partes: faltamPartes === 0,
     quadro: faltamQuadro === 0,
+    planilha: data.planilha.some((l) => !l.grupo) && !divergenciaValor(totalPlanilha(data.planilha), data.dossie?.proposta.valor ?? null).difere,
+    condicoes: data.parametros.anexo_iii_incluir === 'sim' || data.parametros.anexo_iii_incluir === 'nao',
     revisao: !!revisaoAtual && bloqueantes === 0,
   };
   const irPara = (e: Etapa) => setParams({ etapa: e }, { replace: true });
@@ -105,12 +112,14 @@ export function ContratoV2Screen({ id }: { id: string }) {
             <span className="n">{ok[e.chave] ? <Icon name="check" /> : e.n}</span> {e.rotulo}
           </button>
         ))}
-        <span className="ch off" aria-disabled="true">4–6 · em breve</span>
+        <span className="ch off" aria-disabled="true">6 · em breve</span>
       </div>
 
       {etapa === 'dossie' && <EtapaDossie c={data} editavel={editavel} />}
       {etapa === 'partes' && <EtapaPartes c={data} editavel={editavel} />}
       {etapa === 'quadro' && <EtapaQuadro c={data} editavel={editavel} />}
+      {etapa === 'planilha' && <EtapaPlanilha c={data} editavel={editavel} />}
+      {etapa === 'condicoes' && <EtapaCondicoes c={data} editavel={editavel} />}
       {etapa === 'revisao' && <EtapaRevisao c={data} editavel={editavel} rodando={revisar.isPending} />}
 
       <BarraAcao>
@@ -442,7 +451,7 @@ function EtapaRevisao({ c, editavel, rodando }: { c: ContratoV2Detalhe; editavel
       } else if (/^\d+(\.\d+)*$/.test(a.numero)) {
         const item = c.itens.find((i) => i.numero === a.numero);
         if (!item) return toast('Item não encontrado no contrato.');
-        if (item.blocoChave) return toast('Este item vem de uma condição específica: ajuste na etapa de condições (em breve).');
+        if (item.blocoChave) return toast('Este item vem de uma condição específica: ajuste na etapa 5 (Condições).');
         await salvar.mutateAsync({ itens: [{ ...item, texto: a.sugestao, origem: 'variante', justificativa: `Sugestão da revisão IA: ${a.titulo}` }] });
       } else {
         return toast('Aplique esta sugestão manualmente na etapa correspondente.');
