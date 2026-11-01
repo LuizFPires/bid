@@ -16,3 +16,4 @@ export * from './assinatura-pdf';
 export * from './assinar';
 export * from './contrato-docx';
 export * from './contrato-pdf';
+export * from './contrato-carregar';

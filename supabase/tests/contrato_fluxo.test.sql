@@ -4,7 +4,7 @@
 -- com comentário; editar aprovado volta a rascunho e supera a aprovação (RC-10);
 -- autoaprovação registrada (Q2). Dados fictícios. `supabase test db`.
 begin;
-select plan(26);
+select plan(29);
 
 select has_table('public', 'contrato_aprovacoes', 'aprovações existem');
 select has_function('public', 'enviar_validacao', ARRAY['uuid', 'text'], 'enviar_validacao existe');
@@ -58,12 +58,19 @@ select is((select status from public.contratos where id = (select id from fxk)),
 select throws_ok($$ select public.enviar_validacao((select id from fxk), 'h1') $$, 'P0001', 'O conteúdo mudou: gere a minuta de novo antes de enviar.', 'sem hash do servidor não envia');
 select pg_temp.sair();
 
--- servidor grava hash e marcador vazio
-update public.contratos set conteudo_hash = 'h1', parametros = parametros || '{"_faltando":["q_seguros"]}'::jsonb where id = (select id from fxk);
+-- servidor grava hash; sem `faltando` conferido, falha fechado
+update public.contratos set conteudo_hash = 'h1', faltando = null where id = (select id from fxk);
+select pg_temp.como('00000000-0000-4000-8000-00000000f003');
+select throws_like($$ select public.enviar_validacao((select id from fxk), 'h1') $$, '%Gere a minuta antes de enviar%', 'sem pendências conferidas pelo servidor não envia');
+select throws_ok($$ update public.contratos set faltando = '[]'::jsonb where id = (select id from fxk) $$, 'P0001', null, 'cliente não grava faltando');
+select lives_ok($$ select public.salvar_contrato((select id from fxk), '{"parametros":{"_faltando":[]}}'::jsonb) $$, 'cliente pode gravar parâmetros…');
+select pg_temp.sair();
+select is((select conteudo_versao from public.contratos where id = (select id from fxk)), 1, '…e editar conteúdo sobe a versão e zera hash');
+update public.contratos set conteudo_hash = 'h1', faltando = '["q_seguros"]'::jsonb where id = (select id from fxk);
 select pg_temp.como('00000000-0000-4000-8000-00000000f003');
 select throws_like($$ select public.enviar_validacao((select id from fxk), 'h1') $$, '%marcador(es) vazio(s)%', 'marcador vazio bloqueia o envio (RC-09)');
 select pg_temp.sair();
-update public.contratos set parametros = parametros - '_faltando' where id = (select id from fxk);
+update public.contratos set faltando = '[]'::jsonb where id = (select id from fxk);
 
 -- sem revisão concluída para o hash
 select pg_temp.como('00000000-0000-4000-8000-00000000f003');

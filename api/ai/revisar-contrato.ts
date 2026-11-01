@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
-import { contarPorSeveridade, hashDocumento, type Dossie } from '@bid/core';
-import { IAErro, MissingEnvError, bearer, detectarMidia, env, requireMethod, revisaoSimulada, revisarContrato, serviceClient, textoDoContrato, userClient, type ContratoParaRevisao, type DocumentoProposta } from '@bid/server';
+import { contarPorSeveridade, type Dossie } from '@bid/core';
+import { IAErro, MissingEnvError, bearer, carregarContratoV2, detectarMidia, gravarHashConteudo, env, requireMethod, resolverEHash, revisaoSimulada, revisarContrato, serviceClient, textoDoContrato, userClient, type ContratoParaRevisao, type DocumentoProposta } from '@bid/server';
 
 const MAX_PDF_BYTES = 8 * 1024 * 1024;
 
@@ -64,8 +64,12 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     blocos: blocos.map((b) => ({ chave: b.bloco_chave, titulo: b.titulo, itens: Array.isArray(b.itens) ? b.itens : [] })),
     valor: c.valor,
   };
-  // Hash do conteúdo atual (a revisão vale para este hash; o envio exige igualdade).
-  const hash = await hashDocumento({ parametros: contrato.parametros, partes: contrato.partes, itens: contrato.itens, planilha: contrato.planilha, blocos: contrato.blocos, signatarios });
+  // Hash do conteúdo atual = hash do DOCUMENTO RESOLVIDO (o mesmo da minuta e da
+  // emissão); a revisão vale para este hash e o envio exige igualdade.
+  const carregado = await carregarContratoV2(sb, c.id);
+  if (!carregado) return void res.status(404).json({ erro: 'Contrato não encontrado.' });
+  const { hash } = await resolverEHash(carregado);
+  void signatarios;
 
   let svc;
   try {
@@ -82,7 +86,10 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     .single();
   if (rErr || !rev) return void res.status(502).json({ erro: 'Não foi possível abrir a revisão.' });
   const revisaoId = (rev as { id: string }).id;
-  await svc.from('contratos').update({ conteudo_hash: hash }).eq('id', c.id);
+  if (!(await gravarHashConteudo(svc, carregado, hash, null))) {
+    await svc.from('contrato_revisoes').update({ status: 'falhou', erro: 'conteudo_mudou' }).eq('id', revisaoId);
+    return void res.status(409).json({ erro: 'O contrato mudou enquanto a revisão começava. Tente de novo.' });
+  }
 
   // Arquivo original da proposta (no contexto do usuário), se couber.
   let documento: DocumentoProposta | null = null;
