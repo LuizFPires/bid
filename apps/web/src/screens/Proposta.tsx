@@ -222,6 +222,15 @@ export function PropostaScreen() {
     }
   }
 
+  function avisarContrato() {
+    const k = data?.contrato;
+    if (!k) return;
+    toast(`Não dá: esta proposta tem contrato ${k.numero ?? ''} (${CONTRATO_LABEL[k.status].texto}). Apague ou cancele o contrato antes.`, {
+      actionLabel: 'Ver contrato',
+      onAction: () => navigate(`/contratos/${k.id}`),
+    });
+  }
+
   async function apagarEsta() {
     if (!data) return;
     const propostaId = data.id;
@@ -268,7 +277,7 @@ export function PropostaScreen() {
           <PropMenu
             apagando={apagar.isPending}
             onEditar={() => setModo('editar')}
-            onApagar={gerencia(papelObra) && !data.contrato ? () => setConfirmando(true) : undefined}
+            onApagar={gerencia(papelObra) ? () => (data.contrato ? avisarContrato() : setConfirmando(true)) : undefined}
           />
         )}
       </div>
@@ -302,8 +311,8 @@ export function PropostaScreen() {
           <button type="button" className="link" onClick={() => navigate(`/contratos/${data.contrato!.id}`)}>Ver contrato</button>
         </div>
       )}
-      {data.status === 'vencedora' && modo === 'ver' && !data.contrato && (
-        <button type="button" className="link" style={{ marginTop: -4, marginBottom: 8 }} onClick={() => setConfirmandoReverter(true)}>
+      {data.status === 'vencedora' && modo === 'ver' && (
+        <button type="button" className="link" style={{ marginTop: -4, marginBottom: 8 }} onClick={() => (data.contrato ? avisarContrato() : setConfirmandoReverter(true))}>
           <Icon name="back" /> Desfazer vencedora (voltar a comparar)
         </button>
       )}

@@ -27,6 +27,14 @@ export function PropostasScreen() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [paraApagar, setParaApagar] = useState<PropostaAcervo | null>(null);
+  // Proposta com contrato ativo não se apaga: a ação continua visível e explica o porquê.
+  function avisarContrato(p: PropostaAcervo) {
+    const k = p.contrato!;
+    toast(`Não dá para apagar: esta proposta tem contrato ${k.numero ?? ''} (${CONTRATO_LABEL[k.status as ContratoStatus].texto}). Apague ou cancele o contrato antes.`, {
+      actionLabel: 'Ver contrato',
+      onAction: () => navigate(`/contratos/${k.id}`),
+    });
+  }
   async function confirmarApagar() {
     if (!paraApagar) return;
     const alvo = paraApagar;
@@ -170,7 +178,7 @@ export function PropostasScreen() {
           </div>
           <div className="card rowlist">
             {lista.map((p) => (
-              <SwipeRow key={p.id} onApagar={gerencia(papeis.data?.get(p.obraId)) && !p.contrato ? () => setParaApagar(p) : undefined}>
+              <SwipeRow key={p.id} onApagar={gerencia(papeis.data?.get(p.obraId)) ? () => (p.contrato ? avisarContrato(p) : setParaApagar(p)) : undefined}>
                 <AcervoRow p={p} />
               </SwipeRow>
             ))}
