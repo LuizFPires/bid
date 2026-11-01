@@ -72,8 +72,13 @@ export async function registrarAssinaturaV2(sb: SupabaseClient, d: DadosAssinatu
   const novoPath = `${d.orgId}/${d.contratoId}/assinado-${docHash.slice(0, 16)}.pdf`;
   const up = await sb.storage.from('contratos').upload(novoPath, assinado, { upsert: false, contentType: 'application/pdf' });
   if (up.error) throw new Error('Falha ao salvar o PDF assinado.');
-  const imgPath = `${d.orgId}/${d.contratoId}-${d.signatarioId}.png`;
-  await sb.storage.from('assinaturas').upload(imgPath, pngBytes, { upsert: true, contentType: 'image/png' });
+  // Imagem da assinatura: caminho imutável por versão (nunca sobrescreve a de uma assinatura válida).
+  const imgPath = `${d.orgId}/${d.contratoId}/${d.signatarioId}-${docHash.slice(0, 16)}.png`;
+  const upImg = await sb.storage.from('assinaturas').upload(imgPath, pngBytes, { upsert: false, contentType: 'image/png' });
+  if (upImg.error) {
+    await sb.storage.from('contratos').remove([novoPath]);
+    throw new Error('Falha ao guardar a imagem da assinatura.');
+  }
 
   const { data, error } = await sb.rpc('registrar_assinatura_v2', {
     p_contrato: d.contratoId,
@@ -89,6 +94,7 @@ export async function registrarAssinaturaV2(sb: SupabaseClient, d: DadosAssinatu
   });
   if (error) {
     await sb.storage.from('contratos').remove([novoPath]);
+    await sb.storage.from('assinaturas').remove([imgPath]);
     throw new Error(error.message.replace(/^.*?: /, '') || 'Falha ao registrar a assinatura.');
   }
   return { assinado: data === true };
