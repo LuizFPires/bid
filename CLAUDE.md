@@ -15,6 +15,7 @@ A hierarquia de prioridades do produto guia a UX e a ordem de construção:
 - `SPEC.md`: como (stack, arquitetura, modelo de dados, IA, contrato, assinatura, infra).
 - `PLAN.md`: ordem de execução por **milestones**, com checklists e critérios de aceite.
 - `prototipo-bid.html`: o protótipo navegável aprovado — referência visual e de fluxo.
+- **Contratos na minuta padrão (M9–M14):** `docs/contratos/PRD-contratos.md` (RC-01…RC-17, papéis, estados), `docs/contratos/SPEC-contratos.md` (dados, RLS, RPCs, core, servidor, IA, assinatura), `docs/contratos/PLAN-contratos.md`, `docs/contratos/ref/` (motor de referência). `docs/contratos/_privado/` (modelo .docx, catálogo, biblioteca, dicionário) fica **fora do git**; o modelo sobe pelo `scripts/seed-modelo-contrato.mjs`.
 
 Antes de implementar: localize o milestone atual no PLAN.md, leia as seções correspondentes do PRD e do SPEC e só então codifique. Ao terminar um item, marque o checkbox no PLAN.md e registre desvios em "Decisões".
 
@@ -44,7 +45,14 @@ React 18 + TypeScript + Vite (PWA) · TanStack Query · Supabase (Postgres, Auth
 10. **Nada se apaga de fato.** Exclusão lógica (`deleted_at`) e tabela de `eventos` para propostas, versões, contratos e assinaturas.
 11. **Ações destrutivas pedem confirmação e têm "Desfazer".** Toda exclusão abre um modal de confirmação (`ConfirmDialog`) antes de efetivar e, depois, toast de 5 s com Desfazer onde for reversível.
 12. **RLS em tudo.** Migration sempre com política e teste de política no mesmo PR. Arquivos em buckets privados (URL assinada).
-13. **Acesso é por obra.** Quem cria a obra é o dono; os demais só veem a obra após aceitar um convite do dono (`obra_convites`). Só o dono apaga a obra. Não reintroduza acesso por "membro da organização".
+13. **Acesso é por obra, com papéis.** Quem cria a obra é o **dono**; os demais entram por convite aceito com papel **gestor** ou **colaborador** (`obra_convites.papel`). Dono e gestor gerenciam (aprovam e emitem contratos, apagam propostas/equalizações/contratos, convidam e trocam papéis). Colaborador sobe, equaliza, monta contrato e envia para validação — **não aprova, não emite, não apaga**. Só o dono apaga a obra (Q1). Use `papel_obra()` / `gerencia_obra()`; não reintroduza acesso por "membro da organização".
+14. **Contrato oficial vem do modelo versionado.** O texto da minuta mora em `contrato_modelos` (catálogo + .docx em bucket privado). Nunca escreva texto de cláusula no código, em migration ou em `seed.sql`.
+15. **Um documento resolvido, dois formatos.** .docx e PDF saem do mesmo `DocumentoResolvido` (core); o hash é desse JSON canônico. Telas não montam texto de contrato.
+16. **Todo item tem origem.** `padrao | parametro | proposta | bloco | variante`. Variante exige justificativa; variante que reduz proteção exige aprovação explícita de dono/gestor, item a item.
+17. **Revisão por IA é obrigatória e não pode ser desligada.** Sempre compara minuta × proposta e aponta conflitos; refaz quando o conteúdo muda; achado alto sem resolução bloqueia o envio. A IA não aprova nem altera o contrato.
+18. **Aprovação vale para um hash.** Editar depois de aprovado volta a rascunho. Emitido é imutável; numeração `CT-AAAA-NNN` só na emissão, no banco, em transação.
+19. **Equalização não vai para o contrato** (sigilo entre concorrentes, cláusula 21.1). O dossiê usa só os dados da vencedora.
+20. **Dados fictícios em testes.** Enquanto o repositório for público, casos de teste, seeds e fixtures usam só dados inventados (`docs/contratos/casos/`). Nunca copie contrato, proposta, CNPJ ou nome real para o repo.
 
 ## Design system bid
 
@@ -64,7 +72,7 @@ React 18 + TypeScript + Vite (PWA) · TanStack Query · Supabase (Postgres, Auth
 ## Linguagem e formatos
 - Toda a UI em **pt-BR**.
 - Datas "qua 21/10"; completa "quinta, 03/12/2026". Números no padrão brasileiro (1.234,56).
-- Vocabulário: proposta, versão/revisão, certame (tomada de preços), categoria de serviço, fornecedor, equalização, vencedora, adjudicar, contrato, cláusula, anexo, assinatura, signatário.
+- Vocabulário: proposta, versão/revisão, certame (tomada de preços), categoria de serviço, fornecedor, equalização, vencedora, adjudicar, contrato, cláusula, anexo, assinatura, signatário; minuta, modelo, quadro-resumo, item de cláusula, variante, bloco (condição específica), dossiê, revisão IA, achado (conflito/lacuna/risco), validação, emissão, testemunha, ratificação, prevalência.
 
 ## Performance
 - Abrir o acervo/um certame < 1,5 s em 4G. Buscar o agregado em uma consulta e calcular derivados no cliente com o `core`. Sem N+1. Paginar históricos.

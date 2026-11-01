@@ -37,16 +37,16 @@ Todas as tabelas: `id uuid pk`, `created_at`, `updated_at`, `deleted_at` (exclus
 - **obra_convites** — `obra_id`, `org_id`, `email`, `user_id` (nulo até a conta existir/aceitar), `convidado_por`, `status` ∈ {pendente, aceito, recusado, removido}, `respondido_em`. Índice único parcial: um convite vivo por obra+e-mail. Sem escrita direta (só RPCs `security definer`: `convidar_para_obra`, `meus_convites`, `responder_convite`, `listar_acesso_obra`, `remover_acesso_obra`). **RLS por obra**: helpers `dono_obra`, `pode_obra` (dono OU convite aceito), `pode_certame`, `pode_proposta`, `pode_contrato` e `colabora_org` (membro da org OU acesso aceito a alguma obra dela — para eventos, sugestões, equalizações entre obras e buckets de contratos). `is_member(org_id)` fica só para criar obra na própria org. Bucket `propostas`: além do dono do arquivo, quem tem acesso à obra da versão lê (URL assinada).
 - **propostas.opcao** (text, null = preço único) — rótulo da alternativa de preço quando um mesmo documento traz várias ("Opção 2 (Splitão)"). A extração (`PropostaExtraida.opcoes[]`: `rotulo`, `valor`, `descricao`) lista as alternativas; o cliente chama `criar_proposta(..., p_opcao)` uma vez por opção marcada. Nome de exibição: `core.nomeProposta(fornecedor, opcao)`.
 - **equalizacoes** — `escopo` ∈ {obra, entre_obras}, `categoria`, `certame_id` (nullable p/ entre_obras), `proposta_ids` (uuid[]), `resultado_ia` (jsonb: veredito, achados, recomendação, **escopo** — matriz itens×propostas), `criado_por`.
-- **contratos** — `certame_id`, `proposta_id` (vencedora), `obra_id`, `categoria`, `valor`, `status` ∈ {rascunho, enviado, assinado}, `pdf_path`, `paginas` (int).
+- **contratos** — `certame_id`, `proposta_id` (vencedora), `obra_id`, `categoria`, `valor`, `status` ∈ {rascunho, em_validacao, devolvido, aprovado, emitido, enviado, assinado, cancelado}, `pdf_path`, `paginas` (int). **Minuta padrão (v2):** `modelo_id` (nulo = legado), `numero` (CT-AAAA-NNN na emissão), `dossie` (fotografia da vencedora), `parametros`, `partes`, `conteudo_hash` + `conteudo_versao` + `faltando` (só do servidor), `docx_path/docx_hash/pdf_hash`, `emitido_em/por`, `cancelado_motivo`. Tabelas filhas: `contrato_itens_clausula`, `contrato_planilha`, `contrato_blocos`, `contrato_signatarios`, `contrato_revisoes` + `contrato_achados`, `contrato_aprovacoes`, `contrato_numeracao`; modelo em `contrato_modelos` + `modelo_blocos/variantes/parametros`. Detalhe e RLS em `docs/contratos/SPEC-contratos.md` §2–3.
 - **contrato_clausulas** — `contrato_id`, `numero`, `titulo`, `texto`, `origem` (ex.: "proposta v2" | "modelo"). (Ou template + overrides em jsonb.)
-- **assinaturas** — `contrato_id`, `parte` ∈ {contratante, contratada}, `signatario_nome`, `assinatura_img_path`, `via` ∈ {app, link}, `token` (p/ link), `assinado_em`, `ip`, `user_agent`, `doc_hash`.
+- **assinaturas** — `contrato_id`, `parte` ∈ {contratante, contratada, construtora, testemunha}, `signatario_id` (v2: um por signatário; nulo = legado, um por parte), `signatario_nome`, `assinatura_img_path`, `via` ∈ {app, link}, `coletado_por`, `token_hash`/`token_expira` (p/ link), `assinado_em`, `ip`, `user_agent`, `doc_hash` (cadeia a partir do `pdf_hash` da emissão).
 - **sugestoes** — `tipo` ∈ {categoria, fornecedor, obra, local}, `texto`, `uso` (int). Autocomplete ordenado por uso.
 - **eventos** — `entidade`, `entidade_id`, `tipo`, `payload` (jsonb), `autor`. Auditoria.
 
 ### Estados e transições
 - Certame: `aberta` → `analise` (quando começa a equalizar) → `adjudicada` (quando há vencedora). Vencedora direta pula de `aberta/analise` para `adjudicada`.
 - Proposta: `recebida` → `analise` → `vencedora` | `desclassificada`.
-- Contrato: `rascunho` → `enviado` (link gerado) → `assinado` (as duas partes).
+- Contrato legado: `rascunho` → `enviado` (link gerado) → `assinado` (as duas partes). Minuta padrão: `rascunho` → `em_validacao` → `aprovado` | `devolvido` → `emitido` → `enviado` → `assinado`; `emitido/enviado` → `cancelado` (PRD-contratos §6).
 
 ## Integração com a Anthropic (Claude)
 Chaves **apenas** no servidor (`ANTHROPIC_API_KEY`).
@@ -65,9 +65,10 @@ Chaves **apenas** no servidor (`ANTHROPIC_API_KEY`).
 > Boas práticas: enviar só o necessário, usar prompt caching quando aplicável, tratar timeouts e exibir estado "lendo…". A recomendação é apoio; a decisão é do usuário.
 
 ## Geração do contrato
+- **Minuta padrão (v2):** modelo .docx versionado em bucket privado + catálogo; `core.resolverDocumento` monta o `DocumentoResolvido`, o motor `contrato-docx.ts` preenche o .docx e `contrato-pdf.ts` renderiza o PDF do mesmo documento; hash do conteúdo em `/api/contracts/preview`, revisão IA e emissão (`docs/contratos/SPEC-contratos.md` §5, §9). O legado abaixo continua para contratos sem `modelo_id`.
 - Template de minuta (HTML) + dados da proposta vencedora → **cláusulas pré-preenchidas** (objeto, preço/pagamento, prazo, garantia) e cláusulas padrão editáveis.
 - Render **HTML→PDF** no servidor; grava em Storage (`contratos/{id}.pdf`), com `paginas` detectado.
-- Anexos: proposta vencedora (arquivo original) e equalização (export).
+- Anexos: proposta vencedora. A equalização **não** vai para o contrato (RC-15).
 
 ## Assinatura digital
 - **No app:** canvas captura a assinatura (imagem PNG transparente). Enviada ao servidor, que a **aplica em todas as páginas** do PDF (posição configurável por parte) e regrava o PDF.

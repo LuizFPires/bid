@@ -10,3 +10,4 @@ export { ContratosScreen, NovoContratoScreen, ContratoScreen } from './Contratos
 export { ConvitesScreen } from './Convites';
 export { CategoriasScreen } from './Categorias';
 export { CadastrosScreen } from './Cadastros';
+export { MetricasScreen } from './Metricas';

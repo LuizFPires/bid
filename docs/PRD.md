@@ -16,11 +16,13 @@ A UX e a navegação seguem esta ordem (é a espinha dorsal do app):
 4. **Vencedora → contrato** — a proposta vencedora vira contrato (anexo + base das cláusulas) e é assinada digitalmente.
 
 ## Perfis de usuário
-- **Gestor / Comprador:** faz tudo — cadastra propostas, equaliza, define vencedora, gera e envia contrato para assinatura, assina pelo app.
-- **Equipe:** tudo menos configurações sensíveis (ex.: excluir, alterar modelos de contrato). (Definir na RLS.)
+- **Dono da obra:** criou a obra; faz tudo nela, inclusive apagar a obra.
+- **Gestor (da obra):** convidado com papel gestor — aprova e emite contratos, apaga propostas/equalizações/contratos, convida e troca papéis. O **gestor da organização** administra cadastros (partes, fornecedores) e vê as métricas de contratos.
+- **Colaborador (da obra):** sobe propostas, equaliza, monta o contrato e envia para validação — não aprova, não emite, não apaga.
+- (Detalhe dos papéis e das regras de contrato em `docs/contratos/PRD-contratos.md` §3.)
 - **Signatário externo (sem conta):** acessa apenas um contrato específico por **link tokenizado** (recebido por WhatsApp), para assinar.
 
-**Acesso por obra (dono + convites).** Qualquer pessoa pode criar conta. Quem cria uma obra é o **dono** dela. Uma obra (e suas tomadas de preços, propostas, equalizações e contratos) só é visível para o dono e para quem **aceitou um convite** do dono. O dono convida por **e-mail** na tela da obra (seção **Pessoas**); a conta pode ainda não existir — o convite espera o cadastro com aquele e-mail. O convidado vê uma **notificação no ícone de perfil** (contagem) e, no menu **Convites**, a lista de obras para as quais foi convidado, com **Aceitar** ou **Recusar**. O dono pode remover um acesso a qualquer momento. **Apagar uma obra é exclusivo do dono.** Apagar propostas: dono da obra ou gestor da organização.
+**Acesso por obra (dono + convites).** Qualquer pessoa pode criar conta. Quem cria uma obra é o **dono** dela. Uma obra (e suas tomadas de preços, propostas, equalizações e contratos) só é visível para o dono e para quem **aceitou um convite** do dono. O dono convida por **e-mail** na tela da obra (seção **Pessoas**); a conta pode ainda não existir — o convite espera o cadastro com aquele e-mail. O convidado vê uma **notificação no ícone de perfil** (contagem) e, no menu **Convites**, a lista de obras para as quais foi convidado, com **Aceitar** ou **Recusar**. O dono pode remover um acesso a qualquer momento. **Apagar uma obra é exclusivo do dono.** Apagar propostas, equalizações e contratos: dono ou gestor **da obra** (papel no convite).
 
 **Confirmação de exclusão.** Toda ação de exclusão (proposta, obra, remover acesso) abre um **modal de confirmação** antes de ser efetivada e, depois de confirmada, ainda oferece **Desfazer** por 5 s onde a ação é reversível.
 
@@ -51,16 +53,16 @@ A UX e a navegação seguem esta ordem (é a espinha dorsal do app):
   - pela equalização (comparou e escolheu); ou
   - **direto na proposta** ("Definir como vencedora"), sem equalizar — caso de **proposta única**. Altera o status da proposta e marca o certame como adjudicado.
 - A vencedora fica **liberada para contrato**.
-- **Gerar contrato** a partir da vencedora (na proposta, no certame adjudicado ou pelo "+" em Contratos). O contrato:
-  - vincula a proposta como **Anexo I** (e a equalização como anexo);
+- **Gerar contrato** a partir da vencedora (na proposta, no certame adjudicado ou pelo "+" em Contratos). Quando a organização tem a **minuta padrão** ativa, o contrato segue o assistente em 7 etapas (dossiê da vencedora, partes e signatários, quadro-resumo, planilha de preços, condições específicas, minuta com variantes justificadas, revisão obrigatória por IA), vai para **validação** de dono/gestor, é **emitido** com número `CT-AAAA-NNN` (.docx e PDF finais) e assinado pelas **três partes** — regras em `docs/contratos/PRD-contratos.md`. Sem minuta ativa, vale o contrato legado:
+  - vincula a proposta como **Anexo I** (a equalização **não** vai para o contrato — sigilo entre concorrentes);
   - **pré-preenche as cláusulas** (objeto, preço, pagamento, prazo, garantia) com os dados da proposta;
   - mantém cláusulas padrão do modelo, editáveis.
 
 ### 5. Assinatura digital
-- Seção **Assinaturas** no contrato, com as duas partes (Contratante e Contratada).
+- Seção **Assinaturas** no contrato: no legado, as duas partes (Contratante e Contratada); na minuta padrão, **um signatário por linha** das três partes (contratante, contratada, construtora; testemunhas opcionais), cada um com link pessoal ou coleta presencial por dono/gestor.
 - **Assinar no app**: quadro para assinar **com o dedo**; a mesma assinatura é **replicada em todas as páginas** do documento.
 - **Enviar para assinatura** (quem não usa o app): o app gera um **link**; o usuário compartilha por **WhatsApp**; a outra parte abre o link no navegador, **assina a dedo**, confirma, e o documento **aparece assinado no app**.
-- Quando as duas partes assinam, o contrato fica **Assinado** (com trilha de auditoria: data/hora, IP, hash).
+- Quando todas as partes (legado: as duas; minuta padrão: todos os signatários obrigatórios) assinam, o contrato fica **Assinado** (trilha de auditoria: data/hora, IP, hash encadeado a partir do PDF emitido).
 
 ## Regras de negócio
 1. **Proposta é dado vivo:** chega, pode ser **revisada** (nova versão), e tudo fica registrado. Nunca se perde versão anterior.

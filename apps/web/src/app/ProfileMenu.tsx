@@ -183,6 +183,17 @@ export function ProfileMenu() {
                 <Icon name="bldg" />
                 Cadastros
               </button>
+              <button
+                className="pm-item"
+                type="button"
+                onClick={() => {
+                  fechar();
+                  navigate('/metricas');
+                }}
+              >
+                <Icon name="scale" />
+                Métricas de contratos
+              </button>
               <button className="pm-item" type="button" onClick={() => setTrocando(true)}>
                 <Icon name="link" />
                 Trocar senha
