@@ -18,6 +18,10 @@ create table if not exists public.contrato_revisoes (
 );
 create index if not exists idx_revisoes_contrato on public.contrato_revisoes(contrato_id, created_at desc);
 
+-- Chave composta ANTES da FK dos achados (ordem importa no db push).
+alter table public.contrato_revisoes drop constraint if exists contrato_revisoes_id_org_key;
+alter table public.contrato_revisoes add constraint contrato_revisoes_id_org_key unique (id, org_id);
+
 create table if not exists public.contrato_achados (
   id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizacoes(id) on delete cascade,
@@ -36,8 +40,6 @@ create table if not exists public.contrato_achados (
   foreign key (revisao_id, org_id) references public.contrato_revisoes(id, org_id) on delete cascade
 );
 create index if not exists idx_achados_revisao on public.contrato_achados(revisao_id);
-alter table public.contrato_revisoes drop constraint if exists contrato_revisoes_id_org_key;
-alter table public.contrato_revisoes add constraint contrato_revisoes_id_org_key unique (id, org_id);
 
 alter table public.contrato_revisoes enable row level security;
 alter table public.contrato_achados enable row level security;
