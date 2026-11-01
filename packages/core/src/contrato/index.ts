@@ -7,3 +7,8 @@ export * from './hash';
 export * from './revisao';
 export * from './planilha';
 export * from './blocos';
+export * from './extenso';
+export * from './numeracao';
+export * from './clausulas-v2';
+export * from './resolver';
+export * from './validar';

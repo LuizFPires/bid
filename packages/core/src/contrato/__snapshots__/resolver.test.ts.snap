@@ -1,0 +1,251 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`resolverDocumento (caso fictício) > snapshot do documento e do texto corrido 1`] = `
+{
+  "_origens": {
+    "1.1": "padrao",
+    "1.3": "padrao",
+    "22.8": "padrao",
+    "3.1": "padrao",
+    "3.6": "padrao",
+    "3.7": "variante",
+    "6.3": "padrao",
+    "6.3.1": "variante",
+    "decl:1": "padrao",
+    "decl:4": "padrao",
+  },
+  "anexoIII": {
+    "texto": "Proposta nº 045/2026, de 20/10/2026, emitida por Fundações Exemplo Ltda. e dirigida a Construtora Exemplo S.A.. **Prevalência:** em caso de conflito, prevalecem o contrato e o Anexo I (cláusula 1.3).",
+    "titulo": "ANEXO III – PROPOSTA COMERCIAL DA CONTRATADA",
+  },
+  "blocos": [
+    {
+      "itens": [
+        "A CONTRATADA é responsável pela estabilidade das escavações.",
+        "Sobras serão destinadas conforme o plano de resíduos.",
+      ],
+      "titulo": "Fundações — escavação e escoramento",
+    },
+    {
+      "itens": [
+        "PIT em 10% das estacas.",
+      ],
+      "titulo": "Ensaios",
+    },
+  ],
+  "campos": {
+    "anexos_lista": "ANEXOS I, II e III",
+    "ass_local": "Cidade Exemplo/MG",
+    "cd_cnpj": "11.222.333/0001-81",
+    "cd_email": "contato@fundacoes-exemplo.com.br",
+    "cd_razao": "Fundações Exemplo Ltda.",
+    "cd_sede": "Av. Teste, 50, Cidade Exemplo/MG",
+    "cs_email": "contratos@construtora-exemplo.com.br",
+    "ct_email": "obras@spe-exemplo.com.br",
+    "decl_cargo": "Sócio-administrador",
+    "decl_cpf": "529.982.247-25",
+    "decl_nome": "Beltrano Exemplo",
+    "empreitada_desc": "execução de fundações profundas tipo estaca hélice contínua",
+    "escopo_resumo": "Execução de 120 estacas hélice contínua Ø40 cm.",
+    "obra_cno": "90.000.00000/01",
+    "obra_endereco": "Rua das Palmeiras, 100, Bairro Novo, Cidade Exemplo/MG, CEP 30000-000",
+    "obra_foro": "Cidade Exemplo/MG",
+    "obra_nome": "Residencial Jardim das Acácias",
+    "q_antecipacao": "Não há.",
+    "q_criterio": "Medição mensal por metro linear executado.",
+    "q_docs": "Projeto de fundações rev. 02.",
+    "q_documentos_integrantes": "Anexo I (Condições Particulares, Planilha de Preços e Escopo), Anexo II (Declaração de Capacidade) e Anexo III (Proposta Comercial).",
+    "q_fat_direto": "Não há.",
+    "q_garantia": "5 anos.",
+    "q_inicio": "10/11/2026",
+    "q_liberacao": "Até 10 dias após a aprovação da medição.",
+    "q_marcos": "Não se aplica.",
+    "q_mat_contratada": "Concreto, aço e consumíveis.",
+    "q_mat_contratante": "Não há.",
+    "q_periodicidade": "Mensal, com corte no dia 25.",
+    "q_prazo": "60 dias corridos",
+    "q_regime": "Preço unitário — pagamento pelas quantidades efetivamente medidas.",
+    "q_representante": "Eng. Fulano de Tal (fictício)",
+    "q_retencao": "5% de cada medição.",
+    "q_seguros": "RC obras de R$ 500.000,00.",
+    "q_valor": "312.450,00",
+    "q_valor_extenso": "trezentos e doze mil, quatrocentos e cinquenta reais",
+    "total": "312.450,00",
+  },
+  "clausulas": {
+    "1.1": "A empreitada é contratada pela CONTRATANTE.",
+    "1.3": "Integram: Anexos I e II.",
+    "22.8": "Fica eleito o foro de {{obra_foro}}.",
+    "3.1": "A CONTRATADA iniciará a mobilização na data do ANEXO I.",
+    "3.6": "Item 3.6 padrão.",
+    "6.3": "Item 6.3.",
+    "6.3.1": null,
+  },
+  "declaracao": [
+    {
+      "numero": "1",
+      "texto": "Possui capacidade técnica.",
+      "titulo": "Capacidade técnica.",
+    },
+    {
+      "numero": "4",
+      "texto": "Não está em recuperação judicial.",
+      "titulo": "Situação jurídica.",
+    },
+  ],
+  "extras": [
+    {
+      "apos": "3.6",
+      "numero": "3.7",
+      "texto": "Os dias de chuva que impeçam a execução prorrogam o prazo na mesma medida.",
+    },
+  ],
+  "final": false,
+  "itens": [
+    {
+      "desc": "MOBILIZAÇÃO",
+      "grupo": true,
+      "n": "1",
+    },
+    {
+      "desc": "Mobilização e desmobilização de equipamento",
+      "n": "1.1",
+      "qtd": "1",
+      "total": "18.000,00",
+      "und": "vb",
+      "unit": "18.000,00",
+    },
+    {
+      "desc": "ESTACAS",
+      "grupo": true,
+      "n": "2",
+    },
+    {
+      "desc": "Estaca hélice contínua Ø40 cm",
+      "n": "2.1",
+      "qtd": "1.800",
+      "total": "274.450,50",
+      "und": "m",
+      "unit": "152,4725",
+    },
+    {
+      "desc": "Arrasamento de estaca",
+      "n": "2.2",
+      "qtd": "120",
+      "total": "19.999,50",
+      "und": "un",
+      "unit": "166,6625",
+    },
+  ],
+  "qualificacao": {
+    "cd": "Fundações Exemplo Ltda., … representada por Beltrano Exemplo",
+    "cs": "Construtora Exemplo S.A., … representada por seus diretores Diretor Um e Diretor Dois",
+    "ct": "SPE Exemplo Empreendimentos Ltda., … representada por Sicrano Alves",
+  },
+  "razao": {
+    "construtora": "Construtora Exemplo S.A.",
+    "contratada": "Fundações Exemplo Ltda.",
+    "contratante": "SPE Exemplo Empreendimentos Ltda.",
+  },
+  "signatarios": {
+    "construtora": [
+      {
+        "cargo": "Diretor",
+        "nome": "Diretor Um",
+      },
+      {
+        "cargo": "Diretor",
+        "nome": "Diretor Dois",
+      },
+    ],
+    "contratada": [
+      {
+        "cargo": "Sócio-administrador",
+        "nome": "Beltrano Exemplo",
+      },
+    ],
+    "contratante": [
+      {
+        "cargo": "Administrador",
+        "nome": "Sicrano Alves",
+      },
+    ],
+    "declarante": [
+      {
+        "cargo": "Sócio-administrador",
+        "nome": "Beltrano Exemplo",
+      },
+    ],
+  },
+}
+`;
+
+exports[`resolverDocumento (caso fictício) > snapshot do documento e do texto corrido 2`] = `
+"anexos_lista: ANEXOS I, II e III
+ass_local: Cidade Exemplo/MG
+cd_cnpj: 11.222.333/0001-81
+cd_email: contato@fundacoes-exemplo.com.br
+cd_razao: Fundações Exemplo Ltda.
+cd_sede: Av. Teste, 50, Cidade Exemplo/MG
+cs_email: contratos@construtora-exemplo.com.br
+ct_email: obras@spe-exemplo.com.br
+decl_cargo: Sócio-administrador
+decl_cpf: 529.982.247-25
+decl_nome: Beltrano Exemplo
+empreitada_desc: execução de fundações profundas tipo estaca hélice contínua
+escopo_resumo: Execução de 120 estacas hélice contínua Ø40 cm.
+obra_cno: 90.000.00000/01
+obra_endereco: Rua das Palmeiras, 100, Bairro Novo, Cidade Exemplo/MG, CEP 30000-000
+obra_foro: Cidade Exemplo/MG
+obra_nome: Residencial Jardim das Acácias
+q_antecipacao: Não há.
+q_criterio: Medição mensal por metro linear executado.
+q_docs: Projeto de fundações rev. 02.
+q_documentos_integrantes: Anexo I (Condições Particulares, Planilha de Preços e Escopo), Anexo II (Declaração de Capacidade) e Anexo III (Proposta Comercial).
+q_fat_direto: Não há.
+q_garantia: 5 anos.
+q_inicio: 10/11/2026
+q_liberacao: Até 10 dias após a aprovação da medição.
+q_marcos: Não se aplica.
+q_mat_contratada: Concreto, aço e consumíveis.
+q_mat_contratante: Não há.
+q_periodicidade: Mensal, com corte no dia 25.
+q_prazo: 60 dias corridos
+q_regime: Preço unitário — pagamento pelas quantidades efetivamente medidas.
+q_representante: Eng. Fulano de Tal (fictício)
+q_retencao: 5% de cada medição.
+q_seguros: RC obras de R$ 500.000,00.
+q_valor: 312.450,00
+q_valor_extenso: trezentos e doze mil, quatrocentos e cinquenta reais
+total: 312.450,00
+SPE Exemplo Empreendimentos Ltda., … representada por Sicrano Alves
+Fundações Exemplo Ltda., … representada por Beltrano Exemplo
+Construtora Exemplo S.A., … representada por seus diretores Diretor Um e Diretor Dois
+1.1. A empreitada é contratada pela CONTRATANTE.
+1.3. Integram: Anexos I e II.
+3.1. A CONTRATADA iniciará a mobilização na data do ANEXO I.
+3.6. Item 3.6 padrão.
+3.7. Os dias de chuva que impeçam a execução prorrogam o prazo na mesma medida.
+6.3. Item 6.3.
+6.3.1. Não se aplica.
+22.8. Fica eleito o foro de {{obra_foro}}.
+1 MOBILIZAÇÃO
+1.1 Mobilização e desmobilização de equipamento vb 1 18.000,00 18.000,00
+2 ESTACAS
+2.1 Estaca hélice contínua Ø40 cm m 1.800 152,4725 274.450,50
+2.2 Arrasamento de estaca un 120 166,6625 19.999,50
+1. Fundações — escavação e escoramento
+1.1. A CONTRATADA é responsável pela estabilidade das escavações.
+1.2. Sobras serão destinadas conforme o plano de resíduos.
+2. Ensaios
+2.1. PIT em 10% das estacas.
+1. Capacidade técnica. Possui capacidade técnica.
+4. Situação jurídica. Não está em recuperação judicial.
+ANEXO III – PROPOSTA COMERCIAL DA CONTRATADA
+Proposta nº 045/2026, de 20/10/2026, emitida por Fundações Exemplo Ltda. e dirigida a Construtora Exemplo S.A.. Prevalência: em caso de conflito, prevalecem o contrato e o Anexo I (cláusula 1.3).
+Sicrano Alves, Administrador
+Beltrano Exemplo, Sócio-administrador
+Diretor Um, Diretor
+Diretor Dois, Diretor
+Beltrano Exemplo, Sócio-administrador"
+`;
