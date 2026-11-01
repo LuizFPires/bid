@@ -67,7 +67,7 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     arquivo = { bytes: preenchido.docx, tipo: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: 'docx' };
   } else if (formato === 'pdf') {
     const { buffer } = await renderContratoV2Pdf(doc, { catalogo: c.catalogo, logoPng: logo });
-    let bytes = new Uint8Array(buffer);
+    let bytes: Uint8Array = new Uint8Array(buffer);
     // Anexo III: a proposta vencedora, como arquivada no bid, entra depois da capa do anexo.
     if (doc.anexoIII) {
       const prop = await arquivoDaProposta(sb, c.dossie?.proposta.arquivoPath);
