@@ -10,6 +10,8 @@ import { PROSA_MINUTA, semMarcador as semMarcadorCore, type DocumentoResolvido }
  */
 const MAX_MODELO = 2 * 1024 * 1024; // modelo .docx ≤ 2 MB
 const MAX_XML = 10 * 1024 * 1024; // XML inflado ≤ 10 MB
+const MAX_TOTAL = 40 * 1024 * 1024; // soma inflada ≤ 40 MB
+const MAX_ENTRADAS = 300;
 const LOGO_PATH = 'word/media/image1.png';
 const AVISO_MINUTA = PROSA_MINUTA.avisoMinuta;
 
@@ -196,7 +198,17 @@ export interface PreencherDocxOpts {
  */
 export function preencherDocx(modelo: Uint8Array, doc: DocumentoResolvido, opts: PreencherDocxOpts = {}): { docx: Uint8Array; faltando: string[] } {
   if (modelo.byteLength > MAX_MODELO) throw new Error('Modelo .docx acima de 2 MB.');
-  const z = unzipSync(modelo, { filter: (f) => f.originalSize <= MAX_XML });
+  // Teto por entrada, total inflado e número de entradas (modelo é zip do gestor, mas não confiamos no cabeçalho).
+  let total = 0;
+  let n = 0;
+  const z = unzipSync(modelo, {
+    filter: (f) => {
+      n += 1;
+      total += f.originalSize;
+      if (n > MAX_ENTRADAS || total > MAX_TOTAL) throw new Error('Modelo .docx com entradas demais ou grande demais.');
+      return f.originalSize <= MAX_XML;
+    },
+  });
   const docXml = z['word/document.xml'];
   if (!docXml) throw new Error('Modelo .docx sem word/document.xml.');
   for (const [nome, bytes] of Object.entries(z)) if (bytes.length > MAX_XML) throw new Error(`Entrada ${nome} grande demais no modelo.`);

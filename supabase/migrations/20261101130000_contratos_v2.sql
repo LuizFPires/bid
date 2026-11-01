@@ -410,7 +410,7 @@ grant execute on function public.salvar_contrato(uuid, jsonb) to authenticated;
 -- herda reduz_protecao da biblioteca (o cliente não "desmarca" risco).
 create or replace function public.guard_item_clausula_origem()
 returns trigger language plpgsql as $$
-declare v_modelo uuid; v_padrao text; v_reduz boolean;
+declare v_modelo uuid; v_padrao text; v_reduz boolean; v_texto_var text;
 begin
   if auth.uid() is null or current_setting('bid.interno', true) = '1' then return new; end if;
   select modelo_id into v_modelo from public.contratos where id = new.contrato_id;
@@ -429,9 +429,11 @@ begin
   new.texto_padrao := v_padrao;
 
   if new.variante_chave is not null then
-    select reduz_protecao into v_reduz from public.modelo_variantes
+    select reduz_protecao, texto into v_reduz, v_texto_var from public.modelo_variantes
      where modelo_id = v_modelo and chave = new.variante_chave and numero = new.numero;
     if v_reduz is null then raise exception 'variante % não existe no modelo para o item %', new.variante_chave, new.numero; end if;
+    -- Texto da variante é o do catálogo (o cliente não "assina" texto livre como variante catalogada).
+    new.texto := v_texto_var;
     if coalesce(length(trim(new.justificativa)), 0) < 10 then
       raise exception 'item % como variante exige justificativa (mínimo 10 caracteres)', new.numero;
     end if;
