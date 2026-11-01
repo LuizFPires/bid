@@ -6,6 +6,10 @@
 drop policy if exists "bid_contratos_insert" on storage.objects;
 drop policy if exists "bid_contratos_update" on storage.objects;
 
--- Hash do token de link não precisa ser legível pelo cliente (só o servidor
--- compara). Mantém a leitura das demais colunas para a tela de assinaturas.
-revoke select (token_hash) on public.assinaturas from authenticated;
+-- Hash do token de link (e IP/user agent da trilha) não precisam ser legíveis
+-- pelo cliente: só o servidor compara/escreve. Privilégio por coluna só vale
+-- sem SELECT de tabela, então revoga a tabela e concede as colunas que as
+-- telas usam (RLS continua valendo por cima).
+revoke select on public.assinaturas from authenticated;
+grant select (id, org_id, contrato_id, signatario_id, parte, signatario_nome, via, coletado_por, token_expira, assinado_em, doc_hash, created_at)
+  on public.assinaturas to authenticated;

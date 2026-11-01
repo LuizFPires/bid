@@ -3,7 +3,7 @@
 -- links por signatário (gestor), colaborador não; cancelar com motivo;
 -- emitido não se apaga. Dados fictícios. `supabase test db`.
 begin;
-select plan(33);
+select plan(34);
 
 select has_function('public', 'emitir_contrato', ARRAY['uuid', 'text', 'text', 'text', 'text', 'integer', 'uuid'], 'emitir_contrato existe');
 select has_function('public', 'gerar_links_assinatura', ARRAY['uuid', 'uuid'], 'gerar_links_assinatura existe');
@@ -87,12 +87,15 @@ select throws_ok($$ select public.cancelar_contrato((select id from fxk), 'motiv
 select pg_temp.sair();
 select pg_temp.como('00000000-0000-4000-8000-00000000a002');
 select is((select count(*) from public.gerar_links_assinatura((select id from fxk))), 4::bigint, 'um link por signatário pendente');
-create temporary table fxt as select signatario_id, token_hash from public.assinaturas where contrato_id = (select id from fxk);
-select is((select count(*) from public.gerar_links_assinatura((select id from fxk), (select signatario_id from fxt limit 1))), 1::bigint, 'reemitir link de um signatário');
-select isnt((select a.token_hash from public.assinaturas a join fxt t on t.signatario_id = a.signatario_id limit 1), (select token_hash from fxt limit 1), 'reemissão troca o token (ON CONFLICT do índice parcial)');
 select is((select status from public.contratos where id = (select id from fxk)), 'enviado', 'primeiro link leva a enviado');
-select is((select count(*) from public.assinaturas where contrato_id = (select id from fxk) and token_hash is not null), 4::bigint, 'tokens guardados só como hash');
+select throws_ok($$ select token_hash from public.assinaturas where contrato_id = (select id from fxk) $$, '42501', null, 'cliente não lê token_hash');
 select pg_temp.sair();
+create temporary table fxt as select signatario_id, token_hash from public.assinaturas where contrato_id = (select id from fxk);
+select is((select count(*) from fxt where token_hash is not null), 4::bigint, 'tokens guardados só como hash');
+select pg_temp.como('00000000-0000-4000-8000-00000000a002');
+select is((select count(*) from public.gerar_links_assinatura((select id from fxk), (select signatario_id from fxt limit 1))), 1::bigint, 'reemitir link de um signatário');
+select pg_temp.sair();
+select isnt((select a.token_hash from public.assinaturas a join fxt t on t.signatario_id = a.signatario_id limit 1), (select token_hash from fxt limit 1), 'reemissão troca o token (ON CONFLICT do índice parcial)');
 
 -- trilha por RPC (servidor): cadeia de hashes a partir do pdf_hash; signatário só assina uma vez; todos obrigatórios → assinado
 create temporary table fxs as select id, parte from public.contrato_signatarios where contrato_id = (select id from fxk) order by ordem;
