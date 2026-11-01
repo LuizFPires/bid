@@ -183,9 +183,10 @@ as $$
 declare v_org uuid; v_token text; v_assinado timestamptz;
 begin
   if p_parte <> 'contratada' then raise exception 'o link de assinatura é apenas para a contratada'; end if;
-  select org_id into v_org from public.contratos where id = p_contrato and deleted_at is null and modelo_id is null;
-  if v_org is null then raise exception 'contrato não encontrado'; end if;
-  if not public.is_member(v_org) then raise exception 'sem acesso a este contrato'; end if;
+  select org_id into v_org from public.contratos where id = p_contrato and deleted_at is null and modelo_id is null and status not in ('assinado', 'cancelado');
+  if v_org is null then raise exception 'contrato não encontrado ou já encerrado'; end if;
+  -- Mesma régua das demais ações de contrato (M9): gerência da obra, não só membro da org.
+  if not public.gerencia_contrato(p_contrato) then raise exception 'Só o dono ou um gestor da obra pode gerar o link de assinatura.'; end if;
   select assinado_em into v_assinado from public.assinaturas where contrato_id = p_contrato and parte = p_parte and signatario_id is null;
   if v_assinado is not null then raise exception 'esta parte já assinou'; end if;
   v_token := encode(extensions.gen_random_bytes(24), 'hex');
