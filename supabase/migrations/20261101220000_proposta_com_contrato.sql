@@ -5,7 +5,8 @@
 -- (rascunho/devolvido/aprovado) libera a exclusão da proposta.
 create or replace function public.proposta_tem_contrato(p_proposta uuid)
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists (
+  -- Só responde para proposta que o chamador pode ver (não vira oráculo de outras orgs).
+  select public.pode_proposta(p_proposta) and exists (
     select 1 from public.contratos k
      where k.proposta_id = p_proposta and k.deleted_at is null and k.status <> 'cancelado'
   );
