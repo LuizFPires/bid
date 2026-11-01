@@ -5,3 +5,5 @@ export * from './dossie';
 export * from './parametros';
 export * from './hash';
 export * from './revisao';
+export * from './planilha';
+export * from './blocos';
