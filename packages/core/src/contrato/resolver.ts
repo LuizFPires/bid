@@ -1,6 +1,6 @@
 import { formatBRL } from '../money';
 import { derivarAnexos, textoAnexoIII } from './blocos';
-import { aplicarParametrosClausula, cmpNumeroItem, type CatalogoModelo, type ParametroClausula } from './clausulas-v2';
+import { aplicarParametrosClausula, cmpNumeroItem, proximoNumero, type CatalogoModelo, type ParametroClausula } from './clausulas-v2';
 import { valorExtenso } from './extenso';
 import { fmtQtd, fmtUnit, totalLinha, totalPlanilha, type LinhaPlanilha } from './planilha';
 import { formatarCnpj } from './qualificacao';
@@ -95,7 +95,12 @@ export function resolverDocumento(e: EntradaResolver): DocumentoResolvido {
     if (it.numero.startsWith('decl:')) continue;
     origens[it.numero] = it.origem;
     if (it.apos && !noCatalogo.has(it.numero)) {
-      if (!it.suprimido) extras.push({ apos: it.apos, numero: it.numero, texto: it.texto });
+      // Item extra: número de exibição é o próximo livre depois do `apos`
+      // (itens de bloco têm chave interna "3.6.b.<bloco>", que não vai ao documento).
+      if (!it.suprimido) {
+        const numero = /^\d+(\.\d+)*$/.test(it.numero) ? it.numero : proximoNumero([...itens, ...extras.map((x) => ({ numero: x.numero }) as ItemClausula)], it.apos);
+        extras.push({ apos: it.apos, numero, texto: it.texto });
+      }
       continue;
     }
     clausulas[it.numero] = it.suprimido ? null : it.texto;

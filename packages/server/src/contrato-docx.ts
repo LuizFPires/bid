@@ -14,6 +14,10 @@ const LOGO_PATH = 'word/media/image1.png';
 const AVISO_MINUTA = 'MINUTA PARA CONFERÊNCIA — NÃO VÁLIDA PARA ASSINATURA';
 
 const esc = (s: unknown) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/** Valor vindo do usuário (nome, cargo, bloco, anexo) nunca vira marcador do modelo. */
+const semMarcador = (s: unknown) => String(s ?? '').replace(/\{\{/g, '{ {').replace(/\}\}/g, '} }');
+const NUMERO_ITEM = /^\d+(\.\d+)*$/;
+const MAX_BLOCOS_SIG = 20;
 const semIds = (p: string) => p.replace(/ w14:(paraId|textId)="[^"]*"/g, '');
 
 /** texto com **negrito** e quebras de linha → runs, herdando o rPr do run-base */
@@ -92,31 +96,33 @@ export function preencherXml(xml: string, doc: DocumentoResolvido): { xml: strin
     const num = k[1]!;
     const texto = doc.clausulas?.[num];
     let p = trocarRun(m[0], k[0], texto == null ? 'Não se aplica.' : texto);
-    for (const e of (doc.extras || []).filter((e) => e.apos === num).reverse()) {
-      p += semIds(trocarRun(m[0].replace(`${num}. `, `${e.numero}. `).replace(`${num}.<`, `${e.numero}.<`), k[0], e.texto));
+    for (const e of (doc.extras || []).filter((e) => e.apos === num && NUMERO_ITEM.test(e.numero)).reverse()) {
+      const n = esc(e.numero);
+      p += semIds(trocarRun(m[0].replace(`${num}. `, () => `${n}. `).replace(`${num}.<`, () => `${n}.<`), k[0], semMarcador(e.texto)));
     }
     x = x.slice(0, m.index) + p + x.slice(m.index + m[0].length);
   }
 
   // 3. qualificação das partes e declaração (Anexo II)
   for (const k of ['ct', 'cd', 'cs'] as const) {
-    x = trocarParagrafo(x, `{{qual_${k}}}`, (p) => trocarRun(p, `{{qual_${k}}}`, doc.qualificacao?.[k] || `{{qual_${k}}}`));
+    x = trocarParagrafo(x, `{{qual_${k}}}`, (p) => trocarRun(p, `{{qual_${k}}}`, doc.qualificacao?.[k] ? semMarcador(doc.qualificacao[k]) : `{{qual_${k}}}`));
   }
   for (const d of doc.declaracao || []) {
-    x = trocarParagrafo(x, `{{decl:${d.numero}}}`, (p) => trocarRun(trocarRun(p, `{{decl_t:${d.numero}}}`, `**${d.titulo}** `), `{{decl:${d.numero}}}`, d.texto));
+    x = trocarParagrafo(x, `{{decl:${d.numero}}}`, (p) => trocarRun(trocarRun(p, `{{decl_t:${d.numero}}}`, `**${semMarcador(d.titulo)}** `), `{{decl:${d.numero}}}`, semMarcador(d.texto)));
   }
 
   // 4. assinaturas: um bloco por signatário (linha, nome — cargo, razão — PARTE)
   for (const parte of ['contratante', 'contratada', 'construtora', 'declarante'] as const) {
     let m: Par | undefined;
-    while ((m = paragrafos(x).find((q) => q[0].includes(`{{sig:${parte}}}`)))) {
+    let voltas = 0;
+    while (voltas++ < MAX_BLOCOS_SIG && (m = paragrafos(x).find((q) => q[0].includes(`{{sig:${parte}}}`)))) {
       const lista = doc.signatarios?.[parte] || [];
       const rotulo = parte === 'declarante' ? '' : ` — ${parte.toUpperCase()}`;
       const razao = parte === 'declarante' ? doc.razao?.contratada : doc.razao?.[parte];
       const linhaAss = parte === 'declarante' ? '' : '_________________________________\n';
       const alvo = m;
       const blocos = (lista.length ? lista : [{ nome: '', cargo: '' }]).map((s, j) =>
-        semIds(trocarRun(alvo[0], `{{sig:${parte}}}`, `${j ? '\n' : ''}${linhaAss}${s.nome || '[A PREENCHER]'}${s.cargo ? ', ' + s.cargo : ''}\n**${razao || '[A PREENCHER]'}${rotulo}**`)),
+        semIds(trocarRun(alvo[0], `{{sig:${parte}}}`, semMarcador(`${j ? '\n' : ''}${linhaAss}${s.nome || '[A PREENCHER]'}${s.cargo ? ', ' + s.cargo : ''}\n**${razao || '[A PREENCHER]'}${rotulo}**`))),
       );
       if (!lista.length) faltando.push(`sig:${parte}`);
       x = x.slice(0, alvo.index) + blocos.join('') + x.slice(alvo.index + alvo[0].length);
@@ -131,7 +137,7 @@ export function preencherXml(xml: string, doc: DocumentoResolvido): { xml: strin
       const cab = ps[alvo - 1]!;
       const corpo = ps[alvo]!;
       const novo = (doc.blocos || [])
-        .map((b, bi) => semIds(trocarRun(corpo[0], '{{blocos_anexo_i}}', `**${bi + 1}. ${b.titulo}**`)) + b.itens.map((t, ti) => semIds(trocarRun(corpo[0], '{{blocos_anexo_i}}', `${bi + 1}.${ti + 1}. ${t}`))).join(''))
+        .map((b, bi) => semIds(trocarRun(corpo[0], '{{blocos_anexo_i}}', `**${bi + 1}. ${semMarcador(b.titulo)}**`)) + b.itens.map((t, ti) => semIds(trocarRun(corpo[0], '{{blocos_anexo_i}}', `${bi + 1}.${ti + 1}. ${semMarcador(t)}`))).join(''))
         .join('');
       x = x.slice(0, cab.index) + (novo ? cab[0] + novo : '') + x.slice(corpo.index + corpo[0].length);
     }
@@ -144,8 +150,8 @@ export function preencherXml(xml: string, doc: DocumentoResolvido): { xml: strin
     if (t >= 1 && t + 1 < ps.length) {
       if (doc.anexoIII) {
         const a = doc.anexoIII;
-        x = trocarParagrafo(x, '{{anexo_iii_texto}}', (p) => trocarRun(p, '{{anexo_iii_texto}}', a.texto));
-        x = trocarParagrafo(x, '{{anexo_iii_titulo}}', (p) => trocarRun(p, '{{anexo_iii_titulo}}', a.titulo));
+        x = trocarParagrafo(x, '{{anexo_iii_texto}}', (p) => trocarRun(p, '{{anexo_iii_texto}}', semMarcador(a.texto)));
+        x = trocarParagrafo(x, '{{anexo_iii_titulo}}', (p) => trocarRun(p, '{{anexo_iii_titulo}}', semMarcador(a.titulo)));
       } else {
         const ini = ps[t - 1]!.index;
         const fim = ps[t + 1]!.index + ps[t + 1]![0].length;

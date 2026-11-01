@@ -24,6 +24,7 @@ const MUTED = '#5b6075';
 const LINE = '#d9dbe6';
 const WARN = '#B42318';
 const HIGHLIGHT = '#fff3b0';
+const ROTULOS_EXTRA: Record<string, string> = { q_documentos_integrantes: 'Documentos integrantes', q_valor_extenso: 'Valor por extenso' };
 
 let fontesRegistradas = false;
 
@@ -93,7 +94,7 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
       h(View, { style: s.tr }, h(Text, { style: [s.th, { width: 160 }] }, 'ITEM / IDENTIFICAÇÃO'), h(Text, { style: [s.th, { flex: 1 }] }, 'INFORMAÇÃO')),
       ...chaves.map((k) => {
         const q = QUADRO.find((x) => x.chave === k);
-        return linhaKV(k, q?.rotulo ?? k, q?.numero ?? null);
+        return linhaKV(k, q?.rotulo ?? ROTULOS_EXTRA[k] ?? k, q?.numero ?? null);
       }),
     );
 
@@ -174,8 +175,8 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
         ['SERVIÇO / DESCRIÇÃO', 0],
         ['UND', 32],
         ['QUANT.', 52],
-        ['PREÇO UNIT.', 66],
-        ['TOTAL', 72],
+        ['PREÇO UNIT.', 78],
+        ['TOTAL', 84],
       ].map(([t, w]) => h(Text, { key: String(t), style: [s.th, w ? { width: w } : { flex: 1 }, w && t !== 'ITEM' && t !== 'UND' ? s.r : {}] }, String(t))),
     ),
     ...doc.itens.map((it, i) =>
@@ -188,11 +189,11 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
             h(Text, { style: [s.td, { flex: 1 }] }, it.desc),
             h(Text, { style: [s.td, { width: 32 }] }, it.und ?? ''),
             h(Text, { style: [s.td, { width: 52 }, s.r] }, it.qtd ?? ''),
-            h(Text, { style: [s.td, { width: 66 }, s.r] }, it.unit ? `R$ ${it.unit}` : ''),
-            h(Text, { style: [s.td, { width: 72 }, s.r] }, it.total ? `R$ ${it.total}` : ''),
+            h(Text, { style: [s.td, { width: 78 }, s.r] }, it.unit ? `R$ ${it.unit}` : ''),
+            h(Text, { style: [s.td, { width: 84 }, s.r] }, it.total ? `R$ ${it.total}` : ''),
           ),
     ),
-    h(View, { style: s.tr }, h(Text, { style: [s.td, { flex: 1, fontWeight: 700 }] }, 'TOTAL CONTRATADO'), h(Text, { style: [s.td, { width: 72, fontWeight: 700 }, s.r] }, `R$ ${campo('total')}`)),
+    h(View, { style: s.tr }, h(Text, { style: [s.td, { flex: 1, fontWeight: 700 }] }, 'TOTAL CONTRATADO'), h(Text, { style: [s.td, { width: 84, fontWeight: 700 }, s.r] }, `R$ ${campo('total')}`)),
   );
   const condicoes: El[] = doc.blocos.length
     ? [

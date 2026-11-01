@@ -47,7 +47,7 @@ describe('contrato-docx (motor)', () => {
       extras: [{ apos: '3.6', numero: '3.7', texto: 'Extra.' }],
       qualificacao: { ct: 'CT qualificada', cd: '', cs: '' },
       declaracao: [],
-      signatarios: { contratante: [], contratada: [], construtora: [{ nome: 'Diretor Um', cargo: 'Diretor' }, { nome: 'Diretor Dois', cargo: 'Diretor' }], declarante: [] },
+      signatarios: { contratante: [], contratada: [], construtora: [{ nome: 'Diretor Um', cargo: 'Diretor' }, { nome: 'Diretor {{sig:construtora}} Dois', cargo: 'Diretor' }], declarante: [] },
       razao: { contratante: '', contratada: '', construtora: 'Construtora Exemplo S.A.' },
       itens: [{ grupo: true, n: '1', desc: 'GRUPO' }, { n: '1.1', desc: 'Item & cia', und: 'un', qtd: '1', unit: '2,00', total: '2,00' }],
       blocos: [{ titulo: 'Ensaios', itens: ['PIT em 10%.'] }],
@@ -65,6 +65,7 @@ describe('contrato-docx (motor)', () => {
     expect(out.indexOf('3.7. ')).toBeGreaterThan(out.indexOf('3.6. '));
     expect(out).toMatch(/<w:rPr><w:b\/><w:bCs\/>[^<]*<w:highlight w:val="yellow"\/><\/w:rPr><w:t xml:space="preserve">3\.6<\/w:t>/); // negrito interno herda o rPr
     expect((out.match(/CONSTRUTORA<\/w:t>/g) ?? []).length).toBe(2); // 2 blocos de assinatura
+    expect(out).toContain('Diretor { {sig:construtora} } Dois'); // valor do usuário não vira marcador
     expect(out).toContain('1. Ensaios');
     expect(out).toContain('1.1. PIT em 10%.');
     expect(out).not.toContain('anexo_iii'); // sem Anexo III: quebra + título + texto removidos
