@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { MissingEnvError, bearer, carregarContratoV2, preencherDocx, renderContratoV2Pdf, requireMethod, resolverEHash, serviceClient, sha256Hex, userClient } from '@bid/server';
+import { MissingEnvError, anexarPropostaAoPdf, arquivoDaProposta, bearer, carregarContratoV2, preencherDocx, renderContratoV2Pdf, requireMethod, resolverEHash, serviceClient, sha256Hex, userClient } from '@bid/server';
 
 /**
  * POST /api/contracts/emitir { contratoId }
@@ -61,8 +61,21 @@ async function processar(req: VercelRequest, res: VercelResponse) {
 
   const { docx, faltando } = preencherDocx(modelo, doc, { logo });
   if (faltando.length) return void res.status(409).json({ erro: `Não se emite com marcador vazio: ${faltando.slice(0, 6).join(', ')}${faltando.length > 6 ? '…' : ''}.`, faltando });
-  const { buffer: pdf, paginas } = await renderContratoV2Pdf(doc, { catalogo: c.catalogo, logoPng: logo });
-  const pdfBytes = new Uint8Array(pdf);
+  const { buffer: pdf, paginas: paginasBase } = await renderContratoV2Pdf(doc, { catalogo: c.catalogo, logoPng: logo });
+  let pdfBytes: Uint8Array = new Uint8Array(pdf);
+  let paginas = paginasBase;
+  const avisos: string[] = [];
+  if (doc.anexoIII) {
+    const prop = await arquivoDaProposta(sb, c.dossie?.proposta.arquivoPath);
+    if (prop) {
+      const r = await anexarPropostaAoPdf(pdfBytes, prop);
+      pdfBytes = r.pdf;
+      paginas += r.paginasAnexo;
+      if (r.aviso) avisos.push(r.aviso);
+    } else {
+      avisos.push('Anexo III incluído, mas o arquivo da proposta não foi encontrado: o PDF saiu só com a capa do anexo.');
+    }
+  }
 
   // Caminhos por hash e sem sobrescrita: duas emissões concorrentes nunca trocam
   // os bytes de um arquivo cujo hash já foi gravado pela RPC.
@@ -90,5 +103,5 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     await svc.storage.from('contratos').remove([docxPath, pdfPath]);
     return void res.status(409).json({ erro: eErr.message.includes('aprovação') ? 'A aprovação não corresponde ao conteúdo atual: valide de novo.' : 'Não foi possível emitir o contrato.' });
   }
-  res.status(200).json({ numero: numero as string, paginas });
+  res.status(200).json({ numero: numero as string, paginas, avisos });
 }

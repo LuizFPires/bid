@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { camposVaziosDoDocumento } from '@bid/core';
-import { MissingEnvError, bearer, carregarContratoV2, documentXmlDoDocx, gravarHashConteudo, marcadoresSimples, preencherDocx, renderContratoV2Pdf, requireMethod, resolverEHash, serviceClient, userClient } from '@bid/server';
+import { MissingEnvError, anexarPropostaAoPdf, arquivoDaProposta, bearer, carregarContratoV2, documentXmlDoDocx, gravarHashConteudo, marcadoresSimples, preencherDocx, renderContratoV2Pdf, requireMethod, resolverEHash, serviceClient, userClient } from '@bid/server';
 
 /**
  * POST /api/contracts/preview  { contratoId, formato: 'docx' | 'pdf' | 'hash' }
@@ -67,7 +67,13 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     arquivo = { bytes: preenchido.docx, tipo: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: 'docx' };
   } else if (formato === 'pdf') {
     const { buffer } = await renderContratoV2Pdf(doc, { catalogo: c.catalogo, logoPng: logo });
-    arquivo = { bytes: new Uint8Array(buffer), tipo: 'application/pdf', ext: 'pdf' };
+    let bytes = new Uint8Array(buffer);
+    // Anexo III: a proposta vencedora, como arquivada no bid, entra depois da capa do anexo.
+    if (doc.anexoIII) {
+      const prop = await arquivoDaProposta(sb, c.dossie?.proposta.arquivoPath);
+      if (prop) bytes = (await anexarPropostaAoPdf(bytes, prop)).pdf;
+    }
+    arquivo = { bytes, tipo: 'application/pdf', ext: 'pdf' };
   }
 
   // Grava hash e pendências de marcador quando o contrato está em edição

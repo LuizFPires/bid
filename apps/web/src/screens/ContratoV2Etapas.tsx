@@ -225,8 +225,9 @@ export function EtapaCondicoes({ c, editavel }: { c: ContratoV2Detalhe; editavel
 
   // Anexo III (proposta anexada) — guardado nos parâmetros.
   const p = c.parametros;
+  const incluirPadrao = p.anexo_iii_incluir ? p.anexo_iii_incluir === 'sim' : !!c.dossie?.proposta.arquivoPath;
   const [anexoIII, setAnexoIII] = useState({
-    incluir: p.anexo_iii_incluir === 'sim',
+    incluir: incluirPadrao,
     numero: p.prop_numero ?? '',
     data: p.prop_data ?? '',
     emitente: p.prop_emitente ?? c.dossie?.proposta.fornecedor ?? '',
@@ -234,7 +235,7 @@ export function EtapaCondicoes({ c, editavel }: { c: ContratoV2Detalhe; editavel
   });
   const chaveParams = JSON.stringify([p.anexo_iii_incluir, p.prop_numero, p.prop_data, p.prop_emitente, p.prop_destinatario]);
   useEffect(() => {
-    setAnexoIII({ incluir: p.anexo_iii_incluir === 'sim', numero: p.prop_numero ?? '', data: p.prop_data ?? '', emitente: p.prop_emitente ?? c.dossie?.proposta.fornecedor ?? '', destinatario: p.prop_destinatario ?? '' });
+    setAnexoIII({ incluir: p.anexo_iii_incluir ? p.anexo_iii_incluir === 'sim' : !!c.dossie?.proposta.arquivoPath, numero: p.prop_numero ?? '', data: p.prop_data ?? '', emitente: p.prop_emitente ?? c.dossie?.proposta.fornecedor ?? '', destinatario: p.prop_destinatario ?? '' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c.id, chaveParams]);
   const ratificacaoObrigatoria = precisaRatificacao(c.partes, { incluir: anexoIII.incluir, emitente: anexoIII.emitente, destinatario: anexoIII.destinatario });
@@ -326,7 +327,7 @@ export function EtapaCondicoes({ c, editavel }: { c: ContratoV2Detalhe; editavel
       <div className="card">
         <label className="lote-versao" style={{ marginBottom: 10 }}>
           <input type="checkbox" checked={anexoIII.incluir} disabled={!editavel} onChange={(e) => setAnexoIII({ ...anexoIII, incluir: e.target.checked })} />
-          <span><b>Anexar a proposta comercial como Anexo III.</b> Em conflito, prevalecem o contrato e o Anexo I (cláusula 1.3).</span>
+          <span><b>Anexar a proposta comercial como Anexo III.</b> O arquivo da proposta, como arquivado no bid, entra no fim do PDF do contrato. Em conflito, prevalecem o contrato e o Anexo I (cláusula 1.3).</span>
         </label>
         {anexoIII.incluir && (
           <>

@@ -18,3 +18,4 @@ export * from './contrato-docx';
 export * from './contrato-pdf';
 export * from './contrato-carregar';
 export * from './assinar-v2';
+export * from './contrato-anexo-proposta';
