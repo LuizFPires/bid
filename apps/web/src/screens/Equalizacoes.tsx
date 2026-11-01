@@ -649,7 +649,7 @@ export function EqualizacaoScreen() {
   async function marcarVencedora(propostaId: string) {
     try {
       const anterior = await definir.mutateAsync(propostaId);
-      toast('Definida como vencedora — tomada de preços adjudicada.', {
+      toast('Definida como vencedora — tomada de preços concluída.', {
         actionLabel: 'Desfazer',
         onAction: async () => {
           try {
@@ -815,7 +815,7 @@ export function EqualizacaoScreen() {
           }
         }}
       >
-        A proposta volta a "em análise" e a tomada de preços deixa de estar adjudicada. Você pode escolher outra vencedora na tabela. Se já houver contrato desta proposta, apague-o (ou cancele, se emitido) antes.
+        A proposta volta a "em análise" e a tomada de preços volta a ficar aberta para escolher outra vencedora. Você pode escolher outra vencedora na tabela. Se já houver contrato desta proposta, apague-o (ou cancele, se emitido) antes.
       </ConfirmDialog>
       <ConfirmDialog
         aberto={confirmando}

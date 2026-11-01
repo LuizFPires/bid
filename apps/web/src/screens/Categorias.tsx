@@ -196,7 +196,7 @@ export function CategoriasScreen() {
       >
         {confirmar?.tipo === 'renomear'
           ? 'Todas as tomadas de preços e propostas desta categoria passam a usar o novo nome.'
-          : 'As propostas migram e as tomadas de preços da mesma obra se juntam. Tomadas já adjudicadas bloqueiam a mescla.'}
+          : 'As propostas migram e as tomadas de preços da mesma obra se juntam. Tomadas de preços que já têm vencedora definida bloqueiam a mescla.'}
       </ConfirmDialog>
     </>
   );

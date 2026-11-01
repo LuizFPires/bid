@@ -194,7 +194,7 @@ export function PropostaScreen() {
       const anterior = await definir.mutateAsync(data.id);
       const propostaId = data.id;
       setVersaoAberta(null);
-      toast('Definida como vencedora — tomada de preços adjudicada.', {
+      toast('Definida como vencedora — tomada de preços concluída.', {
         actionLabel: 'Desfazer',
         // Raw + invalidação pelo queryClient global: sobrevive à navegação.
         onAction: async () => {
@@ -315,7 +315,7 @@ export function PropostaScreen() {
           }
         }}
       >
-        A proposta volta ao status normal e a tomada de preços deixa de estar adjudicada. Nada é apagado; você pode definir outra vencedora depois. Se já houver contrato desta proposta, apague-o (ou cancele, se emitido) antes.
+        A proposta volta ao status normal e a tomada de preços volta a ficar aberta para escolher outra vencedora. Nada é apagado; você pode definir outra vencedora depois. Se já houver contrato desta proposta, apague-o (ou cancele, se emitido) antes.
       </ConfirmDialog>
 
       {modo === 'ver' ? (
@@ -463,7 +463,7 @@ function Versoes({
                 <Button block icon="trophy" disabled={definindo} onClick={onVencedora}>
                   {definindo ? 'Definindo…' : 'Definir como vencedora'}
                 </Button>
-                <span className="hint">Adjudica a tomada de preços e libera o contrato. Dá para desfazer.</span>
+                <span className="hint">Conclui a tomada de preços e libera o contrato. Dá para desfazer.</span>
               </>
             ) : (
               <Button block icon="tab-contratos" disabled={gerando} onClick={onContrato}>

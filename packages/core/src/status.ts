@@ -49,7 +49,7 @@ export type StatusTone = 'aberta' | 'analise' | 'adjudicada' | 'neutro';
 export const CERTAME_LABEL: Record<CertameStatus, { texto: string; tom: StatusTone }> = {
   aberta: { texto: 'Recebendo propostas', tom: 'aberta' },
   analise: { texto: 'Em equalização', tom: 'analise' },
-  adjudicada: { texto: 'Adjudicada', tom: 'adjudicada' },
+  adjudicada: { texto: 'Vencedora definida', tom: 'adjudicada' },
 };
 
 /** Certame ativo = ainda não adjudicado (regra de domínio, vive no core). */

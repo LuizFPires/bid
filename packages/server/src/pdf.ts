@@ -71,7 +71,7 @@ export async function renderContratoPdf(d: ContratoPdfDados): Promise<{ buffer: 
         kv('Prazo', v.prazo),
         kv('Condição de pagamento', v.pagamento),
         kv('Garantia', v.garantia),
-        h(Text, { style: s.nota }, 'A proposta comercial do fornecedor, na versão arquivada no bid na data da adjudicação, integra este contrato como Anexo I e é a fonte das cláusulas da minuta. Em caso de divergência entre a minuta e a proposta, prevalece a minuta.'),
+        h(Text, { style: s.nota }, 'A proposta comercial do fornecedor, na versão arquivada no bid na data em que foi definida como vencedora, integra este contrato como Anexo I e é a fonte das cláusulas da minuta. Em caso de divergência entre a minuta e a proposta, prevalece a minuta.'),
       ),
     );
   }

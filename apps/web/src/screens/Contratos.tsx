@@ -145,7 +145,7 @@ export function ContratosScreen() {
         onConfirmar={confirmarApagarCt}
         onCancelar={() => setParaApagar(null)}
       >
-        A proposta vencedora continua adjudicada; só o contrato (e seu PDF) sai da lista. Você ainda pode desfazer
+        A proposta continua como vencedora; só o contrato (e seu PDF) sai da lista. Você ainda pode desfazer
         por alguns segundos.
       </ConfirmDialog>
     </>
@@ -193,7 +193,7 @@ export function NovoContratoScreen() {
           </div>
         </div>
       ) : vencedoras.length === 0 ? (
-        <div className="card empty">Nenhuma proposta vencedora ainda. Adjudique uma tomada de preços primeiro.</div>
+        <div className="card empty">Nenhuma proposta vencedora ainda. Defina uma proposta como vencedora primeiro.</div>
       ) : (
         <div className="card rowlist">
           {vencedoras.map((v) => (
@@ -355,7 +355,7 @@ export function ContratoScreen() {
         }}
         onCancelar={() => setConfirmandoApagar(false)}
       >
-        A proposta vencedora continua adjudicada; só o contrato (e seu PDF) sai da lista. Você ainda pode desfazer
+        A proposta continua como vencedora; só o contrato (e seu PDF) sai da lista. Você ainda pode desfazer
         por alguns segundos.
       </ConfirmDialog>
 
