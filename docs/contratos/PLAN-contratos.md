@@ -50,15 +50,16 @@
 
 ## M12 · Minuta, variantes, motor .docx/PDF e validação
 
-- [ ] `core/contrato/clausulas-v2.ts` (itens iniciais do catálogo + parâmetros + blocos; `aplicarVariante`, `suprimir`, `restaurarPadrao`, item extra) + testes.
-- [ ] `core/contrato/resolver.ts` (`resolverDocumento`) e `validar.ts` (`pendencias`) + teste com snapshot do caso fictício.
-- [ ] `packages/server/src/contrato-docx.ts`: porta do motor de referência (`docs/contratos/ref/motor-docx.mjs`) com fflate; troca de logo por marca; teste com `skipIf` sem o modelo privado.
-- [ ] `packages/server/src/contrato-pdf.ts`: PDF com @react-pdf do mesmo documento resolvido; teste de paridade de texto com o .docx.
-- [ ] Rota `/api/contracts/preview` (minuta .docx/PDF com aviso; grava `conteudo_hash` e `_faltando`).
-- [ ] **Etapa 6 Minuta**: lista de cláusulas → itens com selo de origem; "ver padrão" (diff simples); editar = variante com justificativa; catálogo de variantes negociadas por item (com explicação do que se perde; `reduz_protecao` em vermelho); suprimir; incluir item extra.
-- [ ] **Etapa 7 Enviar**: checklist de pendências do core + revisão IA atual concluída + achados altos resolvidos → `enviar_validacao`.
-- [ ] RPCs `enviar_validacao`, `devolver_contrato`, `aprovar_contrato` (com `autoaprovacao` e aviso — Q2) + pgTAP `contrato_fluxo.test.sql`.
-- [ ] Tela **Validação** (dono/gestor): resumo, variantes que reduzem proteção com "li e aprovo" por item, achados aceitos com justificativas, baixar minuta, Aprovar / Devolver (comentário obrigatório). Badge "aguardando validação" na aba Contratos.
+- [x] `core/contrato/clausulas-v2.ts` (itens iniciais do catálogo + parâmetros + blocos; `aplicarVariante`, `suprimir`, `restaurarPadrao`, item extra) + testes.
+- [x] `core/contrato/resolver.ts` (`resolverDocumento`) e `validar.ts` (`pendencias`) + teste com snapshot do caso fictício.
+- [x] `packages/server/src/contrato-docx.ts`: porta do motor de referência (`docs/contratos/ref/motor-docx.mjs`) com fflate; troca de logo por marca; teste com `skipIf` sem o modelo privado.
+- [x] `packages/server/src/contrato-pdf.ts`: PDF com @react-pdf do mesmo documento resolvido; teste de paridade de texto com o .docx.
+- [x] Rota `/api/contracts/preview` (minuta .docx/PDF com aviso; grava `conteudo_hash` e `_faltando`).
+- [x] **Etapa 6 Minuta**: lista de cláusulas → itens com selo de origem; "ver padrão" (diff simples); editar = variante com justificativa; catálogo de variantes negociadas por item (com explicação do que se perde; `reduz_protecao` em vermelho); suprimir; incluir item extra.
+- [x] **Etapa 7 Enviar**: checklist de pendências do core + revisão IA atual concluída + achados altos resolvidos → `enviar_validacao`.
+- [x] RPCs `enviar_validacao`, `devolver_contrato`, `aprovar_contrato` (com `autoaprovacao` e aviso — Q2) + pgTAP `contrato_fluxo.test.sql`.
+- [x] Tela **Validação** (dono/gestor): resumo, variantes que reduzem proteção com "li e aprovo" por item, achados aceitos com justificativas, baixar minuta, Aprovar / Devolver (comentário obrigatório). Badge "aguardando validação" na aba Contratos.
+- Notas: a paridade .docx × PDF é testada por continência do texto resolvido no .docx (o PDF só é renderizado e paginado — sem extrator de texto de PDF no repo); a validação OOXML no Word fica para a homologação com o modelo carregado. Parâmetros de cláusula são aplicados na resolução (origem `parametro`), não gravados em itens.
 - **Aceite:** colaborador monta e envia; colaborador **não** consegue aprovar (UI e RPC); gestor aprova; editar depois da aprovação volta para rascunho; minuta .docx abre no Word sem erro (validar com o validador OOXML) e o PDF tem o mesmo texto.
 
 ## M13 · Emissão, numeração e assinatura das três partes
