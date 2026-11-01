@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { divergenciaValor, fmtUnit, importarXlsxLinhas, linhasDaProposta, numeroBR, totalLinha, totalPlanilha } from './planilha';
-import { aplicarBloco, derivarAnexos, precisaRatificacao, sugerirBlocos, type BlocoModelo } from './blocos';
+import { divergenciaValor, fmtUnit, importarXlsxLinhas, linhasDaProposta, numeroBR, totalLinha, totalPlanilha, totaisPorGrupo } from './planilha';
+import { aplicarBloco, derivarAnexos, numeroItemBloco, precisaRatificacao, reconciliarItensBlocos, sugerirBlocos, type BlocoModelo } from './blocos';
+import type { ItemClausula } from './tipos';
 import { montarDossie } from './dossie';
 
 describe('planilha', () => {
@@ -10,6 +11,19 @@ describe('planilha', () => {
     expect(totalLinha(1, 0.005)).toBe(0.01);
     expect(totalLinha(0.1, 0.2)).toBe(0.02);
     expect(totalLinha(null, 10)).toBeNull();
+    // produto acima de 2^53 em décimos de milésimo
+    expect(totalLinha(1_000_000, 123456.7891)).toBe(123456789100);
+    expect(totalLinha(-1, 0.005)).toBe(-0.01);
+  });
+  it('subtotal por grupo até o próximo grupo', () => {
+    const linhas = [
+      { codigo: '1', grupo: true, descricao: 'A', unidade: null, quantidade: null, preco_unitario: null },
+      { codigo: '1.1', grupo: false, descricao: 'a', unidade: 'un', quantidade: 2, preco_unitario: 10 },
+      { codigo: '2', grupo: true, descricao: 'B', unidade: null, quantidade: null, preco_unitario: null },
+      { codigo: '2.1', grupo: false, descricao: 'b', unidade: 'un', quantidade: 1, preco_unitario: 0.1 },
+      { codigo: '2.2', grupo: false, descricao: 'c', unidade: 'un', quantidade: 1, preco_unitario: 0.2 },
+    ];
+    expect([...totaisPorGrupo(linhas)]).toEqual([[0, 20], [2, 0.3]]);
   });
   it('soma ignora grupos e fecha o caso fictício em 312.450,00', () => {
     const linhas = [
@@ -97,5 +111,31 @@ describe('blocos', () => {
     expect(precisaRatificacao(partes, { incluir: false, emitente: 'X', destinatario: 'Y' })).toBe(false);
     expect(derivarAnexos({ anexoIII: true }).anexos_lista).toBe('ANEXOS I, II e III');
     expect(derivarAnexos({ anexoIII: false }).anexos_lista).toBe('ANEXOS I e II');
+  });
+});
+
+describe('reconciliarItensBlocos', () => {
+  const base = (n: string, texto: string, extra: Partial<ItemClausula> = {}): ItemClausula => ({ numero: n, apos: null, texto, textoPadrao: texto, origem: 'padrao', varianteChave: null, blocoChave: null, suprimido: false, justificativa: null, reduzProtecao: false, ...extra });
+  const rat = aplicarBloco(biblioteca[0]!, { prop_numero: '045' });
+  it('altera item existente e insere item novo com número único do bloco', () => {
+    const itens = [base('1.3', 'Integram: Anexos I e II.')];
+    const out = reconciliarItensBlocos(itens, [rat]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ numero: '1.3', texto: 'Integram: Anexos I, II e III.', origem: 'bloco', blocoChave: 'ratificacao_proposta' });
+    const ins = aplicarBloco({ ...biblioteca[1]!, altera_clausulas: [{ apos: '5.2', texto: 'Novo item.' }] }, { lista_exclusoes: 'x' });
+    const out2 = reconciliarItensBlocos(itens, [ins]);
+    expect(out2[0]).toMatchObject({ numero: numeroItemBloco('5.2', 'exclusoes'), apos: '5.2', origem: 'bloco', textoPadrao: null });
+  });
+  it('bloco que saiu: alterado volta ao padrão, inserido fica suprimido; nada muda se já está igual', () => {
+    const itens: ItemClausula[] = [
+      base('1.3', 'Integram: Anexos I, II e III.', { textoPadrao: 'Integram: Anexos I e II.', origem: 'bloco', blocoChave: 'ratificacao_proposta' }),
+      base('5.2.b.exclusoes', 'Novo item.', { apos: '5.2', textoPadrao: null, origem: 'bloco', blocoChave: 'exclusoes' }),
+    ];
+    const out = reconciliarItensBlocos(itens, []);
+    expect(out).toEqual([
+      expect.objectContaining({ numero: '1.3', texto: 'Integram: Anexos I e II.', origem: 'padrao', blocoChave: null }),
+      expect.objectContaining({ numero: '5.2.b.exclusoes', suprimido: true, origem: 'bloco' }),
+    ]);
+    expect(reconciliarItensBlocos([itens[0]!], [rat])).toEqual([]);
   });
 });

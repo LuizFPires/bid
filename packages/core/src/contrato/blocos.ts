@@ -1,5 +1,5 @@
 import { categoriasParecidas, chaveCategoria } from '../categorias';
-import type { Dossie, PartesContrato } from './tipos';
+import type { Dossie, ItemClausula, PartesContrato } from './tipos';
 
 /** Bloco de condições específicas, como vem de `modelo_blocos`. */
 export interface BlocoModelo {
@@ -134,4 +134,47 @@ export function derivarAnexos(opts: { anexoIII: boolean }): { anexos_lista: stri
 export function textoAnexoIII(d: { fornecedor: string; numero?: string | null; data?: string | null; destinatario?: string | null }): { titulo: string; texto: string } {
   const partes = [`Proposta${d.numero ? ` nº ${d.numero}` : ''}${d.data ? `, de ${d.data}` : ''}, emitida por ${d.fornecedor}${d.destinatario ? ` e dirigida a ${d.destinatario}` : ''}.`, '**Prevalência:** em caso de conflito, prevalecem o contrato e o Anexo I (cláusula 1.3).'];
   return { titulo: 'ANEXO III – PROPOSTA COMERCIAL DA CONTRATADA', texto: partes.join(' ') };
+}
+
+/** Número do item de cláusula inserido por um bloco após `apos` (único por bloco). */
+export function numeroItemBloco(apos: string, blocoChave: string): string {
+  return `${apos}.b.${blocoChave}`;
+}
+
+/**
+ * Itens de cláusula a gravar depois de aplicar os blocos escolhidos:
+ * - item existente alterado por bloco → texto do bloco, origem 'bloco';
+ * - inserção após um item → item novo (ou reativado) com origem 'bloco';
+ * - item de bloco que saiu: alterado volta ao texto padrão; inserido fica
+ *   `suprimido` (o RPC não apaga, só grava).
+ * Só devolve o que muda.
+ */
+export function reconciliarItensBlocos(itens: readonly ItemClausula[], aplicados: readonly BlocoAplicado[]): ItemClausula[] {
+  const out: ItemClausula[] = [];
+  const tocados = new Set<string>();
+  for (const a of aplicados) {
+    for (const alt of a.alteracoes) {
+      if (alt.numero) {
+        const item = itens.find((i) => i.numero === alt.numero);
+        if (!item) continue;
+        tocados.add(item.numero);
+        if (item.texto !== alt.texto || item.origem !== 'bloco' || item.blocoChave !== a.chave || item.suprimido) {
+          out.push({ ...item, texto: alt.texto, origem: 'bloco', blocoChave: a.chave, varianteChave: null, suprimido: false, justificativa: null });
+        }
+      } else if (alt.apos) {
+        const numero = numeroItemBloco(alt.apos, a.chave);
+        tocados.add(numero);
+        const atual = itens.find((i) => i.numero === numero);
+        if (!atual || atual.texto !== alt.texto || atual.suprimido) {
+          out.push({ numero, apos: alt.apos, texto: alt.texto, textoPadrao: null, origem: 'bloco', varianteChave: null, blocoChave: a.chave, suprimido: false, justificativa: null, reduzProtecao: atual?.reduzProtecao ?? false });
+        }
+      }
+    }
+  }
+  for (const i of itens) {
+    if (i.origem !== 'bloco' || tocados.has(i.numero) || i.suprimido) continue;
+    if (i.textoPadrao != null) out.push({ ...i, texto: i.textoPadrao, origem: 'padrao', blocoChave: null, justificativa: null });
+    else out.push({ ...i, suprimido: true });
+  }
+  return out;
 }

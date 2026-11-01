@@ -17,11 +17,35 @@ export interface LinhaPlanilha {
 /** round(qtd × unit, 2) com HALF_UP em centavos, sem ruído de ponto flutuante. */
 export function totalLinha(qtd: number | null | undefined, unit: number | null | undefined): number | null {
   if (qtd == null || unit == null || !Number.isFinite(qtd) || !Number.isFinite(unit)) return null;
-  // Trabalha em "décimos de milésimo" inteiros para evitar 0.1+0.2.
-  const q = Math.round(qtd * 10000);
-  const u = Math.round(unit * 10000);
-  const centavosExatos = (q * u) / 1_000_000; // (qtd*1e4 * unit*1e4) / 1e8 * 100
-  return Math.round(centavosExatos + 1e-9) / 100;
+  // Trabalha em "décimos de milésimo" inteiros (BigInt: o produto passa de 2^53
+  // em linhas acima de ~R$ 900 mi) para evitar 0.1+0.2. HALF_UP em centavos;
+  // valores negativos arredondam para longe de zero.
+  const q = BigInt(Math.round(qtd * 10000));
+  const u = BigInt(Math.round(unit * 10000));
+  const prod = q * u; // centavos × 1e6
+  const neg = prod < 0n;
+  const abs = neg ? -prod : prod;
+  const cents = (abs + 500_000n) / 1_000_000n;
+  return Number(neg ? -cents : cents) / 100;
+}
+
+/** Subtotal de cada linha de grupo (um grupo vai até o próximo grupo), por índice. */
+export function totaisPorGrupo(linhas: readonly LinhaPlanilha[]): Map<number, number> {
+  const m = new Map<number, number>();
+  let g: number | null = null;
+  let cents = 0;
+  linhas.forEach((l, i) => {
+    if (l.grupo) {
+      if (g != null) m.set(g, cents / 100);
+      g = i;
+      cents = 0;
+    } else if (g != null) {
+      const t = totalLinha(l.quantidade, l.preco_unitario);
+      if (t != null) cents += Math.round(t * 100);
+    }
+  });
+  if (g != null) m.set(g, cents / 100);
+  return m;
 }
 
 export function totalPlanilha(linhas: readonly LinhaPlanilha[]): number {

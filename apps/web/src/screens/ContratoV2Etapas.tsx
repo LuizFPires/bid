@@ -9,12 +9,13 @@ import {
   importarXlsxLinhas,
   numeroBR,
   precisaRatificacao,
+  reconciliarItensBlocos,
   sugerirBlocos,
   textoAnexoIII,
+  totaisPorGrupo,
   totalLinha,
   totalPlanilha,
   type BlocoModelo,
-  type ItemClausula,
   type LinhaPlanilha,
 } from '@bid/core';
 import { Button, Icon } from '@bid/ui';
@@ -43,20 +44,7 @@ export function EtapaPlanilha({ c, editavel }: { c: ContratoV2Detalhe; editavel:
   const dif = divergenciaValor(soma, valorProposta);
   const sujo = linhas !== null;
 
-  // Totais por grupo (um grupo vai até o próximo grupo).
-  const totaisGrupo = useMemo(() => {
-    const m = new Map<number, number>();
-    let g: number | null = null;
-    for (const l of atual) {
-      if (l.grupo) {
-        g = l._k;
-        m.set(g, 0);
-      } else if (g != null) {
-        m.set(g, Math.round(((m.get(g) ?? 0) + (totalLinha(l.quantidade, l.preco_unitario) ?? 0)) * 100) / 100);
-      }
-    }
-    return m;
-  }, [atual]);
+  const totaisGrupo = useMemo(() => new Map([...totaisPorGrupo(atual)].map(([i, t]) => [atual[i]!._k, t])), [atual]);
 
   function editar(k: number, patch: Partial<LinhaPlanilha>) {
     setLinhas((ls) => (ls ?? base).map((l) => (l._k === k ? { ...l, ...patch } : l)));
@@ -199,13 +187,13 @@ export function EtapaPlanilha({ c, editavel }: { c: ContratoV2Detalhe; editavel:
                   </div>
                   <div className="field">
                     <label>Quantidade</label>
-                    <input inputMode="decimal" defaultValue={linhaAberta.quantidade != null ? fmtQtd(linhaAberta.quantidade) : ''} onBlur={(e) => editar(linhaAberta._k, { quantidade: numeroBR(e.target.value) })} placeholder="1.800" />
+                    <input key={`q${linhaAberta._k}`} inputMode="decimal" defaultValue={linhaAberta.quantidade != null ? fmtQtd(linhaAberta.quantidade) : ''} onBlur={(e) => editar(linhaAberta._k, { quantidade: numeroBR(e.target.value) })} placeholder="1.800" />
                   </div>
                 </div>
                 <div className="pair">
                   <div className="field">
                     <label>Preço unitário (R$)</label>
-                    <input inputMode="decimal" defaultValue={linhaAberta.preco_unitario != null ? fmtUnit(linhaAberta.preco_unitario) : ''} onBlur={(e) => editar(linhaAberta._k, { preco_unitario: numeroBR(e.target.value) })} placeholder="152,4725" />
+                    <input key={`u${linhaAberta._k}`} inputMode="decimal" defaultValue={linhaAberta.preco_unitario != null ? fmtUnit(linhaAberta.preco_unitario) : ''} onBlur={(e) => editar(linhaAberta._k, { preco_unitario: numeroBR(e.target.value) })} placeholder="152,4725" />
                   </div>
                   <div className="field">
                     <label>Total</label>
@@ -244,6 +232,11 @@ export function EtapaCondicoes({ c, editavel }: { c: ContratoV2Detalhe; editavel
     emitente: p.prop_emitente ?? c.dossie?.proposta.fornecedor ?? '',
     destinatario: p.prop_destinatario ?? '',
   });
+  const chaveParams = JSON.stringify([p.anexo_iii_incluir, p.prop_numero, p.prop_data, p.prop_emitente, p.prop_destinatario]);
+  useEffect(() => {
+    setAnexoIII({ incluir: p.anexo_iii_incluir === 'sim', numero: p.prop_numero ?? '', data: p.prop_data ?? '', emitente: p.prop_emitente ?? c.dossie?.proposta.fornecedor ?? '', destinatario: p.prop_destinatario ?? '' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.id, chaveParams]);
   const ratificacaoObrigatoria = precisaRatificacao(c.partes, { incluir: anexoIII.incluir, emitente: anexoIII.emitente, destinatario: anexoIII.destinatario });
 
   // Estado por bloco: começa pelo que já está no contrato; senão pela sugestão.
@@ -262,38 +255,19 @@ export function EtapaCondicoes({ c, editavel }: { c: ContratoV2Detalhe; editavel
   const [aberto, setAberto] = useState<string | null>(null);
 
   const marcados = blocos.filter((b) => escolhas[b.chave]?.marcado || (b.chave === 'ratificacao_proposta' && ratificacaoObrigatoria));
-  const aplicados = marcados.map((b) => aplicarBloco(b, { ...(escolhas[b.chave]?.params ?? {}), ...(b.chave === 'ratificacao_proposta' ? { prop_numero: anexoIII.numero, prop_data: anexoIII.data, prop_emitente: anexoIII.emitente, prop_destinatario: anexoIII.destinatario } : {}) }));
+  const paramsDe = (chave: string): Record<string, string> => ({ ...(escolhas[chave]?.params ?? {}), ...(chave === 'ratificacao_proposta' ? { prop_numero: anexoIII.numero, prop_data: anexoIII.data, prop_emitente: anexoIII.emitente, prop_destinatario: anexoIII.destinatario } : {}) });
+  const aplicados = marcados.map((b) => aplicarBloco(b, paramsDe(b.chave)));
   const faltando = aplicados.flatMap((a) => a.faltando.map((f) => `${a.titulo}: ${f}`));
 
   async function gravar() {
     try {
-      // Itens de cláusula alterados por bloco (origem 'bloco'); os que saíram voltam ao padrão.
-      const itens: ItemClausula[] = [];
-      const alterados = new Set<string>();
-      for (const a of aplicados) {
-        for (const alt of a.alteracoes) {
-          if (alt.numero) {
-            const item = c.itens.find((i) => i.numero === alt.numero);
-            if (!item) continue;
-            itens.push({ ...item, texto: alt.texto, origem: 'bloco', blocoChave: a.chave, varianteChave: null, justificativa: null });
-            alterados.add(alt.numero);
-          } else if (alt.apos) {
-            const numero = `${alt.apos}.b${a.chave.slice(0, 6)}`;
-            itens.push({ numero, apos: alt.apos, texto: alt.texto, textoPadrao: null, origem: 'bloco', varianteChave: null, blocoChave: a.chave, suprimido: false, justificativa: null, reduzProtecao: false });
-            alterados.add(numero);
-          }
-        }
-      }
-      for (const i of c.itens) {
-        if (i.origem === 'bloco' && !alterados.has(i.numero) && i.textoPadrao) {
-          itens.push({ ...i, texto: i.textoPadrao, origem: 'padrao', blocoChave: null, justificativa: null });
-        }
-      }
+      // Itens de cláusula: alterados por bloco, inseridos, e os que saíram (regra no core).
+      const itens = reconciliarItensBlocos(c.itens, aplicados);
       const anexo = anexoIII.incluir ? textoAnexoIII({ fornecedor: c.dossie?.proposta.fornecedor ?? '', numero: anexoIII.numero || null, data: anexoIII.data || null, destinatario: anexoIII.destinatario || null }) : null;
       const derivados = derivarAnexos({ anexoIII: anexoIII.incluir });
       await salvar.mutateAsync({
-        blocos: aplicados.map((a) => ({ chave: a.chave, titulo: a.titulo, itens: a.itens, parametros: escolhas[a.chave]?.params ?? {} })),
-        itens,
+        blocos: aplicados.map((a) => ({ chave: a.chave, titulo: a.titulo, itens: a.itens, parametros: paramsDe(a.chave) })),
+        ...(itens.length ? { itens } : {}),
         parametros: {
           anexo_iii_incluir: anexoIII.incluir ? 'sim' : 'nao',
           anexo_iii_titulo: anexo?.titulo ?? '',
@@ -331,7 +305,7 @@ export function EtapaCondicoes({ c, editavel }: { c: ContratoV2Detalhe; editavel
             const apl = aplicados.find((a) => a.chave === s.chave);
             return (
               <div key={s.chave} className="row" role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => setAberto(s.chave)}>
-                <span className={`ck${on ? ' on' : ''}`} aria-hidden="true" onClick={(e) => { e.stopPropagation(); if (editavel && !obrigatoria) setEscolhas((x) => ({ ...x, [s.chave]: { ...esc, marcado: !esc.marcado } })); }}>
+                <span className={`ck${on ? ' on' : ''}`} aria-hidden="true" onClick={(e) => { e.stopPropagation(); if (editavel && !obrigatoria) setEscolhas((x) => { const cur = x[s.chave] ?? { marcado: false, params: {} }; return { ...x, [s.chave]: { ...cur, marcado: !cur.marcado } }; }); }}>
                   {on && <Icon name="check" />}
                 </span>
                 <span className="tt">
