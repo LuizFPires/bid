@@ -39,12 +39,13 @@
 
 ## M11 · Planilha, condições específicas (blocos) e Anexo III
 
-- [ ] `core/contrato/planilha.ts` (código, grupos, 4 casas no unitário, total arredondado a 2, soma) + testes (incluir 1.800 × 152,4725).
-- [ ] **Etapa 4 Planilha**: tabela editável (mobile: faixa presa), linhas de grupo, importação .xlsx (colunas código/descrição/unidade/qtd/unitário; usar `xlsx` só no servidor ou parser leve — registrar decisão), aviso quando a soma ≠ valor da proposta.
-- [ ] `core/contrato/blocos.ts` (`sugerirBlocos` por categoria e por sinais do dossiê; `aplicarBloco` com parâmetros) + testes.
-- [ ] **Etapa 5 Condições específicas**: blocos sugeridos marcados, parâmetros do bloco (ex.: diesel de referência R$/L, emissor/aprovador da OC), edição dos itens do bloco; bloco pode alterar itens de cláusula (vira origem `bloco`).
-- [ ] Anexo III: escolher incluir a proposta como anexo (texto/título do anexo; documentos citados e não anexados); se emitente/destinatário divergem → bloco **ratificação** obrigatório (RC-14) e itens 1.3, 1.4, 22.4 trocados.
-- [ ] `anexos_lista`, `q_documentos_integrantes` derivados automaticamente.
+- [x] `core/contrato/planilha.ts` (código, grupos, 4 casas no unitário, total arredondado a 2, soma) + testes (incluir 1.800 × 152,4725).
+- [x] **Etapa 4 Planilha**: tabela editável (mobile: faixa presa), linhas de grupo, importação .xlsx (colunas código/descrição/unidade/qtd/unitário; usar `xlsx` só no servidor ou parser leve — registrar decisão), aviso quando a soma ≠ valor da proposta.
+- [x] `core/contrato/blocos.ts` (`sugerirBlocos` por categoria e por sinais do dossiê; `aplicarBloco` com parâmetros) + testes.
+- [x] **Etapa 5 Condições específicas**: blocos sugeridos marcados, parâmetros do bloco (ex.: diesel de referência R$/L, emissor/aprovador da OC), edição dos itens do bloco; bloco pode alterar itens de cláusula (vira origem `bloco`).
+- [x] Anexo III: escolher incluir a proposta como anexo (texto/título do anexo; documentos citados e não anexados); se emitente/destinatário divergem → bloco **ratificação** obrigatório (RC-14) e itens 1.3, 1.4, 22.4 trocados.
+- [x] `anexos_lista`, `q_documentos_integrantes` derivados automaticamente.
+- Nota: a tabela editável abre cada linha num drawer (mobile first) em vez de faixa presa; importação .xlsx/.csv por parser leve no cliente (`apps/web/src/lib/xlsx.ts`, fflate) — decisão em docs/PLAN.md.
 - **Aceite:** contrato fictício de fundações com 2 grupos e 3 itens soma R$ 312.450,00; blocos "Fundações — escavação e escoramento" e "Ensaios" entram no Anexo I; incluir Anexo III de proposta dirigida a outra empresa força a ratificação.
 
 ## M12 · Minuta, variantes, motor .docx/PDF e validação
