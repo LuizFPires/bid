@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Achado, BlocoModelo, Dossie, ItemClausula, PartesContrato, SignatarioContrato, StatusContratoV2 } from '@bid/core';
+import type { Achado, BlocoModelo, CatalogoModelo, Dossie, ItemClausula, ParametroClausula, PartesContrato, SignatarioContrato, StatusContratoV2, VarianteModelo } from '@bid/core';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -70,6 +70,8 @@ export interface ContratoV2Detalhe {
   parametros: Record<string, string>;
   partes: Partial<PartesContrato>;
   conteudoHash: string | null;
+  /** Marcadores vazios conferidos pelo servidor na última minuta (null = minuta não gerada para esta versão). */
+  faltandoServidor: string[] | null;
   itens: ItemClausula[];
   planilha: LinhaPlanilhaV2[];
   blocos: { chave: string; titulo: string; itens: string[]; parametros: Record<string, unknown> }[];
@@ -83,7 +85,7 @@ export async function fetchContratoV2(id: string): Promise<ContratoV2Detalhe | n
   const { data, error } = await db()
     .from('contratos')
     .select(
-      `id, org_id, obra_id, proposta_id, certame_id, categoria, status, valor, numero, modelo_id, dossie, dossie_em, parametros, partes, conteudo_hash,
+      `id, org_id, obra_id, proposta_id, certame_id, categoria, status, valor, numero, modelo_id, dossie, dossie_em, parametros, partes, conteudo_hash, faltando,
        obras ( nome ), propostas ( versao_atual, valor_atual, prazo_atual ),
        contrato_itens_clausula ( numero, apos, texto, texto_padrao, origem, variante_chave, bloco_chave, suprimido, justificativa, reduz_protecao ),
        contrato_planilha ( id, ordem, codigo, grupo, descricao, unidade, quantidade, preco_unitario, total ),
@@ -151,6 +153,7 @@ export async function fetchContratoV2(id: string): Promise<ContratoV2Detalhe | n
     parametros: (r.parametros as Record<string, string>) ?? {},
     partes: (r.partes as Partial<PartesContrato>) ?? {},
     conteudoHash: (r.conteudo_hash as string | null) ?? null,
+    faltandoServidor: Array.isArray(r.faltando) ? (r.faltando as string[]) : null,
     itens: (r.contrato_itens_clausula ?? []).map((i) => ({ numero: i.numero, apos: i.apos, texto: i.texto, textoPadrao: i.texto_padrao, origem: i.origem, varianteChave: i.variante_chave, blocoChave: i.bloco_chave, suprimido: i.suprimido, justificativa: i.justificativa, reduzProtecao: i.reduz_protecao })),
     planilha: [...(r.contrato_planilha ?? [])].sort((a, b) => a.ordem - b.ordem),
     blocos: [...(r.contrato_blocos ?? [])].sort((a, b) => a.ordem - b.ordem).map((b) => ({ chave: b.bloco_chave, titulo: b.titulo, itens: Array.isArray(b.itens) ? b.itens : [], parametros: b.parametros ?? {} })),
@@ -254,4 +257,107 @@ export async function fetchBlocosModelo(modeloId: string): Promise<BlocoModelo[]
 }
 export function useBlocosModelo(modeloId: string | undefined) {
   return useQuery({ queryKey: ['modelo-blocos', modeloId], queryFn: () => fetchBlocosModelo(modeloId as string), enabled: !!modeloId, staleTime: 5 * 60_000 });
+}
+
+/* ---------- M12: catálogo, variantes, parâmetros de cláusula, minuta e validação ---------- */
+export interface AprovacaoV2 {
+  id: string;
+  acao: 'enviado' | 'aprovado' | 'devolvido';
+  conteudoHash: string;
+  comentario: string | null;
+  autoaprovacao: boolean;
+  autor: string;
+  criadaEm: string;
+}
+
+export async function fetchAprovacaoVigente(contratoId: string): Promise<AprovacaoV2 | null> {
+  const { data, error } = await db().rpc('aprovacao_vigente', { p_contrato: contratoId });
+  if (error) throw error;
+  const r = ((data ?? []) as { id: string; acao: AprovacaoV2['acao']; conteudo_hash: string; comentario: string | null; autoaprovacao: boolean; autor: string; created_at: string }[])[0];
+  return r ? { id: r.id, acao: r.acao, conteudoHash: r.conteudo_hash, comentario: r.comentario, autoaprovacao: r.autoaprovacao, autor: r.autor, criadaEm: r.created_at } : null;
+}
+
+export async function fetchCatalogoModelo(modeloId: string): Promise<CatalogoModelo | null> {
+  const { data, error } = await db().from('contrato_modelos').select('catalogo').eq('id', modeloId).maybeSingle();
+  if (error) throw error;
+  const c = (data as { catalogo: CatalogoModelo | null } | null)?.catalogo ?? null;
+  return c && Array.isArray(c.clausulas) ? { versao: c.versao, clausulas: c.clausulas, anexo_ii: Array.isArray(c.anexo_ii) ? c.anexo_ii : [] } : null;
+}
+
+export async function fetchVariantesModelo(modeloId: string): Promise<VarianteModelo[]> {
+  const { data, error } = await db().from('modelo_variantes').select('chave, numero, titulo, texto, reduz_protecao, explicacao').eq('modelo_id', modeloId).order('numero');
+  if (error) throw error;
+  return (data ?? []) as VarianteModelo[];
+}
+
+export async function fetchParametrosModelo(modeloId: string): Promise<ParametroClausula[]> {
+  const { data, error } = await db().from('modelo_parametros').select('numero, parametro, rotulo, tipo, texto').eq('modelo_id', modeloId).order('numero');
+  if (error) throw error;
+  return (data ?? []) as ParametroClausula[];
+}
+
+/** Hash + pendências de marcador conferidos pelo servidor (grava em contratos). */
+export async function conferirMinuta(contratoId: string): Promise<{ hash: string; faltando: string[] }> {
+  return post('/api/contracts/preview', { contratoId, formato: 'hash' });
+}
+
+/** Minuta .docx ou PDF (com aviso). Devolve o arquivo para `entregarArquivo` dentro do gesto do usuário. */
+export async function baixarMinuta(contratoId: string, formato: 'docx' | 'pdf'): Promise<{ arquivo: File; hash: string | null; faltando: number }> {
+  const resp = await fetch('/api/contracts/preview', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ contratoId, formato }) });
+  if (!resp.ok) {
+    const corpo = (await resp.json().catch(() => null)) as { erro?: string } | null;
+    throw new Error(corpo?.erro ?? `Falha (HTTP ${resp.status}).`);
+  }
+  const blob = await resp.blob();
+  const cd = resp.headers.get('Content-Disposition') ?? '';
+  const m = /filename\*=UTF-8''([^;]+)/.exec(cd);
+  const nome = m ? decodeURIComponent(m[1]!) : `Minuta.${formato}`;
+  return { arquivo: new File([blob], nome, { type: blob.type }), hash: resp.headers.get('X-Bid-Hash'), faltando: Number(resp.headers.get('X-Bid-Faltando') ?? '0') };
+}
+
+export async function enviarValidacao(contratoId: string, hash: string): Promise<void> {
+  const { error } = await db().rpc('enviar_validacao', { p_contrato: contratoId, p_hash: hash });
+  if (error) throw error;
+}
+export async function aprovarContrato(contratoId: string, hash: string): Promise<void> {
+  const { error } = await db().rpc('aprovar_contrato', { p_contrato: contratoId, p_hash: hash });
+  if (error) throw error;
+}
+export async function devolverContrato(contratoId: string, comentario: string): Promise<void> {
+  const { error } = await db().rpc('devolver_contrato', { p_contrato: contratoId, p_comentario: comentario });
+  if (error) throw error;
+}
+
+export function useAprovacaoVigente(contratoId: string | undefined) {
+  return useQuery({ queryKey: ['contrato-aprovacao', contratoId], queryFn: () => fetchAprovacaoVigente(contratoId as string), enabled: !!contratoId });
+}
+export function useCatalogoModelo(modeloId: string | undefined) {
+  return useQuery({ queryKey: ['modelo-catalogo', modeloId], queryFn: () => fetchCatalogoModelo(modeloId as string), enabled: !!modeloId, staleTime: 10 * 60_000 });
+}
+export function useVariantesModelo(modeloId: string | undefined) {
+  return useQuery({ queryKey: ['modelo-variantes', modeloId], queryFn: () => fetchVariantesModelo(modeloId as string), enabled: !!modeloId, staleTime: 10 * 60_000 });
+}
+export function useParametrosModelo(modeloId: string | undefined) {
+  return useQuery({ queryKey: ['modelo-parametros', modeloId], queryFn: () => fetchParametrosModelo(modeloId as string), enabled: !!modeloId, staleTime: 10 * 60_000 });
+}
+function invalidarContrato(qc: ReturnType<typeof useQueryClient>, id: string | undefined) {
+  qc.invalidateQueries({ queryKey: ['contrato-v2', id] });
+  qc.invalidateQueries({ queryKey: ['contrato-aprovacao', id] });
+  qc.invalidateQueries({ queryKey: ['contratos'] });
+}
+export function useConferirMinuta(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: () => conferirMinuta(id as string), onSettled: () => invalidarContrato(qc, id) });
+}
+export function useEnviarValidacao(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (hash: string) => enviarValidacao(id as string, hash), onSettled: () => invalidarContrato(qc, id) });
+}
+export function useAprovarContrato(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (hash: string) => aprovarContrato(id as string, hash), onSettled: () => invalidarContrato(qc, id) });
+}
+export function useDevolverContrato(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (comentario: string) => devolverContrato(id as string, comentario), onSettled: () => invalidarContrato(qc, id) });
 }

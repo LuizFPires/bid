@@ -23,22 +23,24 @@ import { BarraAcao } from '../app/BarraAcao';
 import { Drawer } from '../app/Drawer';
 import { useToast } from '../app/Toast';
 import { EtapaCondicoes, EtapaPlanilha } from './ContratoV2Etapas';
-import { useContratoV2, useMontarDossie, useResolverAchado, useRevisarContrato, useSalvarContratoV2, type AchadoV2, type ContratoV2Detalhe } from '../data/contrato-v2';
+import { EtapaMinuta, PainelEnvio, PainelValidacao } from './ContratoV2Minuta';
+import { useAprovacaoVigente, useContratoV2, useMontarDossie, useResolverAchado, useRevisarContrato, useSalvarContratoV2, type AchadoV2, type ContratoV2Detalhe } from '../data/contrato-v2';
 
-type Etapa = 'dossie' | 'partes' | 'quadro' | 'planilha' | 'condicoes' | 'revisao';
+type Etapa = 'dossie' | 'partes' | 'quadro' | 'planilha' | 'condicoes' | 'minuta' | 'revisao';
 const ETAPAS: { chave: Etapa; n: number; rotulo: string }[] = [
   { chave: 'dossie', n: 1, rotulo: 'Dossiê' },
   { chave: 'partes', n: 2, rotulo: 'Partes' },
   { chave: 'quadro', n: 3, rotulo: 'Quadro' },
   { chave: 'planilha', n: 4, rotulo: 'Planilha' },
   { chave: 'condicoes', n: 5, rotulo: 'Condições' },
+  { chave: 'minuta', n: 6, rotulo: 'Minuta' },
   { chave: 'revisao', n: 7, rotulo: 'Revisão IA' },
 ];
 
 /**
- * Assistente do contrato na minuta padrão (M10: etapas 1–3 e 7; M11: 4 planilha
- * e 5 condições específicas/Anexo III). A etapa 6 (minuta/variantes) e o envio
- * para validação entram no M12. Nada aqui monta texto de contrato (regra 15).
+ * Assistente do contrato na minuta padrão: etapas 1–3 e 7 (M10), 4 planilha e
+ * 5 condições/Anexo III (M11), 6 minuta/variantes, conferir e enviar, e a
+ * validação por dono/gestor (M12). A emissão entra no M13. Nada aqui monta texto de contrato (regra 15).
  */
 export function ContratoV2Screen({ id }: { id: string }) {
   const navigate = useNavigate();
@@ -47,6 +49,7 @@ export function ContratoV2Screen({ id }: { id: string }) {
   const revisar = useRevisarContrato(id);
   const sondar = revisar.isPending;
   const { data, isLoading, isError } = useContratoV2(id, { sondar });
+  const aprovacao = useAprovacaoVigente(id);
   const toast = useToast();
 
   if (isLoading) {
@@ -71,6 +74,7 @@ export function ContratoV2Screen({ id }: { id: string }) {
     quadro: faltamQuadro === 0,
     planilha: data.planilha.some((l) => !l.grupo) && !divergenciaValor(totalPlanilha(data.planilha), data.dossie?.proposta.valor ?? null).difere,
     condicoes: data.parametros.anexo_iii_incluir === 'sim' || data.parametros.anexo_iii_incluir === 'nao',
+    minuta: !data.itens.some((i) => i.origem === 'variante' && !justificativaValida(i.justificativa ?? '')),
     revisao: !!revisaoAtual && bloqueantes === 0,
   };
   const irPara = (e: Etapa) => setParams({ etapa: e }, { replace: true });
@@ -106,13 +110,26 @@ export function ContratoV2Screen({ id }: { id: string }) {
         </span>
       </div>
 
+      {data.status === 'em_validacao' && <PainelValidacao c={data} />}
+      {data.status === 'devolvido' && aprovacao.data?.acao === 'devolvido' && (
+        <div className="banner warn" role="status" style={{ marginTop: 14 }}>
+          <Icon name="alert" />
+          <span><b>Devolvido para ajustes:</b> {aprovacao.data.comentario}</span>
+        </div>
+      )}
+      {data.status === 'aprovado' && (
+        <div className="banner ok" role="status" style={{ marginTop: 14 }}>
+          <Icon name="check" />
+          <span><b>Aprovado.</b> Qualquer edição volta o contrato a rascunho e exige nova validação (RC-10). A emissão com número entra no próximo passo.</span>
+        </div>
+      )}
+
       <div className="chips etapas" role="tablist" aria-label="Etapas do contrato">
         {ETAPAS.map((e) => (
           <button key={e.chave} type="button" role="tab" aria-selected={etapa === e.chave} className={`ch${etapa === e.chave ? ' on' : ''}${ok[e.chave] ? ' feita' : ''}`} onClick={() => irPara(e.chave)}>
             <span className="n">{ok[e.chave] ? <Icon name="check" /> : e.n}</span> {e.rotulo}
           </button>
         ))}
-        <span className="ch off" aria-disabled="true">6 · em breve</span>
       </div>
 
       {etapa === 'dossie' && <EtapaDossie c={data} editavel={editavel} />}
@@ -120,7 +137,13 @@ export function ContratoV2Screen({ id }: { id: string }) {
       {etapa === 'quadro' && <EtapaQuadro c={data} editavel={editavel} />}
       {etapa === 'planilha' && <EtapaPlanilha c={data} editavel={editavel} />}
       {etapa === 'condicoes' && <EtapaCondicoes c={data} editavel={editavel} />}
-      {etapa === 'revisao' && <EtapaRevisao c={data} editavel={editavel} rodando={revisar.isPending} />}
+      {etapa === 'minuta' && <EtapaMinuta c={data} editavel={editavel} />}
+      {etapa === 'revisao' && (
+        <>
+          <EtapaRevisao c={data} editavel={editavel} rodando={revisar.isPending} />
+          <PainelEnvio c={data} editavel={editavel} />
+        </>
+      )}
 
       <BarraAcao>
         {etapa === 'revisao' ? (

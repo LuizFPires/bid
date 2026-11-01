@@ -30,46 +30,27 @@ async function processar(req: VercelRequest, res: VercelResponse) {
 
   const sb = userClient(token);
   const { data: userData } = await sb.auth.getUser();
-  const { data: k } = await sb
-    .from('contratos')
-    .select('id, org_id, categoria, status, valor, dossie, parametros, partes, modelo_id, obras ( nome ), contrato_itens_clausula ( numero, texto, origem, suprimido, reduz_protecao, justificativa ), contrato_planilha ( ordem, codigo, grupo, descricao, unidade, quantidade, preco_unitario, total ), contrato_blocos ( ordem, bloco_chave, titulo, itens ), contrato_signatarios ( parte, nome, cargo, ordem )')
-    .eq('id', contratoId)
-    .is('deleted_at', null)
-    .maybeSingle();
-  const c = k as unknown as {
-    id: string; org_id: string; categoria: string; status: string; valor: number | null; dossie: Dossie | null; parametros: Record<string, string>; partes: unknown; modelo_id: string | null;
-    obras: { nome: string } | { nome: string }[] | null;
-    contrato_itens_clausula: { numero: string; texto: string; origem: string; suprimido: boolean; reduz_protecao: boolean; justificativa: string | null }[] | null;
-    contrato_planilha: { ordem: number; codigo: string | null; grupo: boolean; descricao: string; unidade: string | null; quantidade: number | null; preco_unitario: number | null; total: number | null }[] | null;
-    contrato_blocos: { ordem: number; bloco_chave: string; titulo: string; itens: string[] }[] | null;
-    contrato_signatarios: { parte: string; nome: string; cargo: string | null; ordem: number }[] | null;
-  } | null;
-  if (!c) return void res.status(404).json({ erro: 'Contrato não encontrado.' });
-  if (!c.modelo_id || !c.dossie) return void res.status(409).json({ erro: 'Monte o dossiê antes de revisar.' });
-  if (!['rascunho', 'devolvido', 'aprovado'].includes(c.status)) return void res.status(409).json({ erro: 'Contrato fora de edição.' });
+  // Uma leitura só (RLS): o texto que a IA lê e o hash saem do MESMO objeto.
+  const carregado = await carregarContratoV2(sb, contratoId);
+  if (!carregado) return void res.status(404).json({ erro: 'Contrato não encontrado.' });
+  if (!carregado.dossie) return void res.status(409).json({ erro: 'Monte o dossiê antes de revisar.' });
+  if (!['rascunho', 'devolvido', 'aprovado'].includes(carregado.status)) return void res.status(409).json({ erro: 'Contrato fora de edição.' });
+  const c = { id: carregado.id, org_id: carregado.orgId, dossie: carregado.dossie as Dossie };
 
-  const itens = [...(c.contrato_itens_clausula ?? [])].sort((a, b) => cmpNumero(a.numero, b.numero));
-  const planilha = [...(c.contrato_planilha ?? [])].sort((a, b) => a.ordem - b.ordem);
-  const blocos = [...(c.contrato_blocos ?? [])].sort((a, b) => a.ordem - b.ordem);
-  const signatarios = [...(c.contrato_signatarios ?? [])].sort((a, b) => a.ordem - b.ordem);
-  const obra = (Array.isArray(c.obras) ? c.obras[0] : c.obras)?.nome ?? '';
-
+  const itens = [...carregado.itens].sort((a, b) => cmpNumero(a.numero, b.numero));
   const contrato: ContratoParaRevisao = {
-    categoria: c.categoria,
-    obra,
-    parametros: c.parametros ?? {},
-    partes: c.partes,
-    itens: itens.map((i) => ({ numero: i.numero, texto: i.texto, origem: i.origem, suprimido: i.suprimido, reduzProtecao: i.reduz_protecao, justificativa: i.justificativa })),
-    planilha: planilha.map(({ ordem: _o, ...l }) => l),
-    blocos: blocos.map((b) => ({ chave: b.bloco_chave, titulo: b.titulo, itens: Array.isArray(b.itens) ? b.itens : [] })),
-    valor: c.valor,
+    categoria: carregado.categoria,
+    obra: carregado.obraNome,
+    parametros: carregado.parametros,
+    partes: carregado.partes,
+    itens: itens.map((i) => ({ numero: i.numero, texto: i.texto, origem: i.origem, suprimido: i.suprimido, reduzProtecao: i.reduzProtecao, justificativa: i.justificativa })),
+    planilha: carregado.planilha.map(({ ordem: _o, ...l }) => l),
+    blocos: carregado.blocos.map((b) => ({ chave: b.chave, titulo: b.titulo, itens: b.itens })),
+    valor: carregado.valor,
   };
   // Hash do conteúdo atual = hash do DOCUMENTO RESOLVIDO (o mesmo da minuta e da
   // emissão); a revisão vale para este hash e o envio exige igualdade.
-  const carregado = await carregarContratoV2(sb, c.id);
-  if (!carregado) return void res.status(404).json({ erro: 'Contrato não encontrado.' });
   const { hash } = await resolverEHash(carregado);
-  void signatarios;
 
   let svc;
   try {

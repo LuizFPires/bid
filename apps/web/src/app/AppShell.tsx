@@ -3,9 +3,9 @@ import { BrandLogo, Icon, TabBar, type TabKey } from '@bid/ui';
 import { ToastProvider } from './Toast';
 import { ProfileMenu } from './ProfileMenu';
 import { AtualizacaoApp } from './AtualizacaoApp';
-import { useAnalisesEmAndamento, useEqualizacoes } from '../data/hooks';
+import { useAnalisesEmAndamento, useContratos, useEqualizacoes, useMeusPapeis } from '../data/hooks';
 import { useLote } from '../data/lote';
-import { resumoLote } from '@bid/core';
+import { gerencia, resumoLote } from '@bid/core';
 
 /** Ação principal de cada aba: rótulo curto no botão, nome completo no aria-label. */
 const CTA: Partial<Record<TabKey, { label: string; aria: string; to: string }>> = {
@@ -28,6 +28,10 @@ export function AppShell() {
   // Pendência na aba Propostas: lote com arquivos ainda em leitura.
   const lote = useLote();
   const loteLendo = lote ? resumoLote(lote).emAndamento : 0;
+  // Pendência na aba Contratos: aguardando a minha validação (dono/gestor da obra).
+  const contratos = useContratos();
+  const papeis = useMeusPapeis();
+  const aValidar = (contratos.data ?? []).filter((k) => k.status === 'em_validacao' && gerencia(papeis.data?.get(k.obraId))).length;
 
   return (
     <div className="stage">
@@ -53,7 +57,7 @@ export function AppShell() {
           <TabBar
             active={active}
             onNavigate={(key) => navigate(`/${key}`)}
-            badges={{ equalizacoes: gerando.size, propostas: loteLendo }}
+            badges={{ equalizacoes: gerando.size, propostas: loteLendo, contratos: aValidar }}
           />
         </ToastProvider>
       </div>

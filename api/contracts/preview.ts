@@ -45,7 +45,9 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     if (e instanceof MissingEnvError) return void res.status(503).json({ erro: 'Minuta não configurada no servidor.' });
     throw e;
   }
-  // Modelo .docx (bucket privado, só o servidor lê) e logo da construtora quando a marca pede.
+  // Modelo .docx (bucket privado, só o servidor lê): o caminho tem de estar na
+  // pasta da organização do contrato (service_role ignora RLS no storage).
+  if (!c.docxPath.startsWith(`${c.orgId}/`) || c.docxPath.includes('..')) return void res.status(409).json({ erro: 'Modelo da minuta com caminho inválido.' });
   const { data: modeloBlob, error: mErr } = await svc.storage.from('modelos').download(c.docxPath);
   if (mErr || !modeloBlob) return void res.status(503).json({ erro: 'Modelo da minuta não encontrado no servidor. Peça ao gestor para carregar o modelo.' });
   const modelo = new Uint8Array(await modeloBlob.arrayBuffer());
@@ -55,15 +57,14 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     if (l) logo = new Uint8Array(await l.arrayBuffer());
   }
 
-  // Marcadores vazios: pelo modelo real (sem os de emissão, preenchidos ao emitir).
-  const marcadores = marcadoresSimples(documentXmlDoDocx(modelo));
-  let faltando = camposVaziosDoDocumento(doc, marcadores);
+  // Marcadores vazios: SEMPRE pelo preenchimento real do modelo (mesmo cálculo
+  // para docx, pdf e hash), sem os de emissão, preenchidos ao emitir.
+  const preenchido = preencherDocx(modelo, doc, { logo });
+  const faltando = [...new Set([...camposVaziosDoDocumento(doc, marcadoresSimples(documentXmlDoDocx(modelo))), ...preenchido.faltando.filter((k) => !/^ass_/.test(k))])];
 
   let arquivo: { bytes: Uint8Array; tipo: string; ext: string } | null = null;
   if (formato === 'docx') {
-    const r = preencherDocx(modelo, doc, { logo });
-    faltando = [...new Set([...faltando, ...r.faltando.filter((k) => !/^ass_/.test(k))])];
-    arquivo = { bytes: r.docx, tipo: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: 'docx' };
+    arquivo = { bytes: preenchido.docx, tipo: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: 'docx' };
   } else if (formato === 'pdf') {
     const { buffer } = await renderContratoV2Pdf(doc, { catalogo: c.catalogo, logoPng: logo });
     arquivo = { bytes: new Uint8Array(buffer), tipo: 'application/pdf', ext: 'pdf' };
