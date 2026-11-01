@@ -231,6 +231,7 @@ begin
        or new.pdf_hash is distinct from old.pdf_hash
        or new.emitido_em is distinct from old.emitido_em
        or new.emitido_por is distinct from old.emitido_por
+       or new.cancelado_motivo is distinct from old.cancelado_motivo
        or new.dossie is distinct from old.dossie
        or new.dossie_em is distinct from old.dossie_em
        or new.modelo_id is distinct from old.modelo_id then
