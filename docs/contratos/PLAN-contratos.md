@@ -64,13 +64,14 @@
 
 ## M13 · Emissão, numeração e assinatura das três partes
 
-- [ ] RPC `emitir_contrato` (service_role) + numeração `CT-AAAA-NNN` por org/ano com `for update`; pgTAP com duas emissões concorrentes.
-- [ ] Rota `/api/contracts/emitir`: final .docx (sem destaques) + PDF, hashes, Storage; `/api/contracts/download` (URL assinada).
-- [ ] Migration `assinaturas_v2` (por signatário; partes contratante/contratada/construtora/testemunha) + pgTAP.
-- [ ] `core.assinatura`: `todasObrigatoriasAssinaram` + testes; caixas de assinatura por signatário no PDF.
-- [ ] `gerar_links_assinatura` (token por signatário) e compartilhar por WhatsApp; coleta presencial no app por dono/gestor.
-- [ ] Página `/sign/:token` mostra o signatário e a parte; contrato vira `assinado` quando todos os obrigatórios assinam; integridade por `doc_hash` encadeado a partir do `pdf_hash` da emissão.
-- [ ] `cancelar_contrato` com motivo; contrato emitido/assinado não se apaga.
+- [x] RPC `emitir_contrato` (service_role) + numeração `CT-AAAA-NNN` por org/ano com `for update`; pgTAP com duas emissões concorrentes.
+- [x] Rota `/api/contracts/emitir`: final .docx (sem destaques) + PDF, hashes, Storage; `/api/contracts/download` (URL assinada).
+- [x] Migration `assinaturas_v2` (por signatário; partes contratante/contratada/construtora/testemunha) + pgTAP.
+- [x] `core.assinatura`: `todasObrigatoriasAssinaram` + testes; caixas de assinatura por signatário no PDF.
+- [x] `gerar_links_assinatura` (token por signatário) e compartilhar por WhatsApp; coleta presencial no app por dono/gestor.
+- [x] Página `/sign/:token` mostra o signatário e a parte; contrato vira `assinado` quando todos os obrigatórios assinam; integridade por `doc_hash` encadeado a partir do `pdf_hash` da emissão.
+- [x] `cancelar_contrato` com motivo; contrato emitido/assinado não se apaga.
+- Notas: a rubrica vai numa grade no rodapé de todas as páginas (índice estável do signatário), não em caixas com coordenadas do bloco de assinaturas — o @react-pdf não expõe o layout; a concorrência da numeração é garantida pelo upsert em `contrato_numeracao` (lock de linha), testada em sequência no pgTAP (duas sessões simultâneas exigem ambiente real). A detecção de adulteração entre assinaturas é testada no pgTAP pela cadeia de hashes.
 - **Aceite:** emitir gera CT-2026-001; baixar .docx e PDF finais; 3 partes (construtora com 2 diretores) assinam — 2 por link, 2 no app; trilha completa; adulterar o PDF entre assinaturas é detectado.
 
 ## M14 · Legado, sigilo da equalização, métricas e polimento
