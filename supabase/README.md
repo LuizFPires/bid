@@ -29,7 +29,8 @@ O texto da minuta padrão **não fica no git** (repositório público). Ele mora
 
 ```bash
 SUPABASE_URL=https://<ref>.supabase.co SUPABASE_SERVICE_ROLE_KEY=<chave> \
-node scripts/seed-modelo-contrato.mjs --org <uuid-da-organizacao>
+node scripts/seed-modelo-contrato.mjs --email seu@email.com
+# ou --org <uuid>; sem nenhum dos dois, usa a única organização do projeto. Chaves no .env da raiz.
 ```
 
 O script sobe o `.docx` ao bucket privado `modelos` ({org}/empreitada-1.0.docx), grava `contrato_modelos` (catálogo de cláusulas) e a biblioteca (`modelo_blocos`, `modelo_variantes`, `modelo_parametros`). É idempotente: repetir atualiza. Opções: `--versao 1.1`, `--inativo`, `--logo-ampla caminho.png`. O cliente nunca baixa o modelo cru: só o servidor lê o bucket.

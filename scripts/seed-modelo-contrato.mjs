@@ -20,15 +20,43 @@ const args = Object.fromEntries(
     return acc;
   }, []),
 );
-const org = args.org;
+// .env da raiz (local, fora do git): SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.
+const envPath = resolve(import.meta.dirname, '../.env');
+if (existsSync(envPath)) {
+  for (const linha of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/.exec(linha);
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+}
 const versao = typeof args.versao === 'string' ? args.versao : '1.0';
 const ativo = !args.inativo;
-const url = process.env.SUPABASE_URL;
+const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!org || !url || !key) {
-  console.error('Faltam --org, SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY.');
+if (!url || !key) {
+  console.error('Faltam SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY (no ambiente ou no .env da raiz).');
   process.exit(1);
 }
+const sb = createClient(url, key, { auth: { persistSession: false } });
+
+// Organização: --org <uuid>, --email <e-mail do membro>, ou a única existente.
+let org = typeof args.org === 'string' && /^[0-9a-f-]{36}$/i.test(args.org) ? args.org : null;
+if (!org && typeof args.email === 'string') {
+  const { data: lista } = await sb.auth.admin.listUsers({ perPage: 1000 });
+  const u = lista?.users.find((x) => x.email?.toLowerCase() === args.email.toLowerCase());
+  if (!u) { console.error(`Usuário ${args.email} não encontrado.`); process.exit(1); }
+  const { data: m } = await sb.from('membros').select('org_id').eq('user_id', u.id).limit(1).maybeSingle();
+  org = m?.org_id ?? null;
+  if (!org) { console.error(`Usuário ${args.email} não é membro de nenhuma organização.`); process.exit(1); }
+}
+if (!org) {
+  const { data: orgs } = await sb.from('organizacoes').select('id, nome');
+  if (orgs?.length === 1) org = orgs[0].id;
+  else {
+    console.error(`Informe --org <uuid> ou --email <seu e-mail>. Organizações: ${(orgs ?? []).map((o) => `${o.nome ?? '?'} = ${o.id}`).join('; ') || 'nenhuma'}`);
+    process.exit(1);
+  }
+}
+console.log(`organização: ${org}`);
 
 const priv = resolve(import.meta.dirname, '../docs/contratos/_privado');
 const docxPath = resolve(priv, 'modelo-empreitada-v1.docx');
@@ -42,8 +70,6 @@ for (const p of [docxPath, catPath, bibPath]) {
 }
 const catalogo = JSON.parse(readFileSync(catPath, 'utf8'));
 const bib = JSON.parse(readFileSync(bibPath, 'utf8'));
-
-const sb = createClient(url, key, { auth: { persistSession: false } });
 
 // 1) .docx no bucket privado
 const docxObj = `${org}/empreitada-${versao}.docx`;
