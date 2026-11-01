@@ -1,4 +1,4 @@
-import { QUADRO, cmpNumeroItem, type DocumentoResolvido } from '@bid/core';
+import { PROSA_MINUTA, QUADRO, cmpNumeroItem, semMarcador, type DocumentoResolvido } from '@bid/core';
 import { SORA } from './fontes-sora';
 import { carregarReactPdf } from './react-pdf';
 
@@ -18,13 +18,14 @@ export interface ContratoV2PdfOpts {
   logoPng?: Uint8Array | null;
 }
 
-const AVISO_MINUTA = 'MINUTA PARA CONFERÊNCIA — NÃO VÁLIDA PARA ASSINATURA';
+const AVISO_MINUTA = PROSA_MINUTA.avisoMinuta;
+const P = PROSA_MINUTA;
 const INK = '#141b50';
 const MUTED = '#5b6075';
 const LINE = '#d9dbe6';
 const WARN = '#B42318';
 const HIGHLIGHT = '#fff3b0';
-const ROTULOS_EXTRA: Record<string, string> = { q_documentos_integrantes: 'Documentos integrantes', q_valor_extenso: 'Valor por extenso' };
+const ROTULOS_EXTRA = P.rotulosExtras;
 
 let fontesRegistradas = false;
 
@@ -109,7 +110,7 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
     h(
       View,
       { style: s.rod, fixed: true },
-      h(Text, null, 'CONTRATO DE EMPREITADA'),
+      h(Text, null, P.rodape),
       h(Text, { render: ({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `Página ${pageNumber} de ${totalPages}` }),
     ),
   ];
@@ -139,7 +140,7 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
       const texto = doc.clausulas[it.numero];
       clausulas.push(h(View, { key: it.numero, style: s.item }, h(Text, { style: s.itemN }, `${it.numero}.`), rico(texto == null ? 'Não se aplica.' : preencher(texto, c), s.itemT)));
       for (const ex of doc.extras.filter((x) => x.apos === it.numero).sort((a, b) => cmpNumeroItem(a.numero, b.numero))) {
-        clausulas.push(h(View, { key: ex.numero, style: s.item }, h(Text, { style: s.itemN }, `${ex.numero}.`), rico(preencher(ex.texto, c), s.itemT)));
+        clausulas.push(h(View, { key: ex.numero, style: s.item }, h(Text, { style: s.itemN }, `${ex.numero}.`), rico(semMarcador(ex.texto), s.itemT)));
       }
     }
   }
@@ -148,18 +149,18 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
     Page,
     { size: 'A4', style: s.page },
     ...cabecalho(),
-    h(Text, { style: s.h1 }, 'CONTRATO PARTICULAR DE EMPREITADA DE SERVIÇOS'),
-    h(Text, { style: s.h2 }, 'QUADRO-RESUMO DO CONTRATO'),
-    quadro(['obra_nome', 'obra_endereco', 'obra_cno', 'escopo_resumo', 'q_documentos_integrantes']),
-    h(Text, { style: s.h2 }, 'QUALIFICAÇÃO DAS PARTES'),
+    h(Text, { style: s.h1 }, P.titulo),
+    h(Text, { style: s.h2 }, P.quadroTitulo),
+    quadro([...P.quadroCampos]),
+    h(Text, { style: s.h2 }, P.partesTitulo),
     rico(`**I. CONTRATANTE:** ${doc.qualificacao.ct || '[A PREENCHER]'}`, s.p),
     rico(`**II. CONTRATADA:** ${doc.qualificacao.cd || '[A PREENCHER]'}`, s.p),
     rico(`**III. CONSTRUTORA:** ${doc.qualificacao.cs || '[A PREENCHER]'}`, s.p),
-    rico(`As partes acima qualificadas têm entre si justo e contratado o presente CONTRATO PARTICULAR DE EMPREITADA DE SERVIÇOS para a ${campo('empreitada_desc')}, que se regerá pelas cláusulas seguintes e pelos ${campo('anexos_lista')}, que o integram.`, s.p),
+    rico(preencher(P.abertura, c), s.p),
     ...clausulas,
-    rico(`E, por estarem justas e contratadas, as partes assinam o presente instrumento, com os ${campo('anexos_lista')}, em ${campo('ass_local')}, ${campo('ass_dia')} de ${campo('ass_mes')} de ${campo('ass_ano')}.`, { ...s.p, marginTop: 12 }),
+    rico(preencher(P.fecho, c), { ...s.p, marginTop: 12 }),
     assinaturas(['contratante', 'contratada', 'construtora']),
-    h(Text, { style: [s.h2, { marginTop: 24 }] }, 'TESTEMUNHAS'),
+    h(Text, { style: [s.h2, { marginTop: 24 }] }, P.testemunhas),
     h(View, { style: s.assGrid }, ...[1, 2].map((i) => h(View, { key: i, style: s.assBloco }, h(Text, { style: s.assLinha }, 'NOME:'), h(Text, { style: s.small }, 'CPF:')))),
   );
 
@@ -193,14 +194,14 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
             h(Text, { style: [s.td, { width: 84 }, s.r] }, it.total ? `R$ ${it.total}` : ''),
           ),
     ),
-    h(View, { style: s.tr }, h(Text, { style: [s.td, { flex: 1, fontWeight: 700 }] }, 'TOTAL CONTRATADO'), h(Text, { style: [s.td, { width: 84, fontWeight: 700 }, s.r] }, `R$ ${campo('total')}`)),
+    h(View, { style: s.tr }, h(Text, { style: [s.td, { flex: 1, fontWeight: 700 }] }, P.totalRotulo), h(Text, { style: [s.td, { width: 84, fontWeight: 700 }, s.r] }, `R$ ${campo('total')}`)),
   );
   const condicoes: El[] = doc.blocos.length
     ? [
-        h(Text, { style: s.h2 }, 'CONDIÇÕES ESPECÍFICAS'),
+        h(Text, { style: s.h2 }, P.condicoesTitulo),
         ...doc.blocos.flatMap((b, bi) => [
-          h(Text, { key: `b${bi}`, style: { fontWeight: 700, marginTop: 6, marginBottom: 3 } }, `${bi + 1}. ${b.titulo}`),
-          ...b.itens.map((t, ti) => h(View, { key: `b${bi}.${ti}`, style: s.item }, h(Text, { style: s.itemN }, `${bi + 1}.${ti + 1}.`), rico(preencher(t, c), s.itemT))),
+          h(Text, { key: `b${bi}`, style: { fontWeight: 700, marginTop: 6, marginBottom: 3 } }, `${bi + 1}. ${semMarcador(b.titulo)}`),
+          ...b.itens.map((t, ti) => h(View, { key: `b${bi}.${ti}`, style: s.item }, h(Text, { style: s.itemN }, `${bi + 1}.${ti + 1}.`), rico(semMarcador(t), s.itemT))),
         ]),
       ]
     : [];
@@ -208,10 +209,10 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
     Page,
     { size: 'A4', style: s.page },
     ...cabecalho(),
-    h(Text, { style: s.anexoT }, 'ANEXO I — CONDIÇÕES PARTICULARES, PLANILHA DE PREÇOS E ESCOPO'),
-    h(Text, { style: s.h2 }, 'QUADRO COMPLEMENTAR — ITENS 05 A 20'),
-    quadro(['q_regime', 'q_valor', 'q_valor_extenso', 'q_inicio', 'q_liberacao', 'q_prazo', 'q_marcos', 'q_docs', 'q_criterio', 'q_periodicidade', 'q_antecipacao', 'q_retencao', 'q_garantia', 'q_seguros', 'q_mat_contratante', 'q_mat_contratada', 'q_fat_direto', 'q_representante', 'ct_email', 'cd_email', 'cs_email']),
-    h(Text, { style: s.h2 }, 'ESCOPO, PREÇOS E INTERFACES'),
+    h(Text, { style: s.anexoT }, P.anexoITitulo),
+    h(Text, { style: s.h2 }, P.quadroComplementarTitulo),
+    quadro([...P.quadroComplementarCampos]),
+    h(Text, { style: s.h2 }, P.escopoTitulo),
     planilha,
     ...condicoes,
     assinaturas(['contratante', 'contratada', 'construtora']),
@@ -223,15 +224,15 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
     Page,
     { size: 'A4', style: s.page },
     ...cabecalho(),
-    h(Text, { style: s.anexoT }, 'ANEXO II — DECLARAÇÃO DE CAPACIDADE E REGULARIDADE DA CONTRATADA'),
-    rico(`${campo('decl_nome')}, ${campo('decl_cargo')}, CPF ${campo('decl_cpf')}, representante legal de **${campo('cd_razao')}**, CNPJ ${campo('cd_cnpj')}, com sede em ${campo('cd_sede')}, declara, sob as penas da lei, para os fins do contrato de empreitada relativo à obra ${campo('obra_nome')}, que a CONTRATADA:`, s.p),
-    ...doc.declaracao.map((d) => h(View, { key: d.numero, style: s.item }, h(Text, { style: s.itemN }, `${d.numero}.`), rico(`**${d.titulo}** ${preencher(d.texto, c)}`, s.itemT))),
+    h(Text, { style: s.anexoT }, P.anexoIITitulo),
+    rico(preencher(P.anexoIIAbertura, c), s.p),
+    ...doc.declaracao.map((d) => h(View, { key: d.numero, style: s.item }, h(Text, { style: s.itemN }, `${d.numero}.`), rico(`**${semMarcador(d.titulo)}** ${semMarcador(d.texto)}`, s.itemT))),
     h(View, { style: [s.assBloco, { marginTop: 30 }] }, h(Text, { style: s.assLinha }, decl ? `${decl.nome}${decl.cargo ? `, ${decl.cargo}` : ''}` : '[A PREENCHER]'), h(Text, { style: { fontWeight: 700, fontSize: 8.5 } }, doc.razao.contratada || '[A PREENCHER]')),
   );
 
   const paginas: El[] = [corpo, anexoI, anexoII];
   if (doc.anexoIII) {
-    paginas.push(h(Page, { size: 'A4', style: s.page }, ...cabecalho(), h(Text, { style: s.anexoT }, doc.anexoIII.titulo), rico(doc.anexoIII.texto, s.p)));
+    paginas.push(h(Page, { size: 'A4', style: s.page }, ...cabecalho(), h(Text, { style: s.anexoT }, semMarcador(doc.anexoIII.titulo)), rico(semMarcador(doc.anexoIII.texto), s.p)));
   }
 
   const buffer = await renderToBuffer(h(Document, { title: 'Contrato de empreitada', author: 'bid' }, ...paginas));

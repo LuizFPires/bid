@@ -102,14 +102,7 @@ export function EtapaMinuta({ c, editavel }: { c: ContratoV2Detalhe; editavel: b
             {paramsModelo.map((p) => (
               <div key={p.parametro} className="field">
                 <label>{p.rotulo} <small>· troca o item {p.numero}</small></label>
-                {p.tipo === 'opcoes' && p.opcoes ? (
-                  <select value={pc[p.parametro] ?? ''} disabled={!editavel} onChange={(e) => setPc({ ...pc, [p.parametro]: e.target.value })}>
-                    <option value="">Padrão (não usar)</option>
-                    {p.opcoes.map((o) => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                ) : (
-                  <input value={pc[p.parametro] ?? ''} disabled={!editavel} inputMode={p.tipo === 'moeda' ? 'decimal' : undefined} placeholder={p.tipo === 'data' ? 'dd/mm/aaaa' : 'vazio = texto padrão'} onChange={(e) => setPc({ ...pc, [p.parametro]: e.target.value })} />
-                )}
+                <input value={pc[p.parametro] ?? ''} disabled={!editavel} inputMode={p.tipo === 'moeda' ? 'decimal' : undefined} placeholder={p.tipo === 'data' ? 'dd/mm/aaaa' : p.tipo === 'opcoes' ? 'escolha conforme o rótulo; vazio = padrão' : 'vazio = texto padrão'} onChange={(e) => setPc({ ...pc, [p.parametro]: e.target.value })} />
               </div>
             ))}
             {editavel && (
@@ -235,7 +228,7 @@ function DetalheItem({ it, original, todos, variantes, editavel, ocupado, onGrav
           {variantes.length > 0 && <Button variant="soft" size="sm" icon="scale" onClick={() => setModo('variante')}>Variantes ({variantes.length})</Button>}
           {!it.suprimido && <Button variant="soft" size="sm" icon="pencil" onClick={() => { setTexto(it.texto); setModo('editar'); }}>Editar</Button>}
           {!it.suprimido && <Button variant="ghost" size="sm" onClick={() => setModo('suprimir')}>Suprimir</Button>}
-          {!it.numero.startsWith('decl:') && <Button variant="ghost" size="sm" icon="plus" onClick={() => { setTexto(''); setModo('extra'); }}>Item extra</Button>}
+          {!it.numero.startsWith('decl:') && it.textoPadrao != null && <Button variant="ghost" size="sm" icon="plus" onClick={() => { setTexto(''); setModo('extra'); }}>Item extra</Button>}
           {(it.origem !== 'padrao' || it.suprimido) && it.textoPadrao != null && (
             <Button variant="ghost" size="sm" disabled={ocupado} onClick={() => void onGravar(restaurarPadrao(original), 'Item de volta ao padrão.').catch(() => undefined)}>Voltar ao padrão</Button>
           )}
@@ -494,7 +487,7 @@ export function PainelValidacao({ c }: { c: ContratoV2Detalhe }) {
       {podeAprovar && (
         <div className="pair" style={{ marginTop: 12 }}>
           <Button variant="ghost" disabled={devolver.isPending} onClick={() => { setComentario(''); setDevolvendo(true); }}>Devolver</Button>
-          <Button icon="check" disabled={!todosLidos || aprovar.isPending || !c.conteudoHash} onClick={() => void aprovar.mutateAsync(c.conteudoHash!).then(() => toast('Contrato aprovado. A emissão (número, .docx e PDF finais) vem no próximo passo.')).catch((e) => toast(e instanceof Error ? e.message : 'Não foi possível aprovar.'))}>
+          <Button icon="check" disabled={!todosLidos || aprovar.isPending || !c.conteudoHash} onClick={() => void aprovar.mutateAsync({ hash: c.conteudoHash!, itensLidos: [...lidos] }).then(() => toast('Contrato aprovado. A emissão (número, .docx e PDF finais) vem no próximo passo.')).catch((e) => toast(e instanceof Error ? e.message : 'Não foi possível aprovar.'))}>
             {aprovar.isPending ? 'Aprovando…' : 'Aprovar'}
           </Button>
         </div>

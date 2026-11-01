@@ -4,12 +4,12 @@
 -- com comentário; editar aprovado volta a rascunho e supera a aprovação (RC-10);
 -- autoaprovação registrada (Q2). Dados fictícios. `supabase test db`.
 begin;
-select plan(29);
+select plan(36);
 
 select has_table('public', 'contrato_aprovacoes', 'aprovações existem');
 select has_function('public', 'enviar_validacao', ARRAY['uuid', 'text'], 'enviar_validacao existe');
 select has_function('public', 'devolver_contrato', ARRAY['uuid', 'text'], 'devolver_contrato existe');
-select has_function('public', 'aprovar_contrato', ARRAY['uuid', 'text'], 'aprovar_contrato existe');
+select has_function('public', 'aprovar_contrato', ARRAY['uuid', 'text', 'text[]'], 'aprovar_contrato existe');
 select is((select count(*) from pg_policies where schemaname = 'public' and tablename = 'contrato_aprovacoes' and cmd <> 'SELECT'), 0::bigint, 'aprovações sem policy de escrita pelo cliente');
 
 -- fixtures: dono (f001), gestor (f002), colaborador (f003)
@@ -104,10 +104,21 @@ select is((select status from public.contratos where id = (select id from fxk)),
 select is((select comentario from public.aprovacao_vigente((select id from fxk))), 'Incluir o seguro RC no item 15.', 'aprovação vigente é a devolução com o comentário');
 select pg_temp.sair();
 
+-- variante que reduz proteção (do catálogo) exige "li e aprovo" na aprovação (RC-06)
+insert into public.modelo_variantes (org_id, modelo_id, chave, numero, titulo, texto, reduz_protecao, explicacao)
+  select org, modelo, '3.1_v', '3.1', 'V', 'Texto negociado.', true, 'perde x' from fx5;
+select pg_temp.como('00000000-0000-4000-8000-00000000f002');
+select lives_ok($$ select public.salvar_contrato((select id from fxk), '{"itens":[{"numero":"3.1","texto":"Texto negociado.","origem":"variante","varianteChave":"3.1_v","justificativa":"negociado com o fornecedor"}]}'::jsonb) $$, 'variante do catálogo com justificativa entra');
+select throws_ok($$ select public.salvar_contrato((select id from fxk), '{"itens":[{"numero":"3.1","texto":"Texto negociado.","origem":"variante","varianteChave":"3.1_v"}]}'::jsonb) $$, 'P0001', null, 'variante sem justificativa é recusada');
+select pg_temp.sair();
+update public.contratos set conteudo_hash = 'h1', faltando = '[]'::jsonb where id = (select id from fxk);
+insert into public.contrato_revisoes (org_id, contrato_id, conteudo_hash, modelo_ia, status) select org, (select id from fxk), 'h1', 'claude', 'concluida' from fx5;
+
 -- reenvio pelo gestor e autoaprovação (Q2: permitida, registrada)
 select pg_temp.como('00000000-0000-4000-8000-00000000f002');
 select lives_ok($$ select public.enviar_validacao((select id from fxk), 'h1') $$, 'gestor reenvia (devolvido → em_validacao)');
-select lives_ok($$ select public.aprovar_contrato((select id from fxk), 'h1') $$, 'gestor aprova com o hash atual');
+select throws_like($$ select public.aprovar_contrato((select id from fxk), 'h1') $$, '%reduzem proteção sem o aceite%', 'aprovar sem "li e aprovo" falha (RC-06)');
+select lives_ok($$ select public.aprovar_contrato((select id from fxk), 'h1', array['3.1']) $$, 'gestor aprova com o hash atual e o item lido');
 select is((select status from public.contratos where id = (select id from fxk)), 'aprovado', 'status aprovado');
 select is((select autoaprovacao from public.aprovacao_vigente((select id from fxk))), true, 'quem enviou e aprovou: autoaprovação registrada');
 

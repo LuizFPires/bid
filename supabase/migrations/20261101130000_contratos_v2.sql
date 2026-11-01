@@ -430,8 +430,11 @@ begin
 
   if new.variante_chave is not null then
     select reduz_protecao into v_reduz from public.modelo_variantes
-     where modelo_id = v_modelo and chave = new.variante_chave;
-    if v_reduz is null then raise exception 'variante % não existe no modelo', new.variante_chave; end if;
+     where modelo_id = v_modelo and chave = new.variante_chave and numero = new.numero;
+    if v_reduz is null then raise exception 'variante % não existe no modelo para o item %', new.variante_chave, new.numero; end if;
+    if coalesce(length(trim(new.justificativa)), 0) < 10 then
+      raise exception 'item % como variante exige justificativa (mínimo 10 caracteres)', new.numero;
+    end if;
     new.origem := 'variante';
     new.reduz_protecao := v_reduz;
   elsif new.bloco_chave is not null then

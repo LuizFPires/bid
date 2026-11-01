@@ -182,5 +182,35 @@ export function textoDoDocumento(doc: DocumentoResolvido): string {
   return out.join('\n').replace(/\*\*/g, '');
 }
 
+/**
+ * Prosa fixa da minuta que o PDF precisa repetir (no .docx ela já está no modelo).
+ * Fica no core para o PDF não montar texto de contrato por conta própria (regra 15).
+ */
+export const PROSA_MINUTA = {
+  titulo: 'CONTRATO PARTICULAR DE EMPREITADA DE SERVIÇOS',
+  quadroTitulo: 'QUADRO-RESUMO DO CONTRATO',
+  quadroCampos: ['obra_nome', 'obra_endereco', 'obra_cno', 'escopo_resumo', 'q_documentos_integrantes'],
+  quadroComplementarTitulo: 'QUADRO COMPLEMENTAR — ITENS 05 A 20',
+  quadroComplementarCampos: ['q_regime', 'q_valor', 'q_valor_extenso', 'q_inicio', 'q_liberacao', 'q_prazo', 'q_marcos', 'q_docs', 'q_criterio', 'q_periodicidade', 'q_antecipacao', 'q_retencao', 'q_garantia', 'q_seguros', 'q_mat_contratante', 'q_mat_contratada', 'q_fat_direto', 'q_representante', 'ct_email', 'cd_email', 'cs_email'],
+  rotulosExtras: { q_documentos_integrantes: 'Documentos integrantes', q_valor_extenso: 'Valor por extenso' } as Record<string, string>,
+  partesTitulo: 'QUALIFICAÇÃO DAS PARTES',
+  abertura: 'As partes acima qualificadas têm entre si justo e contratado o presente CONTRATO PARTICULAR DE EMPREITADA DE SERVIÇOS para a {{empreitada_desc}}, que se regerá pelas cláusulas seguintes e pelos {{anexos_lista}}, que o integram.',
+  fecho: 'E, por estarem justas e contratadas, as partes assinam o presente instrumento, com os {{anexos_lista}}, em {{ass_local}}, {{ass_dia}} de {{ass_mes}} de {{ass_ano}}.',
+  testemunhas: 'TESTEMUNHAS',
+  anexoITitulo: 'ANEXO I — CONDIÇÕES PARTICULARES, PLANILHA DE PREÇOS E ESCOPO',
+  escopoTitulo: 'ESCOPO, PREÇOS E INTERFACES',
+  condicoesTitulo: 'CONDIÇÕES ESPECÍFICAS',
+  totalRotulo: 'TOTAL CONTRATADO',
+  anexoIITitulo: 'ANEXO II — DECLARAÇÃO DE CAPACIDADE E REGULARIDADE DA CONTRATADA',
+  anexoIIAbertura: '{{decl_nome}}, {{decl_cargo}}, CPF {{decl_cpf}}, representante legal de **{{cd_razao}}**, CNPJ {{cd_cnpj}}, com sede em {{cd_sede}}, declara, sob as penas da lei, para os fins do contrato de empreitada relativo à obra {{obra_nome}}, que a CONTRATADA:',
+  avisoMinuta: 'MINUTA PARA CONFERÊNCIA — NÃO VÁLIDA PARA ASSINATURA',
+  rodape: 'CONTRATO DE EMPREITADA',
+} as const;
+
+/** Texto vindo do usuário nunca vira marcador do documento (mesma regra do motor .docx). */
+export function semMarcador(s: string): string {
+  return s.replace(/\{\{/g, '{ {').replace(/\}\}/g, '} }');
+}
+
 /** Formata o valor para exibição (reaproveita o padrão BRL do app). */
 export const valorBRL = formatBRL;

@@ -319,8 +319,8 @@ export async function enviarValidacao(contratoId: string, hash: string): Promise
   const { error } = await db().rpc('enviar_validacao', { p_contrato: contratoId, p_hash: hash });
   if (error) throw error;
 }
-export async function aprovarContrato(contratoId: string, hash: string): Promise<void> {
-  const { error } = await db().rpc('aprovar_contrato', { p_contrato: contratoId, p_hash: hash });
+export async function aprovarContrato(contratoId: string, hash: string, itensLidos: string[]): Promise<void> {
+  const { error } = await db().rpc('aprovar_contrato', { p_contrato: contratoId, p_hash: hash, p_itens_lidos: itensLidos });
   if (error) throw error;
 }
 export async function devolverContrato(contratoId: string, comentario: string): Promise<void> {
@@ -355,7 +355,7 @@ export function useEnviarValidacao(id: string | undefined) {
 }
 export function useAprovarContrato(id: string | undefined) {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: (hash: string) => aprovarContrato(id as string, hash), onSettled: () => invalidarContrato(qc, id) });
+  return useMutation({ mutationFn: (v: { hash: string; itensLidos: string[] }) => aprovarContrato(id as string, v.hash, v.itensLidos), onSettled: () => invalidarContrato(qc, id) });
 }
 export function useDevolverContrato(id: string | undefined) {
   const qc = useQueryClient();

@@ -66,7 +66,11 @@ export function pendencias(e: EntradaValidar): Pendencia[] {
   const reduzem = e.itens.filter((i) => i.reduzProtecao && !i.suprimido);
   if (reduzem.length) add('reduz_protecao', 6, `${reduzem.length} ${reduzem.length === 1 ? 'variante reduz' : 'variantes reduzem'} a proteção da contratante: dono/gestor aprova item a item.`, false);
 
-  for (const k of e.faltandoServidor ?? []) if (!/^ass_/.test(k)) add(`marcador:${k}`, 3, `Marcador "${k}" vazio no documento.`);
+  for (const k of e.faltandoServidor ?? []) {
+    if (/^ass_/.test(k)) continue;
+    if (k.startsWith('sig:')) add(`marcador:${k}`, 2, `Documento sem bloco de assinatura: ${k.slice(4)}.`);
+    else add(`marcador:${k}`, 3, `Marcador "${k}" vazio no documento.`);
+  }
 
   return out;
 }

@@ -1,5 +1,5 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
-import type { DocumentoResolvido } from '@bid/core';
+import { PROSA_MINUTA, semMarcador as semMarcadorCore, type DocumentoResolvido } from '@bid/core';
 
 /**
  * Motor de preenchimento da minuta .docx — porta tipada de
@@ -11,11 +11,11 @@ import type { DocumentoResolvido } from '@bid/core';
 const MAX_MODELO = 2 * 1024 * 1024; // modelo .docx ≤ 2 MB
 const MAX_XML = 10 * 1024 * 1024; // XML inflado ≤ 10 MB
 const LOGO_PATH = 'word/media/image1.png';
-const AVISO_MINUTA = 'MINUTA PARA CONFERÊNCIA — NÃO VÁLIDA PARA ASSINATURA';
+const AVISO_MINUTA = PROSA_MINUTA.avisoMinuta;
 
 const esc = (s: unknown) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 /** Valor vindo do usuário (nome, cargo, bloco, anexo) nunca vira marcador do modelo. */
-const semMarcador = (s: unknown) => String(s ?? '').replace(/\{\{/g, '{ {').replace(/\}\}/g, '} }');
+const semMarcador = (s: unknown) => semMarcadorCore(String(s ?? ''));
 const NUMERO_ITEM = /^\d+(\.\d+)*$/;
 const MAX_BLOCOS_SIG = 20;
 const semIds = (p: string) => p.replace(/ w14:(paraId|textId)="[^"]*"/g, '');

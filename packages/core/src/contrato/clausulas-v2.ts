@@ -89,7 +89,10 @@ export function proximoNumero(itens: readonly ItemClausula[], apos: string): str
 
 /** Item extra incluído depois de `apos` (origem 'variante' com justificativa: é texto novo). */
 export function itemExtra(itens: readonly ItemClausula[], apos: string, texto: string, justificativa: string): ItemClausula {
-  if (!itens.some((i) => i.numero === apos)) throw new Error(`item ${apos} não existe`);
+  const ancora = itens.find((i) => i.numero === apos);
+  if (!ancora) throw new Error(`item ${apos} não existe`);
+  // Extra sobre extra: ancora no item do catálogo (o documento só insere depois de {{cl:N}}).
+  if (ancora.textoPadrao == null && ancora.apos) return itemExtra(itens, ancora.apos, texto, justificativa);
   if (!texto.trim()) throw new Error('Texto do item extra vazio.');
   if (!justificativaValida(justificativa)) throw new Error('Item extra exige justificativa (mínimo 10 caracteres).');
   return { numero: proximoNumero(itens, apos), apos, texto: texto.trim(), textoPadrao: null, origem: 'variante', varianteChave: null, blocoChave: null, suprimido: false, justificativa: justificativa.trim(), reduzProtecao: false };

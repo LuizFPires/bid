@@ -81,6 +81,7 @@ describe('clausulas-v2', () => {
     const ex = itemExtra(itens, '3.6', 'Dias de chuva prorrogam o prazo.', 'serviço a céu aberto, acordado');
     expect(ex).toMatchObject({ numero: '3.7', apos: '3.6', textoPadrao: null, origem: 'variante' });
     expect(proximoNumero([...itens, ex], '3.6')).toBe('3.8');
+    expect(itemExtra([...itens, ex], '3.7', 'Outro.', 'justificativa suficiente')).toMatchObject({ numero: '3.8', apos: '3.6' });
     expect(() => restaurarPadrao(ex)).toThrow();
     expect(() => itemExtra(itens, '9.9', 'x', 'justificativa longa')).toThrow();
   });

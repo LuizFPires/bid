@@ -6,7 +6,7 @@ import { MissingEnvError, bearer, carregarContratoV2, documentXmlDoDocx, gravarH
  * POST /api/contracts/preview  { contratoId, formato: 'docx' | 'pdf' | 'hash' }
  * Resolve o contrato v2 (core), calcula o hash do conteúdo e gera a MINUTA
  * (.docx preenchido pelo motor ou PDF do mesmo documento) com aviso vermelho e
- * destaques. Grava `conteudo_hash` e `parametros._faltando` (service_role) —
+ * destaques. Grava `conteudo_hash` e a coluna `faltando` (service_role) —
  * o envio para validação compara com esse hash e recusa marcador vazio (RC-09).
  * `formato: 'hash'` só calcula e grava (sem arquivo). Nada é gravado em storage.
  */

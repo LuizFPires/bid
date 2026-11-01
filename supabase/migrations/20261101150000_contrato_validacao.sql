@@ -1,8 +1,8 @@
 -- M12 · Validação do contrato v2 (PRD-contratos §4 passo 8, §5 RC-07/08/10):
 -- aprovações (enviado/aprovado/devolvido) com hash, RPCs enviar_validacao,
 -- devolver_contrato e aprovar_contrato, e "aprovação superada" quando o
--- contrato aprovado volta a rascunho por edição. Hash e `_faltando` são do
--- servidor (rota /api/contracts/preview, service_role); o cliente só compara.
+-- contrato aprovado volta a rascunho por edição. Hash e `faltando` (coluna só
+-- do servidor) vêm da rota /api/contracts/preview (service_role); o cliente só compara.
 
 create table if not exists public.contrato_aprovacoes (
   id uuid primary key default gen_random_uuid(),
@@ -27,7 +27,7 @@ create policy "aprovacoes_select" on public.contrato_aprovacoes for select to au
 -- ---------- enviar para validação ----------
 -- Exige: hash do cliente = hash atual do servidor; revisão IA concluída para
 -- esse hash; nenhum achado ALTO sem resolução; nenhum marcador vazio apontado
--- pelo servidor (parametros->'_faltando', já sem os de emissão).
+-- pelo servidor (coluna `faltando`, já sem os de emissão). Redefinida abaixo.
 create or replace function public.enviar_validacao(p_contrato uuid, p_hash text)
 returns void
 language plpgsql
@@ -107,7 +107,7 @@ $$;
 -- ---------- aprovar (dono/gestor) ----------
 -- `autoaprovacao` = quem aprova é quem enviou (Q2: permitido, mas registrado e
 -- avisado na UI). O hash aprovado fica na aprovação vigente (RC-10).
-create or replace function public.aprovar_contrato(p_contrato uuid, p_hash text)
+create or replace function public.aprovar_contrato(p_contrato uuid, p_hash text, p_itens_lidos text[] default '{}')
 returns void
 language plpgsql
 security definer
@@ -127,15 +127,24 @@ begin
    where contrato_id = p_contrato and acao = 'enviado' order by created_at desc limit 1;
 
   update public.contrato_aprovacoes set situacao = 'superada' where contrato_id = p_contrato and situacao = 'vigente' and acao <> 'enviado';
-  insert into public.contrato_aprovacoes (org_id, contrato_id, acao, conteudo_hash, autoaprovacao)
-    values (v_org, p_contrato, 'aprovado', v_hash, coalesce(v_enviou = auth.uid(), false));
+  -- Variantes que reduzem proteção exigem "li e aprovo" item a item (RC-06).
+  if exists (
+    select 1 from public.contrato_itens_clausula i
+     where i.contrato_id = p_contrato and i.reduz_protecao and not i.suprimido
+       and not (i.numero = any (coalesce(p_itens_lidos, '{}')))
+  ) then
+    raise exception 'Há variantes que reduzem proteção sem o aceite item a item (RC-06).';
+  end if;
+  insert into public.contrato_aprovacoes (org_id, contrato_id, acao, conteudo_hash, autoaprovacao, comentario)
+    values (v_org, p_contrato, 'aprovado', v_hash, coalesce(v_enviou = auth.uid(), false),
+            case when coalesce(array_length(p_itens_lidos, 1), 0) > 0 then 'Variantes lidas e aprovadas: ' || array_to_string(p_itens_lidos, ', ') end);
 
   perform set_config('bid.interno', '1', true);
   update public.contratos set status = 'aprovado' where id = p_contrato;
   perform set_config('bid.interno', '0', true);
 
   insert into public.eventos (org_id, entidade, entidade_id, tipo, payload)
-    values (v_org, 'contrato', p_contrato, 'contrato_aprovado', jsonb_build_object('hash', v_hash, 'autoaprovacao', coalesce(v_enviou = auth.uid(), false)));
+    values (v_org, 'contrato', p_contrato, 'contrato_aprovado', jsonb_build_object('hash', v_hash, 'autoaprovacao', coalesce(v_enviou = auth.uid(), false), 'itens_lidos', to_jsonb(coalesce(p_itens_lidos, '{}'))));
 end;
 $$;
 
@@ -151,7 +160,9 @@ begin
 end;
 $$;
 drop trigger if exists trg_contrato_superar_aprovacao on public.contratos;
-create trigger trg_contrato_superar_aprovacao after update of status on public.contratos
+-- Sem "OF status": a volta a rascunho pode vir do trigger BEFORE (edição de
+-- parametros/partes), em que status não é alvo do UPDATE do cliente.
+create trigger trg_contrato_superar_aprovacao after update on public.contratos
   for each row when (old.status = 'aprovado' and new.status = 'rascunho')
   execute function public.superar_aprovacao();
 
@@ -168,11 +179,11 @@ $$;
 
 revoke all on function public.enviar_validacao(uuid, text) from public, anon;
 revoke all on function public.devolver_contrato(uuid, text) from public, anon;
-revoke all on function public.aprovar_contrato(uuid, text) from public, anon;
+revoke all on function public.aprovar_contrato(uuid, text, text[]) from public, anon;
 revoke all on function public.aprovacao_vigente(uuid) from public, anon;
 grant execute on function public.enviar_validacao(uuid, text) to authenticated;
 grant execute on function public.devolver_contrato(uuid, text) to authenticated;
-grant execute on function public.aprovar_contrato(uuid, text) to authenticated;
+grant execute on function public.aprovar_contrato(uuid, text, text[]) to authenticated;
 grant execute on function public.aprovacao_vigente(uuid) to authenticated;
 
 -- ---------- integridade do hash (revisão de segurança M12) ----------
