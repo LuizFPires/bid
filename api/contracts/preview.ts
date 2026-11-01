@@ -64,13 +64,19 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   const faltando = [...new Set([...camposVaziosDoDocumento(doc, marcadoresSimples(documentXmlDoDocx(modelo))), ...preenchido.faltando.filter((k) => !/^ass_/.test(k)), ...(doc.anexoIII && anexo.faltou ? ['anexo_iii_arquivo'] : [])])];
 
   let arquivo: { bytes: Uint8Array; tipo: string; ext: string } | null = null;
+  let paginasPdf = 0;
   if (formato === 'docx') {
     arquivo = { bytes: preenchido.docx, tipo: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: 'docx' };
   } else if (formato === 'pdf') {
-    const { buffer } = await renderContratoV2Pdf(doc, { catalogo: c.catalogo, logoPng: logo });
+    const { buffer, paginas } = await renderContratoV2Pdf(doc, { catalogo: c.catalogo, logoPng: logo });
     let bytes: Uint8Array = new Uint8Array(buffer);
+    paginasPdf = paginas;
     // Anexo III: a proposta vencedora, como arquivada no bid, entra depois da capa do anexo.
-    if (doc.anexoIII && anexo.arquivo) bytes = (await anexarPropostaAoPdf(bytes, anexo.arquivo)).pdf;
+    if (doc.anexoIII && anexo.arquivo) {
+      const r = await anexarPropostaAoPdf(bytes, anexo.arquivo);
+      bytes = r.pdf;
+      paginasPdf += r.paginasAnexo;
+    }
     arquivo = { bytes, tipo: 'application/pdf', ext: 'pdf' };
   }
 
@@ -89,5 +95,6 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Bid-Hash', hash);
   res.setHeader('X-Bid-Faltando', String(faltando.length));
+  if (paginasPdf) res.setHeader('X-Bid-Paginas', String(paginasPdf));
   res.status(200).send(Buffer.from(arquivo.bytes));
 }
