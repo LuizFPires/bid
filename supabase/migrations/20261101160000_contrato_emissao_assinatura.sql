@@ -47,7 +47,7 @@ begin
   ) then
     raise exception 'a aprovação vigente não corresponde ao conteúdo atual (RC-10)';
   end if;
-  if p_docx_path !~ ('^' || v_org::text || '/') or p_pdf_path !~ ('^' || v_org::text || '/') then
+  if p_docx_path !~ ('^' || v_org::text || '/' || p_contrato::text || '/') or p_pdf_path !~ ('^' || v_org::text || '/' || p_contrato::text || '/') then
     raise exception 'caminhos dos arquivos fora da organização';
   end if;
 

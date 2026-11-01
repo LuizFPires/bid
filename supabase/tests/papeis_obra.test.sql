@@ -2,7 +2,7 @@
 -- (PRD-contratos §3). Simula usuários autenticados via request.jwt.claims +
 -- role authenticated (RLS e guards valem de verdade). `supabase test db`.
 begin;
-select plan(28);
+select plan(33);
 
 -- ---------- estrutura ----------
 select has_column('public', 'obra_convites', 'papel', 'obra_convites.papel existe');

@@ -1,7 +1,7 @@
 -- Teste (pgTAP) dos cadastros de contrato: estrutura, RLS por org e papel.
 -- Dados fictícios. `supabase test db`.
 begin;
-select plan(19);
+select plan(21);
 
 select has_table('public', 'partes', 'partes existe');
 select has_table('public', 'parte_signatarios', 'parte_signatarios existe');

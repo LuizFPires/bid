@@ -95,10 +95,10 @@ create index if not exists idx_forn_sign_forn on public.fornecedor_signatarios(f
 alter table public.obras drop constraint if exists obras_contratante_fk;
 -- FKs compostas com org_id: a obra só aponta para partes da PRÓPRIA org.
 alter table public.obras add constraint obras_contratante_fk
-  foreign key (contratante_id, org_id) references public.partes(id, org_id) on delete set null;
+  foreign key (contratante_id, org_id) references public.partes(id, org_id) on delete no action;
 alter table public.obras drop constraint if exists obras_construtora_fk;
 alter table public.obras add constraint obras_construtora_fk
-  foreign key (construtora_id, org_id) references public.partes(id, org_id) on delete set null;
+  foreign key (construtora_id, org_id) references public.partes(id, org_id) on delete no action;
 
 -- ---------- quem pode escrever cadastros ----------
 -- Partes (contratante/construtora) são o cadastro da EMPRESA: só membros reais

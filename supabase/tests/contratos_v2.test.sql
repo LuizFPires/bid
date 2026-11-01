@@ -2,7 +2,7 @@
 -- trava de edição por status, aprovado → rascunho ao editar, criar_contrato_v2
 -- idempotente, revisão/achados. Dados fictícios. `supabase test db`.
 begin;
-select plan(24);
+select plan(25);
 
 select has_column('public', 'contratos', 'dossie', 'contratos.dossie existe');
 select has_table('public', 'contrato_itens_clausula', 'itens de cláusula existem');

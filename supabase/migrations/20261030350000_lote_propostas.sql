@@ -35,6 +35,13 @@ begin
     if nullif(v_item->>'proposta_id', '') is not null then
       -- Fornecedor já tem proposta na categoria: entra como NOVA VERSÃO dela.
       v_id := (v_item->>'proposta_id')::uuid;
+      if not exists (
+        select 1 from public.propostas p join public.certames c on c.id = p.certame_id
+         where p.id = v_id and p.deleted_at is null and c.deleted_at is null
+           and c.obra_id = p_obra and lower(c.categoria) = lower(p_categoria)
+      ) then
+        raise exception 'proposta % não pertence a esta obra/categoria', v_id;
+      end if;
       perform public.criar_versao(
         v_id,
         (v_item->>'valor')::numeric,

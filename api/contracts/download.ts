@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { MissingEnvError, bearer, serviceClient, userClient } from '@bid/server';
+import { MissingEnvError, bearer, serviceClient, sha256Hex, userClient } from '@bid/server';
 
 /**
  * GET /api/contracts/download?id=…&formato=docx|pdf
@@ -17,8 +17,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!id) return void res.status(400).json({ erro: 'Informe o contrato.' });
 
     const sb = userClient(token);
-    const { data } = await sb.from('contratos').select('id, org_id, numero, status, docx_path, pdf_path, categoria').eq('id', id).is('deleted_at', null).maybeSingle();
-    const c = data as { id: string; org_id: string; numero: string | null; status: string; docx_path: string | null; pdf_path: string | null; categoria: string } | null;
+    const { data } = await sb.from('contratos').select('id, org_id, numero, status, docx_path, pdf_path, docx_hash, pdf_hash, categoria').eq('id', id).is('deleted_at', null).maybeSingle();
+    const c = data as { id: string; org_id: string; numero: string | null; status: string; docx_path: string | null; pdf_path: string | null; docx_hash: string | null; pdf_hash: string | null; categoria: string } | null;
     if (!c) return void res.status(404).json({ erro: 'Contrato não encontrado.' });
     if (!['emitido', 'enviado', 'assinado', 'cancelado'].includes(c.status)) return void res.status(409).json({ erro: 'Contrato ainda não emitido: baixe a minuta.' });
     const path = formato === 'docx' ? c.docx_path : c.pdf_path;
@@ -30,6 +30,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (e) {
       if (e instanceof MissingEnvError) return void res.status(503).json({ erro: 'Download não configurado no servidor.' });
       throw e;
+    }
+    // Integridade (RC-13): os bytes servidos têm de bater com o hash gravado
+    // (docx: da emissão; pdf: da última assinatura ou da emissão).
+    let esperado = formato === 'docx' ? c.docx_hash : c.pdf_hash;
+    if (formato === 'pdf') {
+      const { data: ult } = await svc.from('assinaturas').select('doc_hash').eq('contrato_id', c.id).not('doc_hash', 'is', null).order('assinado_em', { ascending: false }).limit(1).maybeSingle();
+      esperado = (ult as { doc_hash: string | null } | null)?.doc_hash ?? esperado;
+    }
+    const { data: blob } = await svc.storage.from('contratos').download(path);
+    if (!blob) return void res.status(404).json({ erro: 'Arquivo emitido não encontrado.' });
+    const hashReal = sha256Hex(new Uint8Array(await blob.arrayBuffer()));
+    if (esperado && hashReal !== esperado) {
+      console.error('contracts/download: hash divergente', { id: c.id, formato });
+      return void res.status(409).json({ erro: 'O arquivo não confere com o hash registrado na emissão. Procure o gestor.' });
     }
     const nome = `${c.numero ?? 'Contrato'} - ${c.categoria}.${formato}`.replace(/[\\/:*?"<>|]+/g, '-');
     const { data: signed, error } = await svc.storage.from('contratos').createSignedUrl(path, 60, { download: nome });
