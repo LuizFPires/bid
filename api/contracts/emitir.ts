@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { MissingEnvError, anexarPropostaAoPdf, arquivoDaProposta, bearer, carregarContratoV2, preencherDocx, renderContratoV2Pdf, requireMethod, resolverEHash, serviceClient, sha256Hex, userClient } from '@bid/server';
+import { MissingEnvError, anexarPropostaAoPdf, bearer, hashDaPropostaSeAnexo, carregarContratoV2, preencherDocx, renderContratoV2Pdf, requireMethod, resolverEHash, serviceClient, sha256Hex, userClient } from '@bid/server';
 
 /**
  * POST /api/contracts/emitir { contratoId }
@@ -40,7 +40,9 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   if (!c.docxPath.startsWith(`${c.orgId}/`) || c.docxPath.includes('..')) return void res.status(409).json({ erro: 'Modelo da minuta com caminho inválido.' });
 
   // Versão final: data de hoje e local = foro/cidade da obra; ass_* não entram no hash.
-  const { doc, hash } = await resolverEHash(c, { final: true, emissao: { data: new Date(), local: c.parametros.obra_foro || c.obraCidade || null } });
+  const anexo = await hashDaPropostaSeAnexo(sb, c);
+  if (anexo.faltou) return void res.status(409).json({ erro: 'Anexo III incluído, mas o arquivo da proposta não está acessível. Desmarque o anexo ou recupere o arquivo.' });
+  const { doc, hash } = await resolverEHash(c, { final: true, emissao: { data: new Date(), local: c.parametros.obra_foro || c.obraCidade || null }, hashProposta: anexo.hash });
   if (hash !== c.conteudoHash) return void res.status(409).json({ erro: 'O conteúdo mudou depois da aprovação. Gere a minuta e valide de novo.' });
 
   let svc;
@@ -65,16 +67,11 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   let pdfBytes: Uint8Array = new Uint8Array(pdf);
   let paginas = paginasBase;
   const avisos: string[] = [];
-  if (doc.anexoIII) {
-    const prop = await arquivoDaProposta(sb, c.dossie?.proposta.arquivoPath);
-    if (prop) {
-      const r = await anexarPropostaAoPdf(pdfBytes, prop);
-      pdfBytes = r.pdf;
-      paginas += r.paginasAnexo;
-      if (r.aviso) avisos.push(r.aviso);
-    } else {
-      avisos.push('Anexo III incluído, mas o arquivo da proposta não foi encontrado: o PDF saiu só com a capa do anexo.');
-    }
+  if (doc.anexoIII && anexo.arquivo) {
+    const r = await anexarPropostaAoPdf(pdfBytes, anexo.arquivo);
+    pdfBytes = r.pdf;
+    paginas += r.paginasAnexo;
+    if (r.aviso) avisos.push(r.aviso);
   }
 
   // Caminhos por hash e sem sobrescrita: duas emissões concorrentes nunca trocam

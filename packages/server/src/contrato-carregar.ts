@@ -108,10 +108,13 @@ export function entradaDoContrato(c: ContratoV2Carregado, opts: { emissao?: Entr
 }
 
 /** Documento resolvido + hash do conteúdo (o mesmo em preview, revisão e emissão). */
-export async function resolverEHash(c: ContratoV2Carregado, opts: { emissao?: EntradaResolver['emissao']; final?: boolean } = {}): Promise<{ doc: DocumentoResolvido; hash: string }> {
+export async function resolverEHash(c: ContratoV2Carregado, opts: { emissao?: EntradaResolver['emissao']; final?: boolean; hashProposta?: string | null } = {}): Promise<{ doc: DocumentoResolvido; hash: string }> {
   const doc = resolverDocumento(entradaDoContrato(c, opts));
   // Hash sem os dados de emissão (ass_*) para que a minuta e a versão final do mesmo conteúdo batam.
-  const semEmissao = { ...doc, campos: Object.fromEntries(Object.entries(doc.campos).filter(([k]) => !k.startsWith('ass_'))) };
+  // Com Anexo III, o hash do ARQUIVO da proposta entra no conteúdo: trocar o arquivo depois da
+  // aprovação invalida a aprovação (RC-10) e a emissão recusa.
+  const campos = Object.fromEntries(Object.entries(doc.campos).filter(([k]) => !k.startsWith('ass_')));
+  const semEmissao = { ...doc, campos, proposta_arquivo_hash: doc.anexoIII ? (opts.hashProposta ?? null) : null };
   const hash = await hashDocumento(semEmissao);
   return { doc, hash };
 }
@@ -127,4 +130,13 @@ export async function gravarHashConteudo(svc: SupabaseClient, c: ContratoV2Carre
   const { data, error } = await svc.from('contratos').update(patch).eq('id', c.id).eq('conteudo_versao', c.conteudoVersao).select('id');
   if (error) throw error;
   return (data ?? []).length === 1;
+}
+
+/** Hash sha256 do arquivo da proposta quando o Anexo III está incluído (null sem anexo; undefined = arquivo não encontrado). */
+export async function hashDaPropostaSeAnexo(sb: SupabaseClient, c: ContratoV2Carregado): Promise<{ hash: string | null; arquivo: { bytes: Uint8Array; nome: string } | null; faltou: boolean }> {
+  if (c.parametros.anexo_iii_incluir !== 'sim') return { hash: null, arquivo: null, faltou: false };
+  const { arquivoDaProposta } = await import('./contrato-anexo-proposta');
+  const { sha256Hex } = await import('./assinar-v2');
+  const arquivo = await arquivoDaProposta(sb, c.dossie?.proposta.arquivoPath);
+  return { hash: arquivo ? sha256Hex(arquivo.bytes) : null, arquivo, faltou: !arquivo };
 }

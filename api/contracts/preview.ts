@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { camposVaziosDoDocumento } from '@bid/core';
-import { MissingEnvError, anexarPropostaAoPdf, arquivoDaProposta, bearer, carregarContratoV2, documentXmlDoDocx, gravarHashConteudo, marcadoresSimples, preencherDocx, renderContratoV2Pdf, requireMethod, resolverEHash, serviceClient, userClient } from '@bid/server';
+import { MissingEnvError, anexarPropostaAoPdf, bearer, hashDaPropostaSeAnexo, carregarContratoV2, documentXmlDoDocx, gravarHashConteudo, marcadoresSimples, preencherDocx, renderContratoV2Pdf, requireMethod, resolverEHash, serviceClient, userClient } from '@bid/server';
 
 /**
  * POST /api/contracts/preview  { contratoId, formato: 'docx' | 'pdf' | 'hash' }
@@ -36,7 +36,8 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   if (!c.catalogo) return void res.status(409).json({ erro: 'O modelo da minuta não tem catálogo carregado.' });
   if (['emitido', 'enviado', 'assinado', 'cancelado'].includes(c.status)) return void res.status(409).json({ erro: 'Contrato emitido: baixe a versão final.' });
 
-  const { doc, hash } = await resolverEHash(c, { final: false });
+  const anexo = await hashDaPropostaSeAnexo(sb, c);
+  const { doc, hash } = await resolverEHash(c, { final: false, hashProposta: anexo.hash });
 
   let svc;
   try {
@@ -60,7 +61,7 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   // Marcadores vazios: SEMPRE pelo preenchimento real do modelo (mesmo cálculo
   // para docx, pdf e hash), sem os de emissão, preenchidos ao emitir.
   const preenchido = preencherDocx(modelo, doc, { logo });
-  const faltando = [...new Set([...camposVaziosDoDocumento(doc, marcadoresSimples(documentXmlDoDocx(modelo))), ...preenchido.faltando.filter((k) => !/^ass_/.test(k))])];
+  const faltando = [...new Set([...camposVaziosDoDocumento(doc, marcadoresSimples(documentXmlDoDocx(modelo))), ...preenchido.faltando.filter((k) => !/^ass_/.test(k)), ...(doc.anexoIII && anexo.faltou ? ['anexo_iii_arquivo'] : [])])];
 
   let arquivo: { bytes: Uint8Array; tipo: string; ext: string } | null = null;
   if (formato === 'docx') {
@@ -69,10 +70,7 @@ async function processar(req: VercelRequest, res: VercelResponse) {
     const { buffer } = await renderContratoV2Pdf(doc, { catalogo: c.catalogo, logoPng: logo });
     let bytes: Uint8Array = new Uint8Array(buffer);
     // Anexo III: a proposta vencedora, como arquivada no bid, entra depois da capa do anexo.
-    if (doc.anexoIII) {
-      const prop = await arquivoDaProposta(sb, c.dossie?.proposta.arquivoPath);
-      if (prop) bytes = (await anexarPropostaAoPdf(bytes, prop)).pdf;
-    }
+    if (doc.anexoIII && anexo.arquivo) bytes = (await anexarPropostaAoPdf(bytes, anexo.arquivo)).pdf;
     arquivo = { bytes, tipo: 'application/pdf', ext: 'pdf' };
   }
 

@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
 import { contarPorSeveridade, type Dossie } from '@bid/core';
-import { IAErro, MissingEnvError, bearer, carregarContratoV2, detectarMidia, gravarHashConteudo, env, requireMethod, resolverEHash, revisaoSimulada, revisarContrato, serviceClient, textoDoContrato, userClient, type ContratoParaRevisao, type DocumentoProposta } from '@bid/server';
+import { IAErro, MissingEnvError, bearer, carregarContratoV2, detectarMidia, gravarHashConteudo, hashDaPropostaSeAnexo, env, requireMethod, resolverEHash, revisaoSimulada, revisarContrato, serviceClient, textoDoContrato, userClient, type ContratoParaRevisao, type DocumentoProposta } from '@bid/server';
 
 const MAX_PDF_BYTES = 8 * 1024 * 1024;
 
@@ -50,7 +50,8 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   };
   // Hash do conteúdo atual = hash do DOCUMENTO RESOLVIDO (o mesmo da minuta e da
   // emissão); a revisão vale para este hash e o envio exige igualdade.
-  const { hash } = await resolverEHash(carregado);
+  const anexo = await hashDaPropostaSeAnexo(sb, carregado);
+  const { hash } = await resolverEHash(carregado, { hashProposta: anexo.hash });
 
   let svc;
   try {
