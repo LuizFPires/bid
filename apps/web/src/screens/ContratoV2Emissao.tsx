@@ -31,12 +31,21 @@ export function PainelEmitido({ c }: { c: ContratoV2Detalhe }) {
   const pendentes = signatariosPendentes(resumo, linhas.map((l) => ({ signatarioId: l.signatarioId, assinadoEm: l.assinadoEm })));
   const final = c.status === 'assinado' || c.status === 'cancelado';
 
+  // iPhone/Safari só abre janela dentro do gesto: abre vazia AGORA e aponta depois.
+  function abrirDepois(): Window | null {
+    const w = window.open('', '_blank');
+    if (w) w.opener = null;
+    return w;
+  }
   async function baixar(formato: 'docx' | 'pdf') {
+    const w = abrirDepois();
     setBaixando(formato);
     try {
       const { url } = await urlDownloadEmitido(c.id, formato);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      if (w) w.location.href = url;
+      else window.location.assign(url);
     } catch (e) {
+      w?.close();
       toast(e instanceof Error ? e.message : 'Não foi possível baixar.');
     } finally {
       setBaixando(null);
@@ -44,14 +53,20 @@ export function PainelEmitido({ c }: { c: ContratoV2Detalhe }) {
   }
   async function enviarLink(s: SignatarioContrato) {
     if (!s.id) return;
+    const w = abrirDepois();
     try {
       const [l] = await gerar.mutateAsync(s.id);
-      if (!l) return toast('Nenhum link gerado.');
+      if (!l) {
+        w?.close();
+        return toast('Nenhum link gerado.');
+      }
       const url = `${window.location.origin}/sign/${l.token}`;
-      const msg = mensagemAssinatura({ nome: s.nome, parte: s.parte, numero: c.numero, obra: c.obraNome, url });
-      window.open(linkWhatsAppMensagem(msg), '_blank', 'noopener,noreferrer');
+      const wa = linkWhatsAppMensagem(mensagemAssinatura({ nome: s.nome, parte: s.parte, numero: c.numero, obra: c.obraNome, url }));
+      if (w) w.location.href = wa;
+      else window.location.assign(wa);
       toast(`Link gerado para ${s.nome} (vale 7 dias, uso único).`);
     } catch (e) {
+      w?.close();
       toast(e instanceof Error ? e.message : 'Não foi possível gerar o link.');
     }
   }

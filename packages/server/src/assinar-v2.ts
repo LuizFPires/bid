@@ -93,8 +93,12 @@ export async function registrarAssinaturaV2(sb: SupabaseClient, d: DadosAssinatu
     p_user_agent: d.userAgent,
   });
   if (error) {
-    await sb.storage.from('contratos').remove([novoPath]);
-    await sb.storage.from('assinaturas').remove([imgPath]);
+    // Se a RPC chegou a gravar (falha só na resposta), o banco já aponta para o arquivo novo: não apagar.
+    const { data: atual } = await sb.from('contratos').select('pdf_path').eq('id', d.contratoId).maybeSingle();
+    if ((atual as { pdf_path: string | null } | null)?.pdf_path !== novoPath) {
+      await sb.storage.from('contratos').remove([novoPath]);
+      await sb.storage.from('assinaturas').remove([imgPath]);
+    }
     throw new Error(error.message.replace(/^.*?: /, '') || 'Falha ao registrar a assinatura.');
   }
   return { assinado: data === true };

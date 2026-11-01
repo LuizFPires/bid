@@ -3,7 +3,7 @@
 -- links por signatário (gestor), colaborador não; cancelar com motivo;
 -- emitido não se apaga. Dados fictícios. `supabase test db`.
 begin;
-select plan(30);
+select plan(31);
 
 select has_function('public', 'emitir_contrato', ARRAY['uuid', 'text', 'text', 'text', 'text', 'integer', 'uuid'], 'emitir_contrato existe');
 select has_function('public', 'gerar_links_assinatura', ARRAY['uuid', 'uuid'], 'gerar_links_assinatura existe');
@@ -56,7 +56,7 @@ select pg_temp.sair();
 
 -- emitir: só servidor; só aprovado com aprovação vigente do hash atual
 select pg_temp.como('00000000-0000-4000-8000-00000000a001');
-select throws_like($$ select public.emitir_contrato((select id from fxk), 'x', 'h', 'y', 'h', 1, null) $$, '%só do servidor%', 'cliente não emite');
+select throws_ok($$ select public.emitir_contrato((select id from fxk), 'x', 'h', 'y', 'h', 1, null) $$, '42501', null, 'cliente não emite (sem EXECUTE)');
 select pg_temp.sair();
 select throws_like($$ select public.emitir_contrato((select id from fxk), (select org from fx6) || '/a.docx', 'dh', (select org from fx6) || '/a.pdf', 'ph', 18, '00000000-0000-4000-8000-00000000a002') $$, '%só contrato aprovado%', 'não aprovado não emite');
 update public.contratos set status = 'aprovado', conteudo_hash = 'h1' where id = (select id from fxk);
@@ -104,7 +104,8 @@ select throws_ok($$ select public.apagar_contrato((select id from fxk)) $$, 'P00
 select throws_ok($$ update public.contratos set deleted_at = now() where id = (select id from fxk) $$, 'P0001', null, 'enviado não se apaga por update direto');
 select throws_ok($$ select public.cancelar_contrato((select id from fxk), 'x') $$, 'P0001', 'Cancelar exige um motivo.', 'cancelar sem motivo falha');
 select lives_ok($$ select public.cancelar_contrato((select id from fxk), 'Fornecedor desistiu da obra.') $$, 'gestor cancela com motivo');
-select is((select status || '|' || cancelado_motivo from public.contratos where id = (select id from fxk)), 'cancelado|Fornecedor desistiu da obra.', 'cancelado com motivo; tokens invalidados');
+select is((select status || '|' || cancelado_motivo from public.contratos where id = (select id from fxk)), 'cancelado|Fornecedor desistiu da obra.', 'cancelado com motivo');
+select is((select count(*) from public.assinaturas where contrato_id = (select id from fxk) and assinado_em is null and token_hash is not null), 0::bigint, 'tokens pendentes invalidados');
 select pg_temp.sair();
 
 select * from finish();

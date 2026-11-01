@@ -29,6 +29,7 @@ export async function registrarAssinatura(sb: SupabaseClient, d: DadosAssinatura
     .select('assinado_em')
     .eq('contrato_id', d.contratoId)
     .eq('parte', d.parte)
+    .is('signatario_id', null)
     .maybeSingle();
   if ((existente as { assinado_em: string | null } | null)?.assinado_em) {
     throw new Error('Esta parte já assinou.');
@@ -70,25 +71,13 @@ export async function registrarAssinatura(sb: SupabaseClient, d: DadosAssinatura
   await sb.storage.from('assinaturas').upload(imgPath, pngBytes, { upsert: true, contentType: 'image/png' });
 
   // Trilha autoritativa (service_role). Invalida o token (uso único).
-  const upErr = (
-    await sb.from('assinaturas').upsert(
-      {
-        org_id: d.orgId,
-        contrato_id: d.contratoId,
-        parte: d.parte,
-        signatario_nome: d.nome || null,
-        assinatura_img_path: imgPath,
-        via: d.via,
-        assinado_em: new Date().toISOString(),
-        ip: d.ip,
-        user_agent: d.userAgent,
-        doc_hash: docHash,
-        token_hash: null,
-        token_expira: null,
-      },
-      { onConflict: 'contrato_id,parte' },
-    )
-  ).error;
+  // Índice único do legado é parcial (signatario_id is null) — o PostgREST não
+  // expressa o predicado no ON CONFLICT, então: atualiza se existe, senão insere.
+  const trilha = { signatario_nome: d.nome || null, assinatura_img_path: imgPath, via: d.via, assinado_em: new Date().toISOString(), ip: d.ip, user_agent: d.userAgent, doc_hash: docHash, token_hash: null, token_expira: null };
+  const { data: linhaLegado } = await sb.from('assinaturas').select('id').eq('contrato_id', d.contratoId).eq('parte', d.parte).is('signatario_id', null).maybeSingle();
+  const upErr = linhaLegado
+    ? (await sb.from('assinaturas').update(trilha).eq('id', (linhaLegado as { id: string }).id)).error
+    : (await sb.from('assinaturas').insert({ org_id: d.orgId, contrato_id: d.contratoId, parte: d.parte, ...trilha })).error;
   if (upErr) throw new Error('Falha ao registrar a assinatura.');
 
   // Ambas as partes assinaram? → contrato assinado.

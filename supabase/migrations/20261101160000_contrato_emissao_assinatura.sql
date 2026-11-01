@@ -52,7 +52,7 @@ begin
   end if;
 
   -- Número sequencial por org/ano (RC-11): upsert bloqueia a linha → sem buracos.
-  v_ano := extract(year from now())::int;
+  v_ano := extract(year from (now() at time zone 'America/Sao_Paulo'))::int;
   insert into public.contrato_numeracao (org_id, ano, ultimo) values (v_org, v_ano, 1)
     on conflict (org_id, ano) do update set ultimo = public.contrato_numeracao.ultimo + 1
     returning ultimo into v_n;
@@ -75,7 +75,7 @@ $$;
 -- Um token por signatário pendente (ou só o informado). Hash guardado; o token
 -- em claro sai uma vez. Primeiro link leva o contrato a `enviado`.
 create or replace function public.gerar_links_assinatura(p_contrato uuid, p_signatario uuid default null)
-returns table (signatario_id uuid, nome text, parte text, token text)
+returns table (o_signatario_id uuid, o_nome text, o_parte text, o_token text)
 language plpgsql
 security definer
 set search_path = public, extensions
@@ -96,10 +96,10 @@ begin
     v_token := encode(extensions.gen_random_bytes(24), 'hex');
     insert into public.assinaturas (org_id, contrato_id, signatario_id, parte, signatario_nome, via, token_hash, token_expira)
       values (v_org, p_contrato, r.id, r.parte, r.nome, 'link', encode(extensions.digest(v_token, 'sha256'), 'hex'), now() + interval '7 days')
-    on conflict (contrato_id, signatario_id) where signatario_id is not null do update
+    on conflict (contrato_id, signatario_id) where assinaturas.signatario_id is not null do update
       set token_hash = excluded.token_hash, token_expira = excluded.token_expira, via = 'link';
     v_n := v_n + 1;
-    signatario_id := r.id; nome := r.nome; parte := r.parte; token := v_token;
+    o_signatario_id := r.id; o_nome := r.nome; o_parte := r.parte; o_token := v_token;
     return next;
   end loop;
   if v_n = 0 then raise exception 'não há signatário pendente'; end if;
@@ -170,6 +170,51 @@ begin
   update public.contratos set deleted_at = now() where id = p_contrato;
   insert into public.eventos (org_id, entidade, entidade_id, tipo, payload)
     values (v_org, 'contrato', p_contrato, 'contrato_excluido', jsonb_build_object('status', v_status));
+end;
+$$;
+
+-- Legado (M7): o ON CONFLICT precisa do predicado do índice parcial.
+create or replace function public.gerar_token_assinatura(p_contrato uuid, p_parte text, p_signatario text)
+returns text
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare v_org uuid; v_token text; v_assinado timestamptz;
+begin
+  if p_parte <> 'contratada' then raise exception 'o link de assinatura é apenas para a contratada'; end if;
+  select org_id into v_org from public.contratos where id = p_contrato and deleted_at is null and modelo_id is null;
+  if v_org is null then raise exception 'contrato não encontrado'; end if;
+  if not public.is_member(v_org) then raise exception 'sem acesso a este contrato'; end if;
+  select assinado_em into v_assinado from public.assinaturas where contrato_id = p_contrato and parte = p_parte and signatario_id is null;
+  if v_assinado is not null then raise exception 'esta parte já assinou'; end if;
+  v_token := encode(extensions.gen_random_bytes(24), 'hex');
+  insert into public.assinaturas (org_id, contrato_id, parte, signatario_nome, via, token_hash, token_expira)
+    values (v_org, p_contrato, p_parte, nullif(btrim(p_signatario), ''), 'link', encode(extensions.digest(v_token, 'sha256'), 'hex'), now() + interval '7 days')
+  on conflict (contrato_id, parte) where signatario_id is null do update
+    set token_hash = excluded.token_hash, token_expira = excluded.token_expira,
+        signatario_nome = coalesce(excluded.signatario_nome, public.assinaturas.signatario_nome), via = 'link';
+  insert into public.eventos (org_id, entidade, entidade_id, tipo, payload)
+    values (v_org, 'contrato', p_contrato, 'token_assinatura_gerado', jsonb_build_object('parte', p_parte));
+  return v_token;
+end;
+$$;
+
+-- restaurar_contrato: mesma gerência da exclusão.
+create or replace function public.restaurar_contrato(p_contrato uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare v_org uuid;
+begin
+  select org_id into v_org from public.contratos where id = p_contrato and deleted_at is not null;
+  if v_org is null then raise exception 'contrato não encontrado'; end if;
+  if not public.gerencia_contrato(p_contrato) then raise exception 'Só o dono ou um gestor da obra pode restaurar o contrato.'; end if;
+  update public.contratos set deleted_at = null where id = p_contrato;
+  insert into public.eventos (org_id, entidade, entidade_id, tipo, payload)
+    values (v_org, 'contrato', p_contrato, 'contrato_restaurado', '{}'::jsonb);
 end;
 $$;
 

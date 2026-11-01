@@ -64,25 +64,30 @@ async function processar(req: VercelRequest, res: VercelResponse) {
   const { buffer: pdf, paginas } = await renderContratoV2Pdf(doc, { catalogo: c.catalogo, logoPng: logo });
   const pdfBytes = new Uint8Array(pdf);
 
+  // Caminhos por hash e sem sobrescrita: duas emissões concorrentes nunca trocam
+  // os bytes de um arquivo cujo hash já foi gravado pela RPC.
   const base = `${c.orgId}/${c.id}`;
-  const docxPath = `${base}/emitido.docx`;
-  const pdfPath = `${base}/emitido.pdf`;
-  const u1 = await svc.storage.from('contratos').upload(docxPath, docx, { upsert: true, contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const docxHash = sha256Hex(docx);
+  const pdfHash = sha256Hex(pdfBytes);
+  const docxPath = `${base}/emitido-${docxHash.slice(0, 16)}.docx`;
+  const pdfPath = `${base}/emitido-${pdfHash.slice(0, 16)}.pdf`;
+  const u1 = await svc.storage.from('contratos').upload(docxPath, docx, { upsert: false, contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
   if (u1.error) return void res.status(502).json({ erro: 'Não foi possível gravar o .docx emitido.' });
-  const u2 = await svc.storage.from('contratos').upload(pdfPath, pdfBytes, { upsert: true, contentType: 'application/pdf' });
+  const u2 = await svc.storage.from('contratos').upload(pdfPath, pdfBytes, { upsert: false, contentType: 'application/pdf' });
   if (u2.error) return void res.status(502).json({ erro: 'Não foi possível gravar o PDF emitido.' });
 
   const { data: numero, error: eErr } = await svc.rpc('emitir_contrato', {
     p_contrato: c.id,
     p_docx_path: docxPath,
-    p_docx_hash: sha256Hex(docx),
+    p_docx_hash: docxHash,
     p_pdf_path: pdfPath,
-    p_pdf_hash: sha256Hex(pdfBytes),
+    p_pdf_hash: pdfHash,
     p_paginas: paginas,
     p_emitido_por: userId,
   });
   if (eErr) {
     console.error('emitir_contrato falhou', eErr);
+    await svc.storage.from('contratos').remove([docxPath, pdfPath]);
     return void res.status(409).json({ erro: eErr.message.includes('aprovação') ? 'A aprovação não corresponde ao conteúdo atual: valide de novo.' : 'Não foi possível emitir o contrato.' });
   }
   res.status(200).json({ numero: numero as string, paginas });

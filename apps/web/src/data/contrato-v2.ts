@@ -374,15 +374,15 @@ export interface AssinaturaV2Linha {
 }
 
 export async function fetchAssinaturasV2(contratoId: string): Promise<AssinaturaV2Linha[]> {
-  const { data, error } = await db().from('assinaturas').select('signatario_id, parte, signatario_nome, assinado_em, via, token_hash, token_expira').eq('contrato_id', contratoId);
+  const { data, error } = await db().from('assinaturas').select('signatario_id, parte, signatario_nome, assinado_em, via, token_expira').eq('contrato_id', contratoId);
   if (error) throw error;
-  return ((data ?? []) as { signatario_id: string | null; parte: ParteV2; signatario_nome: string | null; assinado_em: string | null; via: 'app' | 'link' | null; token_hash: string | null; token_expira: string | null }[]).map((r) => ({
+  return ((data ?? []) as { signatario_id: string | null; parte: ParteV2; signatario_nome: string | null; assinado_em: string | null; via: 'app' | 'link' | null; token_expira: string | null }[]).map((r) => ({
     signatarioId: r.signatario_id,
     parte: r.parte,
     signatarioNome: r.signatario_nome,
     assinadoEm: r.assinado_em,
     via: r.via,
-    temLink: !!r.token_hash && (!r.token_expira || new Date(r.token_expira).getTime() > Date.now()),
+    temLink: !r.assinado_em && !!r.token_expira && new Date(r.token_expira).getTime() > Date.now(),
     linkExpira: r.token_expira,
   }));
 }
@@ -402,7 +402,7 @@ export async function urlDownloadEmitido(contratoId: string, formato: 'docx' | '
 export async function gerarLinksAssinatura(contratoId: string, signatarioId?: string): Promise<{ signatarioId: string; nome: string; parte: ParteV2; token: string }[]> {
   const { data, error } = await db().rpc('gerar_links_assinatura', { p_contrato: contratoId, p_signatario: signatarioId ?? null });
   if (error) throw error;
-  return ((data ?? []) as { signatario_id: string; nome: string; parte: ParteV2; token: string }[]).map((r) => ({ signatarioId: r.signatario_id, nome: r.nome, parte: r.parte, token: r.token }));
+  return ((data ?? []) as { o_signatario_id: string; o_nome: string; o_parte: ParteV2; o_token: string }[]).map((r) => ({ signatarioId: r.o_signatario_id, nome: r.o_nome, parte: r.o_parte, token: r.o_token }));
 }
 
 export async function coletarAssinaturaApp(contratoId: string, signatarioId: string, pngBase64: string): Promise<{ assinado: boolean }> {
