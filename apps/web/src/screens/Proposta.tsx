@@ -18,6 +18,7 @@ import {
   useCriarContrato,
   useCriarVersao,
   useDefinirVencedora,
+  useReverterVencedora,
   useEditarProposta,
   useProposta,
   useSugestoes,
@@ -148,6 +149,8 @@ export function PropostaScreen() {
   const papelObra = usePapelObra(data?.obraId);
   const [modo, setModo] = useState<'ver' | 'nova' | 'editar'>('ver');
   const definir = useDefinirVencedora();
+  const reverter = useReverterVencedora();
+  const [confirmandoReverter, setConfirmandoReverter] = useState(false);
   const criarContrato = useCriarContrato();
   const apagar = useApagarProposta();
   const toast = useToast();
@@ -289,6 +292,30 @@ export function PropostaScreen() {
         <span className="vcur">versão {data.versaoAtual} · atual</span>
         <span className="val">{data.valorAtual != null ? formatBRL(data.valorAtual) : '—'}</span>
       </div>
+      {data.status === 'vencedora' && modo === 'ver' && (
+        <button type="button" className="link" style={{ marginTop: -4, marginBottom: 8 }} onClick={() => setConfirmandoReverter(true)}>
+          <Icon name="back" /> Desfazer vencedora (voltar a comparar)
+        </button>
+      )}
+      <ConfirmDialog
+        aberto={confirmandoReverter}
+        titulo={`Desfazer a vencedora ${nomeProposta(data.fornecedor, data.opcao)}?`}
+        confirmarLabel={reverter.isPending ? 'Desfazendo…' : 'Desfazer vencedora'}
+        ocupado={reverter.isPending}
+        onCancelar={() => setConfirmandoReverter(false)}
+        onConfirmar={async () => {
+          try {
+            const r = await reverter.mutateAsync(data.id);
+            setConfirmandoReverter(false);
+            toast(r.certame_status === 'analise' ? 'Vencedora desfeita: a tomada de preços voltou para equalização.' : 'Vencedora desfeita: a tomada de preços voltou a receber propostas.');
+          } catch (e) {
+            setConfirmandoReverter(false);
+            toast(e instanceof Error ? e.message : 'Não foi possível desfazer a vencedora.');
+          }
+        }}
+      >
+        A proposta volta ao status normal e a tomada de preços deixa de estar adjudicada. Nada é apagado; você pode definir outra vencedora depois. Se já houver contrato desta proposta, apague-o (ou cancele, se emitido) antes.
+      </ConfirmDialog>
 
       {modo === 'ver' ? (
         <>

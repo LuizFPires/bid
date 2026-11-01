@@ -23,6 +23,7 @@ import {
   invalidarVencedora,
   useCriarEqualizacao,
   useDefinirVencedora,
+  useReverterVencedora,
   useEqualizacao,
   useEqualizacoes,
   useEqualizarIA,
@@ -562,6 +563,8 @@ export function EqualizacaoScreen() {
     }
   }
   const definir = useDefinirVencedora();
+  const reverter = useReverterVencedora();
+  const [revertendo, setRevertendo] = useState<string | null>(null);
   const toast = useToast();
   const qc = useQueryClient();
   const [erroIA, setErroIA] = useState<string | null>(null);
@@ -694,9 +697,14 @@ export function EqualizacaoScreen() {
       const ehVencedora = data.vencedoraPropostaId === p.id;
       const recomendada = ia?.recomendacao?.proposta_id === p.id;
       return ehVencedora ? (
-        <span className="pill adjudicada">
-          <Icon name="trophy" style={{ width: 13, height: 13 }} />
-          Vencedora
+        <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <span className="pill adjudicada">
+            <Icon name="trophy" style={{ width: 13, height: 13 }} />
+            Vencedora
+          </span>
+          <button type="button" className="link" style={{ fontSize: 12 }} disabled={reverter.isPending} onClick={() => setRevertendo(p.id)}>
+            Desfazer
+          </button>
         </span>
       ) : (
         <button
@@ -788,6 +796,26 @@ export function EqualizacaoScreen() {
         obra={data.obraNome}
         onFechar={() => setPedidoAberto(null)}
       />
+      <ConfirmDialog
+        aberto={revertendo !== null}
+        titulo={`Desfazer a vencedora ${revertendo ? nome(revertendo) : ''}?`}
+        confirmarLabel={reverter.isPending ? 'Desfazendo…' : 'Desfazer vencedora'}
+        ocupado={reverter.isPending}
+        onCancelar={() => setRevertendo(null)}
+        onConfirmar={async () => {
+          if (!revertendo) return;
+          try {
+            await reverter.mutateAsync(revertendo);
+            setRevertendo(null);
+            toast('Vencedora desfeita: a tomada de preços voltou para equalização.');
+          } catch (e) {
+            setRevertendo(null);
+            toast(e instanceof Error ? e.message : 'Não foi possível desfazer a vencedora.');
+          }
+        }}
+      >
+        A proposta volta a "em análise" e a tomada de preços deixa de estar adjudicada. Você pode escolher outra vencedora na tabela. Se já houver contrato desta proposta, apague-o (ou cancele, se emitido) antes.
+      </ConfirmDialog>
       <ConfirmDialog
         aberto={confirmando}
         titulo={`Apagar a equalização "${data.categoria}"?`}

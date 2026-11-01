@@ -28,6 +28,7 @@ import {
   criarEqualizacao,
   equalizarIA,
   definirVencedora,
+  reverterVencedora,
   desfazerVencedora,
   criarContrato,
   atualizarClausula,
@@ -414,6 +415,11 @@ export function useDefinirVencedora() {
     mutationFn: definirVencedora,
     onSuccess: () => invalidarVencedora(qc),
   });
+}
+
+export function useReverterVencedora() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: reverterVencedora, onSuccess: () => invalidarVencedora(qc) });
 }
 
 export function useDesfazerVencedora() {

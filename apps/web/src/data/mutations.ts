@@ -267,6 +267,17 @@ export async function desfazerVencedora(input: DesfazerVencedoraInput): Promise<
   if (error) throw error;
 }
 
+/**
+ * Reverte a vencedora a qualquer momento (não só no toast): proposta volta a
+ * analise/recebida e o certame deixa de ser adjudicado. O servidor recusa se
+ * houver contrato ativo da proposta.
+ */
+export async function reverterVencedora(propostaId: string): Promise<{ certame_id: string; proposta_status: string; certame_status: string }> {
+  const { data, error } = await db().rpc('reverter_vencedora', { p_proposta: propostaId });
+  if (error) throw error;
+  return data as { certame_id: string; proposta_status: string; certame_status: string };
+}
+
 /* ---------- Contrato ---------- */
 
 /**
