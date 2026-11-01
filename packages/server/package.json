@@ -15,7 +15,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "esbuild src/index.ts --bundle --platform=node --format=esm --external:@react-pdf/renderer --external:react --outfile=dist/index.js && tsc -p tsconfig.build.json --emitDeclarationOnly",
-    "test": "node -e \"process.exit(0)\""
+    "test": "vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
@@ -30,6 +30,7 @@
     "@types/react": "^18.3.31",
     "@vercel/node": "^28.0.0",
     "esbuild": "^0.25.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
