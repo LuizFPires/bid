@@ -16,7 +16,14 @@ export interface ContratoV2PdfOpts {
   catalogo: CatalogoTitulos;
   /** Logo PNG da construtora (cabeçalho); sem logo, só o texto. */
   logoPng?: Uint8Array | null;
+  /** 'compacta' (padrão): fonte 9 e margens menores; 'normal': fonte 9,5 e margens maiores. Entrelinha natural da fonte: com a Sora, qualquer lineHeight no react-pdf dobra o espaço entre linhas. */
+  densidade?: 'compacta' | 'normal';
 }
+
+const DENSIDADE = {
+  compacta: { fonte: 9, item: 4, clausula: 14, clausulaBaixo: 7, h2: 10, padH: 46, padTopMinuta: 76, padTop: 58, padBottom: 50, td: 3.5, tdFonte: 8.3 },
+  normal: { fonte: 9.5, item: 6, clausula: 16, clausulaBaixo: 8, h2: 14, padH: 52, padTopMinuta: 84, padTop: 66, padBottom: 60, td: 5, tdFonte: 8.8 },
+} as const;
 
 const AVISO_MINUTA = PROSA_MINUTA.avisoMinuta;
 const P = PROSA_MINUTA;
@@ -47,33 +54,35 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
   const c = doc.campos;
   const campo = (k: string) => (c[k] ?? '').trim() || '[A PREENCHER]';
 
+  const D = DENSIDADE[opts.densidade ?? 'compacta'];
   const s = StyleSheet.create({
-    page: { paddingTop: minuta ? 84 : 66, paddingBottom: 60, paddingHorizontal: 52, fontFamily: 'Sora', fontWeight: 400, fontSize: 9.5, color: INK },
-    cab: { position: 'absolute', top: 22, left: 52, right: 52, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    cabTxt: { fontSize: 8, color: MUTED, fontWeight: 600, letterSpacing: 0.4 },
-    logo: { height: 22, width: 90, objectFit: 'contain', objectPosition: 'left' },
-    aviso: { position: 'absolute', top: 50, left: 52, right: 52, textAlign: 'center', color: WARN, fontWeight: 700, fontSize: 9.5 },
-    rod: { position: 'absolute', bottom: 26, left: 52, right: 52, flexDirection: 'row', justifyContent: 'space-between', fontSize: 7.5, color: MUTED },
-    h1: { fontSize: 13, fontWeight: 700, textAlign: 'center', marginBottom: 14, letterSpacing: 0.3 },
-    h2: { fontSize: 10.5, fontWeight: 700, marginTop: 14, marginBottom: 6, letterSpacing: 0.3 },
-    clH: { fontSize: 9.5, fontWeight: 700, marginTop: 12, marginBottom: 4, textTransform: 'uppercase' },
-    p: { textAlign: 'justify', lineHeight: 1.45, marginBottom: 4 },
-    item: { flexDirection: 'row', marginBottom: 4 },
-    itemN: { width: 36, fontWeight: 700 },
-    itemT: { flex: 1, textAlign: 'justify', lineHeight: 1.45 },
-    tbl: { borderWidth: 0.6, borderColor: LINE, marginBottom: 8 },
+    page: { paddingTop: minuta ? D.padTopMinuta : D.padTop, paddingBottom: D.padBottom, paddingHorizontal: D.padH, fontFamily: 'Sora', fontWeight: 400, fontSize: D.fonte, color: INK },
+    cab: { position: 'absolute', top: 20, left: D.padH, right: D.padH, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    cabTxt: { fontSize: 7.5, color: MUTED, fontWeight: 600, letterSpacing: 0.4 },
+    logo: { height: 20, width: 84, objectFit: 'contain', objectPosition: 'left' },
+    aviso: { position: 'absolute', top: 46, left: D.padH, right: D.padH, textAlign: 'center', color: WARN, fontWeight: 700, fontSize: 9 },
+    rod: { position: 'absolute', bottom: 22, left: D.padH, right: D.padH, flexDirection: 'row', justifyContent: 'space-between', fontSize: 7.5, color: MUTED },
+    h1: { fontSize: 12.5, fontWeight: 700, textAlign: 'center', marginBottom: 10, letterSpacing: 0.3 },
+    h2: { fontSize: 10, fontWeight: 700, marginTop: D.h2, marginBottom: 5, letterSpacing: 0.3 },
+    // Título da cláusula com respiro: mais acima (separa da anterior) e abaixo (não cola no primeiro item).
+    clH: { fontSize: D.fonte + 0.5, fontWeight: 700, marginTop: D.clausula, marginBottom: D.clausulaBaixo, textTransform: 'uppercase', letterSpacing: 0.2 },
+    p: { textAlign: 'justify', marginBottom: D.item },
+    item: { flexDirection: 'row', marginBottom: D.item },
+    itemN: { width: 34, fontWeight: 700 },
+    itemT: { flex: 1, textAlign: 'justify' },
+    tbl: { borderWidth: 0.6, borderColor: LINE, marginBottom: 6 },
     tr: { flexDirection: 'row', borderBottomWidth: 0.6, borderBottomColor: LINE },
-    th: { backgroundColor: '#eef0f8', fontWeight: 700, fontSize: 8, padding: 5 },
-    td: { padding: 5, fontSize: 8.8, lineHeight: 1.35 },
-    k: { width: 160, fontWeight: 600, color: MUTED, fontSize: 8.3 },
+    th: { backgroundColor: '#eef0f8', fontWeight: 700, fontSize: 7.5, padding: D.td },
+    td: { padding: D.td, fontSize: D.tdFonte },
+    k: { width: 150, fontWeight: 600, color: MUTED, fontSize: 8 },
     v: { flex: 1 },
     hl: { backgroundColor: HIGHLIGHT },
     r: { textAlign: 'right' },
-    assBloco: { width: '46%', marginTop: 26 },
-    assLinha: { borderTopWidth: 0.8, borderTopColor: INK, paddingTop: 4, fontSize: 8.5 },
+    assBloco: { width: '46%', marginTop: 22 },
+    assLinha: { borderTopWidth: 0.8, borderTopColor: INK, paddingTop: 3, fontSize: 8.3 },
     assGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    small: { fontSize: 8, color: MUTED },
-    anexoT: { fontSize: 11.5, fontWeight: 700, textAlign: 'center', marginBottom: 12, letterSpacing: 0.3 },
+    small: { fontSize: 7.8, color: MUTED },
+    anexoT: { fontSize: 11, fontWeight: 700, textAlign: 'center', marginBottom: 10, letterSpacing: 0.3 },
   });
 
   /** Texto com **negrito** → runs; destaque amarelo em campos preenchidos na minuta. */
@@ -138,9 +147,9 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
     clausulas.push(h(Text, { key: `h${cl.clausula}`, style: s.clH, minPresenceAhead: 60 }, `CLÁUSULA ${cl.clausula} — ${cl.titulo}`));
     for (const it of cl.itens) {
       const texto = doc.clausulas[it.numero];
-      clausulas.push(h(View, { key: it.numero, style: s.item }, h(Text, { style: s.itemN }, `${it.numero}.`), rico(texto == null ? 'Não se aplica.' : preencher(texto, c), s.itemT)));
+      clausulas.push(h(View, { key: it.numero, style: s.item, minPresenceAhead: 24 }, h(Text, { style: s.itemN }, `${it.numero}.`), rico(texto == null ? 'Não se aplica.' : preencher(texto, c), s.itemT)));
       for (const ex of doc.extras.filter((x) => x.apos === it.numero).sort((a, b) => cmpNumeroItem(a.numero, b.numero))) {
-        clausulas.push(h(View, { key: ex.numero, style: s.item }, h(Text, { style: s.itemN }, `${ex.numero}.`), rico(semMarcador(ex.texto), s.itemT)));
+        clausulas.push(h(View, { key: ex.numero, style: s.item, minPresenceAhead: 24 }, h(Text, { style: s.itemN }, `${ex.numero}.`), rico(semMarcador(ex.texto), s.itemT)));
       }
     }
   }
@@ -201,7 +210,7 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
         h(Text, { style: s.h2 }, P.condicoesTitulo),
         ...doc.blocos.flatMap((b, bi) => [
           h(Text, { key: `b${bi}`, style: { fontWeight: 700, marginTop: 6, marginBottom: 3 } }, `${bi + 1}. ${semMarcador(b.titulo)}`),
-          ...b.itens.map((t, ti) => h(View, { key: `b${bi}.${ti}`, style: s.item }, h(Text, { style: s.itemN }, `${bi + 1}.${ti + 1}.`), rico(semMarcador(t), s.itemT))),
+          ...b.itens.map((t, ti) => h(View, { key: `b${bi}.${ti}`, style: s.item, minPresenceAhead: 24 }, h(Text, { style: s.itemN }, `${bi + 1}.${ti + 1}.`), rico(semMarcador(t), s.itemT))),
         ]),
       ]
     : [];
@@ -226,7 +235,7 @@ export async function renderContratoV2Pdf(doc: DocumentoResolvido, opts: Contrat
     ...cabecalho(),
     h(Text, { style: s.anexoT }, P.anexoIITitulo),
     rico(preencher(P.anexoIIAbertura, c), s.p),
-    ...doc.declaracao.map((d) => h(View, { key: d.numero, style: s.item }, h(Text, { style: s.itemN }, `${d.numero}.`), rico(`**${semMarcador(d.titulo)}** ${semMarcador(d.texto)}`, s.itemT))),
+    ...doc.declaracao.map((d) => h(View, { key: d.numero, style: s.item, minPresenceAhead: 24 }, h(Text, { style: s.itemN }, `${d.numero}.`), rico(`**${semMarcador(d.titulo)}** ${semMarcador(d.texto)}`, s.itemT))),
     h(View, { style: [s.assBloco, { marginTop: 30 }] }, h(Text, { style: s.assLinha }, decl ? `${decl.nome}${decl.cargo ? `, ${decl.cargo}` : ''}` : '[A PREENCHER]'), h(Text, { style: { fontWeight: 700, fontSize: 8.5 } }, doc.razao.contratada || '[A PREENCHER]')),
   );
 
