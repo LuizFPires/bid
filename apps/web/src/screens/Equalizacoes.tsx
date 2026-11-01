@@ -810,7 +810,8 @@ export function EqualizacaoScreen() {
             toast('Vencedora desfeita: a tomada de preços voltou para equalização.');
           } catch (e) {
             setRevertendo(null);
-            toast(e instanceof Error ? e.message : 'Não foi possível desfazer a vencedora.');
+            const m = (e as { message?: string } | null)?.message;
+            toast(m && !/function|schema cache/i.test(m) ? m : 'Não foi possível desfazer a vencedora. Se o app acabou de ser atualizado, as migrations do banco ainda precisam ser aplicadas.');
           }
         }}
       >
