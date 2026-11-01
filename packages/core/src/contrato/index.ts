@@ -12,3 +12,4 @@ export * from './numeracao';
 export * from './clausulas-v2';
 export * from './resolver';
 export * from './validar';
+export * from './assinatura';
