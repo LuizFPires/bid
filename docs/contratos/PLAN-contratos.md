@@ -76,12 +76,13 @@
 
 ## M14 · Legado, sigilo da equalização, métricas e polimento
 
-- [ ] Contratos legados continuam funcionando (tela/PDF/assinatura atuais) — teste Playwright do caminho legado.
-- [ ] Remover o anexo de equalização do PDF legado (RC-15), se Q3 confirmada.
-- [ ] Métricas (consulta em `eventos`): tempo vencedora→emitido, % com variante que reduz proteção, achados por severidade, devoluções por contrato. Exibir em uma seção simples no perfil do gestor (ou só SQL documentado — decidir).
-- [ ] Atualizar `docs/PRD.md` (perfis e contratos), `docs/SPEC.md` (modelo de dados) e regra 13 do `CLAUDE.md` (aplicar `docs/contratos/CLAUDE-contratos.md`).
-- [ ] Playwright do fluxo feliz completo (SPEC §13).
-- [ ] Revisão independente final (segurança/RLS, integridade de hash e assinatura, paridade docx×PDF).
+- [x] Contratos legados continuam funcionando (tela/PDF/assinatura atuais) — teste Playwright do caminho legado.
+- [x] Remover o anexo de equalização do PDF legado (RC-15), se Q3 confirmada.
+- [x] Métricas (consulta em `eventos`): tempo vencedora→emitido, % com variante que reduz proteção, achados por severidade, devoluções por contrato. Exibir em uma seção simples no perfil do gestor (ou só SQL documentado — decidir).
+- [x] Atualizar `docs/PRD.md` (perfis e contratos), `docs/SPEC.md` (modelo de dados) e regra 13 do `CLAUDE.md` (aplicar `docs/contratos/CLAUDE-contratos.md`).
+- [x] Playwright do fluxo feliz completo (SPEC §13).
+- [x] Revisão independente final (segurança/RLS, integridade de hash e assinatura, paridade docx×PDF).
+- Notas (auto — recomendado): métricas via RPC `metricas_contratos` (só gestor da org) com tela `/metricas` no menu do perfil; Playwright escrito para o legado e o fluxo feliz v2, guardado por variáveis de homologação (pula sem ambiente) — **não executado** aqui; Anexo II legado já removido na Q3 (01/11). A revisão independente final roda sobre tudo desde o último deploy.
 - **Aceite:** fluxo ponta a ponta em produção com dados fictícios em homologação; documentação atualizada; nenhuma pendência alta da revisão independente.
 
 ---
