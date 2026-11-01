@@ -8,6 +8,7 @@ import {
   nomeProposta,
   type PropostaAcervo,
 } from '@bid/core';
+import { CONTRATO_LABEL, type ContratoStatus } from '@bid/core';
 import { useNavigate } from 'react-router-dom';
 import { Icon, iconeCategoria } from '@bid/ui';
 import { useAcervo, useApagarProposta, invalidarVencedora, useMeusPapeis } from '../data/hooks';
@@ -169,7 +170,7 @@ export function PropostasScreen() {
           </div>
           <div className="card rowlist">
             {lista.map((p) => (
-              <SwipeRow key={p.id} onApagar={gerencia(papeis.data?.get(p.obraId)) ? () => setParaApagar(p) : undefined}>
+              <SwipeRow key={p.id} onApagar={gerencia(papeis.data?.get(p.obraId)) && !p.contrato ? () => setParaApagar(p) : undefined}>
                 <AcervoRow p={p} />
               </SwipeRow>
             ))}
@@ -223,6 +224,12 @@ function AcervoRow({ p }: { p: PropostaAcervo }) {
       </span>
       <span className="rt">
         <span className="v">{p.valor != null ? formatBRL(p.valor) : '—'}</span>
+        {p.contrato && (
+          <span className="pill adjudicada" title={`Contrato ${p.contrato.numero ?? ''} · ${CONTRATO_LABEL[p.contrato.status as ContratoStatus].texto}`}>
+            <Icon name="tab-contratos" style={{ width: 12, height: 12 }} />
+            {p.contrato.numero ?? 'Contrato'}
+          </span>
+        )}
       </span>
       <span className="chev">
         <Icon name="chev" />

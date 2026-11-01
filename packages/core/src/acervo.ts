@@ -19,6 +19,8 @@ export function nomeProposta(fornecedor: string, opcao?: string | null): string 
 
 /** Uma proposta como aparece no acervo (achatada para a lista). */
 export interface PropostaAcervo {
+  /** Contrato ativo gerado desta proposta (selo na lista; trava a exclusão). */
+  contrato: { id: string; status: string; numero: string | null } | null;
   id: string;
   fornecedor: string;
   /** Rótulo da alternativa de preço (null = preço único). */

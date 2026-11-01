@@ -10,6 +10,7 @@ import {
   PROPOSTA_LABEL,
   type PropostaExtraida,
   type Variacao, gerencia } from '@bid/core';
+import { CONTRATO_LABEL } from '@bid/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Icon } from '@bid/ui';
 import {
@@ -267,7 +268,7 @@ export function PropostaScreen() {
           <PropMenu
             apagando={apagar.isPending}
             onEditar={() => setModo('editar')}
-            onApagar={gerencia(papelObra) ? () => setConfirmando(true) : undefined}
+            onApagar={gerencia(papelObra) && !data.contrato ? () => setConfirmando(true) : undefined}
           />
         )}
       </div>
@@ -292,7 +293,16 @@ export function PropostaScreen() {
         <span className="vcur">versão {data.versaoAtual} · atual</span>
         <span className="val">{data.valorAtual != null ? formatBRL(data.valorAtual) : '—'}</span>
       </div>
-      {data.status === 'vencedora' && modo === 'ver' && (
+      {data.contrato && (
+        <div className="banner" role="status" style={{ marginBottom: 10 }}>
+          <Icon name="tab-contratos" />
+          <span>
+            <b>Esta proposta tem contrato</b> ({CONTRATO_LABEL[data.contrato.status].texto}{data.contrato.numero ? ` · ${data.contrato.numero}` : ''}). Enquanto ele existir, a proposta não pode ser apagada nem deixar de ser a vencedora.
+          </span>
+          <button type="button" className="link" onClick={() => navigate(`/contratos/${data.contrato!.id}`)}>Ver contrato</button>
+        </div>
+      )}
+      {data.status === 'vencedora' && modo === 'ver' && !data.contrato && (
         <button type="button" className="link" style={{ marginTop: -4, marginBottom: 8 }} onClick={() => setConfirmandoReverter(true)}>
           <Icon name="back" /> Desfazer vencedora (voltar a comparar)
         </button>

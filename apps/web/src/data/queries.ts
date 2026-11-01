@@ -31,6 +31,7 @@ interface RawAcervoRow {
   valor_atual: number | null;
   versao_atual: number;
   certame_id: string;
+  contratos: { id: string; status: ContratoStatus; numero: string | null; deleted_at: string | null }[] | null;
   certames:
     | {
         id: string;
@@ -47,6 +48,7 @@ export async function fetchAcervo(): Promise<PropostaAcervo[]> {
     .from('propostas')
     .select(
       `id, fornecedor, opcao, status, valor_atual, versao_atual, certame_id,
+       contratos ( id, status, numero, deleted_at ),
        certames!inner ( id, titulo, categoria, obra_id, obras!inner ( id, nome ) )`,
     )
     .is('deleted_at', null)
@@ -70,8 +72,20 @@ export async function fetchAcervo(): Promise<PropostaAcervo[]> {
       status: r.status,
       valor: r.valor_atual,
       versaoAtual: r.versao_atual,
+      contrato: contratoVinculado(r.contratos),
     };
   });
+}
+
+/** Contrato ativo (não apagado, não cancelado) de uma proposta: trava a exclusão e aparece como selo. */
+export interface ContratoVinculado {
+  id: string;
+  status: ContratoStatus;
+  numero: string | null;
+}
+function contratoVinculado(lista: { id: string; status: ContratoStatus; numero: string | null; deleted_at: string | null }[] | null | undefined): ContratoVinculado | null {
+  const k = (lista ?? []).find((c) => !c.deleted_at && c.status !== 'cancelado');
+  return k ? { id: k.id, status: k.status, numero: k.numero } : null;
 }
 
 /* ---------- Obras ---------- */
@@ -304,6 +318,8 @@ export interface PropostaDetalhe {
   certameStatus: CertameStatus;
   /** Versões em ordem decrescente (a mais nova primeiro). */
   versoes: VersaoDetalhe[];
+  /** Contrato ativo gerado desta proposta (trava exclusão e desfazer vencedora). */
+  contrato: ContratoVinculado | null;
 }
 
 /**
@@ -325,7 +341,7 @@ export async function fetchProposta(id: string): Promise<PropostaDetalhe | null>
   if (error) throw error;
   if (!p) return null;
 
-  const [certRes, versRes] = await Promise.all([
+  const [certRes, versRes, contRes] = await Promise.all([
     db()
       .from('certames')
       .select('id, titulo, categoria, status, obra_id, obras ( nome )')
@@ -336,6 +352,7 @@ export async function fetchProposta(id: string): Promise<PropostaDetalhe | null>
       .select('id, n, data, valor, prazo, condicao_pagamento, garantia, obs, arquivo_path, dados_extraidos')
       .eq('proposta_id', id)
       .order('n', { ascending: false }),
+    db().from('contratos').select('id, status, numero, deleted_at').eq('proposta_id', id).is('deleted_at', null),
   ]);
 
   const cert = certRes.data as {
@@ -366,6 +383,7 @@ export async function fetchProposta(id: string): Promise<PropostaDetalhe | null>
     certameTitulo: cert?.titulo ?? '',
     certameStatus: (cert?.status ?? 'aberta') as CertameStatus,
     versoes,
+    contrato: contratoVinculado((contRes.data ?? []) as { id: string; status: ContratoStatus; numero: string | null; deleted_at: string | null }[]),
   };
 }
 
