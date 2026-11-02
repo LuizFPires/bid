@@ -3,6 +3,7 @@ import { BrandLogo, Icon, TabBar, type TabKey } from '@bid/ui';
 import { ToastProvider } from './Toast';
 import { ProfileMenu } from './ProfileMenu';
 import { AtualizacaoApp } from './AtualizacaoApp';
+import { ErrorBoundary } from './ErrorBoundary';
 import { useAnalisesEmAndamento, useContratos, useEqualizacoes, useMeusPapeis } from '../data/hooks';
 import { useLote } from '../data/lote';
 import { gerencia, resumoLote } from '@bid/core';
@@ -49,7 +50,10 @@ export function AppShell() {
         </header>
 
         <main className="content">
-          <Outlet />
+          {/* Rearma ao trocar de rota: um erro numa tela não trava as outras. */}
+          <ErrorBoundary key={location.pathname} onInicio={() => navigate('/propostas')}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
 
           <div id="barra-acao" className="barra-acao" />

@@ -2784,6 +2784,43 @@ table.eq .nota-eq.warn {
   width: 16px;
   height: 16px;
 }
+/* "Avisar" (compartilhar o convite): mesmo tamanho do remover, tom da marca. */
+.acesso .avisar {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--accent-deep);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.acesso .avisar:hover {
+  background: var(--accent-soft);
+}
+.acesso .avisar svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Aviso de convites pendentes na aba Obras: banner inteiro é o botão. */
+.convites-aviso {
+  width: 100%;
+  align-items: center;
+  text-align: left;
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.convites-aviso span {
+  flex: 1;
+}
+.convites-aviso strong {
+  font-weight: 900;
+  white-space: nowrap;
+}
 
 /* Confirmação de exclusão (modal) */
 .confirm-backdrop {
