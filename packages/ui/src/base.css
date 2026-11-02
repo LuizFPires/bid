@@ -2756,13 +2756,13 @@ table.eq .nota-eq.warn {
 
 /* Pessoas com acesso à obra */
 .acesso-form {
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-  margin-bottom: 12px;
+  /* Empilhado: o e-mail ocupa a largura inteira (digitar num campo espremido
+     ao lado do papel e do botão era ruim no celular). */
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 .acesso-form .field {
-  flex: 1 1 auto;
   margin: 0;
 }
 .acesso .remover {
