@@ -133,18 +133,6 @@ export function ProfileMenu() {
 
           {!trocando ? (
             <div className="pm-list">
-              <button
-                className="pm-item"
-                type="button"
-                onClick={() => {
-                  fechar();
-                  navigate('/convites');
-                }}
-              >
-                <Icon name="users" />
-                Convites
-                {pendentes > 0 && <span className="count">{pendentes}</span>}
-              </button>
               <div className="pm-tema" role="group" aria-label="Tema do aplicativo">
                 <span className="pm-tema-k">Tema</span>
                 <div className="pm-seg">
@@ -161,6 +149,18 @@ export function ProfileMenu() {
                   ))}
                 </div>
               </div>
+              <button
+                className="pm-item"
+                type="button"
+                onClick={() => {
+                  fechar();
+                  navigate('/convites');
+                }}
+              >
+                <Icon name="users" />
+                Convites
+                {pendentes > 0 && <span className="count">{pendentes}</span>}
+              </button>
               <button
                 className="pm-item"
                 type="button"

@@ -158,12 +158,12 @@ function Pessoas({ obraId, obraNome, gerencia }: { obraId: string; obraNome: str
           <div className="field">
             <label htmlFor="acesso-papel">Papel na obra</label>
             <select id="acesso-papel" value={papel} onChange={(e) => setPapel(e.target.value as 'gestor' | 'colaborador')}>
-              <option value="colaborador">Colaborador — sobe, equaliza, monta contrato</option>
-              <option value="gestor">Gestor — também aprova, emite e apaga</option>
+              <option value="colaborador">Colaborador</option>
+              <option value="gestor">Gestor — aprova, emite e apaga</option>
             </select>
           </div>
-          <Button type="submit" icon="plus" disabled={convidar.isPending || !email.trim()}>
-            Convidar
+          <Button type="submit" block icon="plus" disabled={convidar.isPending || !email.trim()}>
+            {convidar.isPending ? 'Convidando…' : 'Convidar'}
           </Button>
         </form>
       )}
