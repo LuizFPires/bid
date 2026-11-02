@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './auth/AuthProvider';
 import { LoginScreen } from './auth/LoginScreen';
 import { NovaSenhaScreen } from './auth/NovaSenhaScreen';
 import { AppShell } from './app/AppShell';
+import { ErrorBoundary } from './app/ErrorBoundary';
 import {
   PropostasScreen,
   EqualizacoesScreen,
@@ -96,7 +97,10 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
-          <Conteudo />
+          {/* Último recurso: erro fora das telas (casca, auth) ainda mostra uma saída. */}
+          <ErrorBoundary>
+            <Conteudo />
+          </ErrorBoundary>
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>

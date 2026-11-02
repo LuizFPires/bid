@@ -41,7 +41,7 @@ export function lerXlsx(bytes: Uint8Array): unknown[][] {
   const xml = strFromU8(z[primeira]!);
   const rows: unknown[][] = [];
   // <row .../> auto-fechada (linha vazia) não pode engolir a linha seguinte.
-  for (const row of xml.matchAll(/<row\b(?:[^>\/]|\/(?!>))*>([\s\S]*?)<\/row>/g)) {
+  for (const row of xml.matchAll(/<row\b(?:[^>/]|\/(?!>))*>([\s\S]*?)<\/row>/g)) {
     if (rows.length >= MAX_LINHAS) break;
     const linha: unknown[] = [];
     for (const c of row[1]!.matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {

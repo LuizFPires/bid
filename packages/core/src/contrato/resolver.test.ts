@@ -3,7 +3,8 @@ import { inteiroExtenso, valorExtenso } from './extenso';
 import { formatarNumeroContrato, parseNumeroContrato } from './numeracao';
 import { agruparPorClausula, aplicarParametrosClausula, aplicarVariante, cmpNumeroItem, editarTexto, itemExtra, itensIniciais, proximoNumero, restaurarPadrao, suprimir, type CatalogoModelo } from './clausulas-v2';
 import { resolverDocumento, textoDoDocumento, type EntradaResolver } from './resolver';
-import { pendencias, pendenciasBloqueantes } from './validar';
+import { pendencias, pendenciasBloqueantes, type EntradaValidar } from './validar';
+import type { LinhaPlanilha } from './planilha';
 import { hashDocumento } from './hash';
 import type { ItemClausula, PartesContrato, SignatarioContrato } from './tipos';
 
@@ -112,7 +113,7 @@ const signatarios: SignatarioContrato[] = [
   { parte: 'construtora', nome: 'Diretor Um', cpf: null, cargo: 'Diretor', email: null, telefone: null, ordem: 1, obrigatorio: true },
   { parte: 'construtora', nome: 'Diretor Dois', cpf: null, cargo: 'Diretor', email: null, telefone: null, ordem: 2, obrigatorio: true },
 ];
-const planilha = [
+const planilha: LinhaPlanilha[] = [
   { codigo: '1', grupo: true, descricao: 'MOBILIZAÇÃO', unidade: null, quantidade: null, preco_unitario: null },
   { codigo: '1.1', grupo: false, descricao: 'Mobilização e desmobilização de equipamento', unidade: 'vb', quantidade: 1, preco_unitario: 18000 },
   { codigo: '2', grupo: true, descricao: 'ESTACAS', unidade: null, quantidade: null, preco_unitario: null },
@@ -184,7 +185,7 @@ describe('resolverDocumento (caso fictício)', () => {
 });
 
 describe('pendencias', () => {
-  const base = { dossie: { proposta: { valor: 312450 } } as never, parametros, partes, itens: itensIniciais(catalogo), planilha, blocos: [{ chave: 'ensaios' }], signatarios };
+  const base: EntradaValidar = { dossie: { proposta: { valor: 312450 } } as never, parametros, partes, itens: itensIniciais(catalogo), planilha, blocos: [{ chave: 'ensaios' }], signatarios };
   it('contrato completo não tem pendência bloqueante', () => {
     expect(pendenciasBloqueantes(pendencias(base))).toEqual([]);
   });

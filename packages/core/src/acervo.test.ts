@@ -33,6 +33,7 @@ const base: PropostaAcervo[] = [
     status: 'analise',
     valor: 1284500,
     versaoAtual: 2,
+    contrato: null,
   },
   {
     id: 'p2',
@@ -45,6 +46,7 @@ const base: PropostaAcervo[] = [
     status: 'analise',
     valor: 1198900,
     versaoAtual: 3,
+    contrato: null,
   },
   {
     id: 'h1',
@@ -57,6 +59,7 @@ const base: PropostaAcervo[] = [
     status: 'recebida',
     valor: 486300,
     versaoAtual: 1,
+    contrato: null,
   },
 ];
 

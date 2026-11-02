@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '@bid/ui';
-import { useApagarObra, useObras } from '../data/hooks';
+import { useApagarObra, useMeusConvites, useObras } from '../data/hooks';
 import { restaurarObra } from '../data/mutations';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../app/Toast';
@@ -13,6 +13,9 @@ export function ObrasScreen() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useObras();
   const obras = data ?? [];
+  // Convites pendentes: a obra só aparece aqui depois de aceitar (Perfil › Convites).
+  const convites = useMeusConvites();
+  const pendentes = convites.data?.length ?? 0;
   const { session } = useAuth();
   const meuId = session?.user?.id;
   // Só o dono apaga (regra #13); arrastar → lixeira → confirmação → Desfazer.
@@ -50,6 +53,17 @@ export function ObrasScreen() {
         <p className="lead">O acervo organizado por obra.</p>
       </div>
 
+      {pendentes > 0 && (
+        <button type="button" className="banner warn convites-aviso" onClick={() => navigate('/convites')}>
+          <Icon name="users" />
+          <span>
+            Você tem {pendentes} convite{pendentes === 1 ? '' : 's'} de obra para aceitar.
+            <strong> Ver convites</strong>
+          </span>
+          <Icon name="chev" />
+        </button>
+      )}
+
       {isLoading ? (
         <div className="card">
           <div className="empty">
@@ -66,7 +80,9 @@ export function ObrasScreen() {
           <span>Não foi possível carregar as obras.</span>
         </div>
       ) : obras.length === 0 ? (
-        <div className="card empty">Nenhuma obra ainda.</div>
+        <div className="card empty">
+          {pendentes > 0 ? 'Aceite um convite para ver a obra aqui.' : 'Nenhuma obra ainda. Crie uma ou peça um convite ao dono de uma obra.'}
+        </div>
       ) : (
         obras.map((o) => (
           <SwipeRow key={o.id} className="ucard-wrap" onApagar={meuId && o.criado_por === meuId ? () => setParaApagar(o) : undefined}>

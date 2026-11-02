@@ -21,6 +21,7 @@ import type { Obra } from '../data/types';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../app/Toast';
 import { ConfirmDialog } from '../app/ConfirmDialog';
+import { avisarConvite } from '../lib/convite';
 
 /** Menu de 3 pontinhos da obra (apagar) — só o dono vê. */
 function ObraMenu({ onApagar, apagando }: { onApagar: () => void; apagando: boolean }) {
@@ -84,7 +85,7 @@ const ACESSO_LABEL: Record<AcessoObra['status'], { texto: string; tom: 'neutro' 
  * Pessoas com acesso à obra. O dono convida por e-mail (a conta pode ainda não
  * existir — o convite espera o cadastro) e remove acessos com confirmação.
  */
-function Pessoas({ obraId, gerencia }: { obraId: string; gerencia: boolean }) {
+function Pessoas({ obraId, obraNome, gerencia }: { obraId: string; obraNome: string; gerencia: boolean }) {
   const acesso = useAcessoObra(obraId);
   const convidar = useConvidarParaObra(obraId);
   const remover = useRemoverAcessoObra(obraId);
@@ -100,8 +101,14 @@ function Pessoas({ obraId, gerencia }: { obraId: string; gerencia: boolean }) {
     e.preventDefault();
     setErro(null);
     try {
-      await convidar.mutateAsync({ obraId, email, papel });
-      toast(`Convite enviado para ${email.trim()} como ${PAPEL_LABEL[papel].texto.toLowerCase()}.`);
+      const destinatario = email.trim();
+      await convidar.mutateAsync({ obraId, email: destinatario, papel });
+      // O bid não manda e-mail: quem convida avisa a pessoa (toast com atalho).
+      toast(`Convite registrado para ${destinatario} como ${PAPEL_LABEL[papel].texto.toLowerCase()}. Avise a pessoa.`, {
+        actionLabel: 'Avisar',
+        duration: 8000,
+        onAction: () => void avisarConvite({ obraNome, email: destinatario }).catch(() => {}),
+      });
       setEmail('');
       setPapel('colaborador');
     } catch (err) {
@@ -129,7 +136,7 @@ function Pessoas({ obraId, gerencia }: { obraId: string; gerencia: boolean }) {
         <h2 style={{ fontSize: 15, margin: 0 }}>Pessoas</h2>
         <p className="lead" style={{ marginTop: 2 }}>
           {gerencia
-            ? 'Só quem for convidado vê esta obra. Gestor aprova, emite e apaga; colaborador sobe, equaliza e monta contratos.'
+            ? 'Só quem for convidado vê esta obra. A pessoa entra no bid com o e-mail convidado e aceita em Perfil › Convites. Gestor aprova, emite e apaga; colaborador sobe, equaliza e monta contratos.'
             : 'Quem tem acesso a esta obra.'}
         </p>
       </div>
@@ -210,6 +217,17 @@ function Pessoas({ obraId, gerencia }: { obraId: string; gerencia: boolean }) {
                       {a.status === 'pendente' ? 'convidado · ' : ''}
                       {PAPEL_LABEL[a.papel].texto.toLowerCase()}
                     </span>
+                  )}
+                  {gerencia && a.conviteId && a.status === 'pendente' && (
+                    <button
+                      type="button"
+                      className="avisar"
+                      aria-label={`Avisar ${a.email} do convite`}
+                      title="Avisar do convite (WhatsApp ou compartilhar)"
+                      onClick={() => void avisarConvite({ obraNome, email: a.email }).catch(() => {})}
+                    >
+                      <Icon name="link" />
+                    </button>
                   )}
                   {gerencia && a.conviteId && (
                     <button
@@ -381,6 +399,9 @@ export function ObraScreen() {
   const toast = useToast();
   const qc = useQueryClient();
   const [confirmando, setConfirmando] = useState(false);
+  // Antes de qualquer `return` condicional: hook depois de um early return muda
+  // a ordem dos hooks entre renders e derruba a árvore inteira (tela preta).
+  const papelAqui = usePapelObra(id);
 
   async function apagarEsta(obraId: string, nome: string) {
     try {
@@ -433,7 +454,6 @@ export function ObraScreen() {
 
   const { obra, certames } = data;
   const ehDono = !!session?.user?.id && obra.criado_por === session.user.id;
-  const papelAqui = usePapelObra(obra.id);
 
   return (
     <>
@@ -502,7 +522,7 @@ export function ObraScreen() {
       )}
 
       <DadosContrato obra={obra} podeEditar={gerencia(papelAqui) || ehDono} />
-      <Pessoas obraId={obra.id} gerencia={ehDono || papelAqui === 'gestor'} />
+      <Pessoas obraId={obra.id} obraNome={obra.nome} gerencia={ehDono || papelAqui === 'gestor'} />
     </>
   );
 }
